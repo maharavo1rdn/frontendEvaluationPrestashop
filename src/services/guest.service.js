@@ -1,10 +1,11 @@
 import parseGuests from "../XMLUtil/parser/Guest.parser";
 import { API_URL, WS_KEY } from "../config/config.service";
 
+const DEFAULT_DISPLAY = "full";
 export const getAll = async () => {
   try {
     const response = await fetch(
-      `${API_URL()}/guests?output_format=XML&display=full`,
+      `${API_URL()}/guests?output_format=XML&display=${DEFAULT_DISPLAY}`,
       {
         headers: {
           Authorization: `Basic ${btoa(WS_KEY() + ":")}`,

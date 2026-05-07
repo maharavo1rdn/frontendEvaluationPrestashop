@@ -1,4 +1,4 @@
-import parseProducts from "../XMLUtil/parser/Product.parser";
+import parseOrderPayments from "../XMLUtil/parser/OrderPayment.parser";
 import { API_URL, WS_KEY } from "../config/config.service";
 
 const DEFAULT_DISPLAY = "full";
@@ -6,7 +6,7 @@ const DEFAULT_DISPLAY = "full";
 export const getAll = async (display = DEFAULT_DISPLAY) => {
   try {
     const response = await fetch(
-      `${API_URL()}/products?output_format=XML&display=${display}`,
+      `${API_URL()}/order_payments?output_format=XML&display=${display}`,
       {
         headers: {
           Authorization: `Basic ${btoa(WS_KEY() + ":")}`,
@@ -19,15 +19,15 @@ export const getAll = async (display = DEFAULT_DISPLAY) => {
         `Erreur HTTP ${response.status} — ${response.statusText}`,
       );
     const xmlText = await response.text();
-    return parseProducts(xmlText);
+    return parseOrderPayments(xmlText);
   } catch (error) {
     throw error;
   }
 };
 
-export const deleteProduct = async (id) => {
+export const deleteOrderPayment = async (id) => {
   try {
-    const response = await fetch(`${API_URL()}/products/${id}`, {
+    const response = await fetch(`${API_URL()}/order_payments/${id}`, {
       method: "DELETE",
       headers: {
         Authorization: `Basic ${btoa(WS_KEY() + ":")}`,
@@ -43,11 +43,11 @@ export const deleteProduct = async (id) => {
   }
 };
 
-export const resetProducts = async () => {
+export const resetOrderPayments = async () => {
   try {
-    const products = await getAll();
-    products.forEach((product) => {
-      deleteProduct(product.id);
+    const payments = await getAll();
+    payments.forEach((payment) => {
+      deleteOrderPayment(payment.id);
     });
   } catch (error) {
     throw error;
