@@ -7,13 +7,14 @@ const ProduitList = () => {
   const [products, setProducts] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
-  const [status, setStatus] = useState();
+  const [status, setStatus] = useState("");
 
   useEffect(() => {
     fetchProducts();
   }, []);
 
   const fetchProducts = async () => {
+    setLoading(true);
     try {
       const parsed = await getAll();
       setProducts(parsed);
@@ -25,221 +26,123 @@ const ProduitList = () => {
   };
 
   const handleDeleteProduct = async (id) => {
-    setLoading(true);
-    setStatus("");
+    if (!window.confirm("Voulez-vous vraiment supprimer ce produit ?")) return;
+    
     try {
       const response = await deleteProduct(id);
       if (response.ok) {
-        setStatus(`✅ Produit #${id} supprimé avec succès`);
+        setStatus(`✅ Produit #${id} supprimé`);
+        setProducts(products.filter(p => p.id !== id));
       } else {
-        setStatus(`❌ Erreur ${response.status} : ${response.statusText}`);
+        setStatus(`❌ Erreur lors de la suppression`);
       }
     } catch (error) {
-      setStatus(`❌ Erreur réseau : ${error.message}`);
-    } finally {
-      setLoading(false);
+      setStatus(`❌ Erreur réseau`);
     }
-    fetchProducts();
   };
 
   const TypeBadge = ({ type }) => {
     const styles = {
-      simple: "bg-sky-100   text-sky-700",
+      simple: "bg-sky-100 text-sky-700",
       combinations: "bg-amber-100 text-amber-700",
       virtual: "bg-purple-100 text-purple-700",
     };
     return (
-      <span
-        className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold
-          ${styles[type] ?? "bg-slate-100 text-slate-600"}`}
-      >
-        {type ?? "—"}
+      <span className={`px-2 py-1 rounded text-[10px] font-bold uppercase ${styles[type] ?? "bg-slate-100 text-slate-600"}`}>
+        {type || "simple"}
       </span>
     );
   };
 
-  /* ── Formatage date ── */
-  const formatDate = (dateString) => {
-    if (!dateString) return "—";
-    return new Date(dateString).toLocaleDateString("fr-FR", {
-      day: "2-digit",
-      month: "short",
-      year: "numeric",
-    });
-  };
-
   return (
-    <div className="p-8 max-w-5xl">
-      {/* ── En-tête ── */}
-      <div className="flex items-center justify-between mb-8">
-        <div className="flex items-center gap-3">
-          <ShoppingBag size={22} className="text-sky-500" />
-          <div>
-            <h1 className="text-[22px] font-bold text-slate-900 leading-tight">
-              Produits
-            </h1>
-            <p className="text-sm text-slate-500 mt-0.5">
-              {products.length} produit{products.length > 1 ? "s" : ""} au total
-            </p>
-          </div>
+    <div className="p-8 max-w-7xl mx-auto">
+      
+      <div className="flex items-center justify-between mb-8 border-b border-slate-200 pb-6">
+        <div>
+          <h1 className="text-2xl font-bold text-slate-900">Gestion des Produits</h1>
+          <p className="text-slate-500 text-sm">Catalogue PrestaShop — {products.length} articles</p>
         </div>
 
         <Link
           to="/products/create"
-          className="inline-flex items-center gap-2 px-4 py-2 rounded-md
-            bg-sky-500 hover:bg-sky-600 text-white text-sm font-semibold
-            transition-colors duration-150 focus-visible:outline-2
-            focus-visible:outline-sky-500 focus-visible:outline-offset-2"
+          className="flex items-center gap-2 px-5 py-2.5 bg-sky-600 text-white text-sm font-bold rounded-lg"
         >
-          <Plus size={15} strokeWidth={2.5} />
+          <Plus size={16} />
           Ajouter un produit
         </Link>
       </div>
 
-      {/* ── État : chargement ── */}
-      {loading && (
-        <div
-          className="flex items-center justify-center gap-3 py-24
-            bg-white border border-slate-200 rounded-xl text-slate-400"
-        >
-          <Loader2 size={20} className="animate-spin text-sky-500" />
-          <span className="text-sm font-medium">Chargement des produits…</span>
+      {status && (
+        <div className="mb-6 p-4 bg-slate-100 border-l-4 border-slate-500 text-slate-700 text-sm font-bold">
+          {status}
         </div>
       )}
 
-      {/* ── État : erreur ── */}
-      {!loading && error && (
-        <div
-          className="flex items-center gap-3 px-5 py-4 bg-red-50
-            border border-red-200 rounded-xl text-red-600 text-sm font-medium"
-        >
-          <AlertCircle size={18} />
-          {error}
+      {loading && products.length === 0 ? (
+        <div className="py-20 text-center bg-white border border-slate-200 rounded-xl">
+          <Loader2 size={30} className="mx-auto mb-3 text-slate-300 animate-spin" />
+          <p className="text-slate-400">Chargement des données...</p>
         </div>
-      )}
-
-      {/* ── État : liste vide ── */}
-      {!loading && !error && products.length === 0 && (
-        <div
-          className="flex flex-col items-center justify-center gap-3
-            py-24 bg-white border border-slate-200 rounded-xl text-slate-400"
-        >
-          <ShoppingBag size={36} className="text-slate-300" />
-          <p className="text-sm font-medium">Aucun produit trouvé.</p>
-          <Link
-            to="/products/create"
-            className="mt-1 text-sm font-semibold text-sky-500 hover:text-sky-600
-              transition-colors"
-          >
-            Ajouter le premier produit →
-          </Link>
+      ) : error ? (
+        <div className="p-4 bg-red-50 border border-red-200 text-red-700 rounded-lg flex items-center gap-2">
+          <AlertCircle size={20} />
+          <span>{error}</span>
         </div>
-      )}
-
-      {/* ── Tableau ── */}
-      {!loading && !error && products.length > 0 && (
-        <div
-          className="bg-white border border-slate-200 rounded-xl
-            shadow-[0_1px_3px_rgba(14,165,233,0.04)] overflow-hidden"
-        >
+      ) : (
+        <div className="bg-white border border-slate-200 rounded-xl shadow-sm overflow-hidden">
           <div className="overflow-x-auto">
-            <table className="w-full text-sm">
+            <table className="w-full text-left border-collapse">
               <thead>
-                <tr className="border-b border-slate-200 bg-slate-50">
-                  {[
-                    "Référence",
-                    "Type",
-                    "Description",
-                    "Prix",
-                    "Date ajout",
-                    "",
-                  ].map((col) => (
-                    <th
-                      key={col}
-                      className="px-5 py-3 text-left text-xs font-semibold
-                          uppercase tracking-wider text-slate-400"
-                      aria-label={col || "Actions"}
-                    >
-                      {col}
-                    </th>
-                  ))}
+                <tr className="bg-slate-50 border-b border-slate-200">
+                  <th className="px-6 py-4 text-xs font-bold text-slate-500 uppercase w-[15%]">Référence</th>
+                  <th className="px-6 py-4 text-xs font-bold text-slate-500 uppercase w-[20%]">Nom</th>
+                  <th className="px-6 py-4 text-xs font-bold text-slate-500 uppercase w-[10%]">Type</th>
+                  <th className="px-6 py-4 text-xs font-bold text-slate-500 uppercase w-[30%]">Description</th>
+                  <th className="px-6 py-4 text-xs font-bold text-slate-500 uppercase w-[10%]">Prix HT</th>
+                  <th className="px-6 py-4 text-xs font-bold text-slate-500 uppercase w-[15%] text-right">Actions</th>
                 </tr>
               </thead>
-
               <tbody className="divide-y divide-slate-100">
                 {products.map((product) => (
-                  <tr
-                    key={product.id}
-                    className="hover:bg-slate-50 transition-colors duration-150"
-                  >
-                    {/* Référence */}
-                    <td className="px-5 py-3.5 font-semibold text-slate-900 whitespace-nowrap">
-                      {product.reference || (
-                        <span className="italic text-slate-300 font-normal">
-                          —
-                        </span>
-                      )}
+                  <tr key={product.id} className="hover:bg-slate-50/50">
+                    <td className="px-6 py-4 text-sm font-mono text-slate-600">
+                      {product.reference || "—"}
                     </td>
-
-                    {/* Type */}
-                    <td className="px-5 py-3.5 whitespace-nowrap">
+                    <td className="px-6 py-4 text-sm font-bold text-slate-900">
+                      {product.name || "N/A"}
+                    </td>
+                    <td className="px-6 py-4">
                       <TypeBadge type={product.type} />
                     </td>
-
-                    {/* Description */}
-                    <td className="px-5 py-3.5 text-slate-500 max-w-xs truncate">
-                      {product.description || (
-                        <span className="italic text-slate-300">—</span>
-                      )}
+                    <td className="px-6 py-4">
+                      <div 
+                        className="text-xs text-slate-500 line-clamp-2"
+                        dangerouslySetInnerHTML={{ __html: product.descriptionShort || "—" }}
+                      />
                     </td>
-
-                    {/* Prix */}
-                    <td className="px-5 py-3.5 text-slate-700 whitespace-nowrap font-medium">
-                      {product.price != null ? (
-                        `${product.price.toFixed(2)} €`
-                      ) : (
-                        <span className="italic text-slate-300">—</span>
-                      )}
+                    <td className="px-6 py-4 text-sm font-bold text-slate-900">
+                      {product.price ? `${Number(product.price).toFixed(2)} €` : "0.00 €"}
                     </td>
-
-                    {/* Date */}
-                    <td className="px-5 py-3.5 text-slate-400 whitespace-nowrap text-xs">
-                      {formatDate(product.date)}
-                    </td>
-
-                    {/* Actions */}
-                    <td className="px-5 py-3.5 text-right whitespace-nowrap">
-                      <Link
-                        to={`/products/${product.id}`}
-                        className="text-xs font-semibold text-sky-500
-                          hover:text-sky-700 transition-colors"
-                      >
-                        Détail
-                      </Link>{" "}
-                      <button
-                        className="text-xs font-semibold text-red-600
-                          hover:text-red-500 transition-colors"
-                        onClick={() => {
-                          handleDeleteProduct(product.id);
-                        }}
-                      >
-                        Supprimer
-                      </button>
+                    <td className="px-6 py-4 text-right">
+                      <div className="flex justify-end gap-3">
+                        <Link 
+                          to={`/products/${product.id}`} 
+                          className="text-xs font-bold text-sky-600 hover:underline"
+                        >
+                          Détails
+                        </Link>
+                        <button 
+                          onClick={() => handleDeleteProduct(product.id)}
+                          className="text-xs font-bold text-red-600 hover:underline"
+                        >
+                          Supprimer
+                        </button>
+                      </div>
                     </td>
                   </tr>
                 ))}
               </tbody>
             </table>
-          </div>
-
-          {/* Footer du tableau */}
-          <div
-            className="px-5 py-3 border-t border-slate-100 bg-slate-50
-              flex items-center justify-between"
-          >
-            <p className="text-xs text-slate-400">
-              {products.length} produit{products.length > 1 ? "s" : ""}
-            </p>
           </div>
         </div>
       )}
