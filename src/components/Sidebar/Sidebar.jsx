@@ -3,6 +3,7 @@ import {
   Users, Settings, ChevronLeft, ChevronRight, Layers,
   User,
   Box,
+  ListRestartIcon,
 } from 'lucide-react'
 import SidebarItem from './SidebarItem'
 import './sidebar.css'
@@ -13,6 +14,12 @@ export const NAV_ITEMS = [
     label: 'Tableau de bord',
     icon: LayoutDashboard,
     path: '/',
+  },
+  {
+    id: 'reset',
+    label: 'Réinitialisation',
+    icon: ListRestartIcon,
+    path: '/reset',
   },
   {
     id: 'commandes',
