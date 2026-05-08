@@ -29,6 +29,17 @@ export const field = (tag, value) =>
   `<${tag}><![CDATA[${escapeXML(value)}]]></${tag}>`;
 
 /**
+ * Construit un champ simple uniquement si la valeur est fournie.
+ * Utile pour eviter d'envoyer des balises vides.
+ *
+ * @param {string} tag
+ * @param {any} value
+ * @returns {string}
+ */
+export const optionalField = (tag, value) =>
+  value === undefined || value === null ? "" : field(tag, value);
+
+/**
  * Construit un champ multilingue PrestaShop.
  * PrestaShop exige cette structure pour name, description, link_rewrite, etc.
  * Exemple : langField("name", "T-Shirt", 1)
@@ -43,6 +54,17 @@ export const langField = (tag, value, langId = 1) =>
   `<${tag}>
     <language id="${langId}"><![CDATA[${escapeXML(value)}]]></language>
   </${tag}>`;
+
+/**
+ * Construit un champ multilingue uniquement si la valeur est fournie.
+ *
+ * @param {string} tag
+ * @param {any} value
+ * @param {number} langId
+ * @returns {string}
+ */
+export const optionalLangField = (tag, value, langId = 1) =>
+  value === undefined || value === null ? "" : langField(tag, value, langId);
 
 /**
  * Enveloppe un bloc XML dans la structure racine PrestaShop.
