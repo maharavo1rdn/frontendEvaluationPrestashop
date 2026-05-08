@@ -1,6 +1,6 @@
 import parseCategories from "../XMLUtil/parser/Category.parser";
-import { API_URL, WS_KEY } from "../config/config.service";
-
+import { API_URL, WS_KEY, authHeaders } from "../config/config.service";
+import { buildCategoryXML } from "../XMLUtil/builder/Category.builder";
 const DEFAULT_DISPLAY = "full";
 
 export const getAll = async (display = DEFAULT_DISPLAY) => {
@@ -24,6 +24,25 @@ export const getAll = async (display = DEFAULT_DISPLAY) => {
     throw error;
   }
 };
+
+export const postCategory = async (category) => {
+  const xml = buildCategoryXML(category);
+  try {
+    const response = await fetch(`${API_URL()}/categories?output_format=XML`, {
+      method: "POST",
+      headers: authHeaders(),
+      body: xml,
+    });
+    if (!response.ok) {
+      const errText = await response.text();
+      throw new Error(`HTTP ${response.status} — ${errText}`);
+    }
+    return { success: true, name: category.name };
+  } catch (err) {
+    return { success: false, name: category.name, error: err.message };
+  }
+};
+
 
 export const deleteCategory = async (id) => {
   try {
