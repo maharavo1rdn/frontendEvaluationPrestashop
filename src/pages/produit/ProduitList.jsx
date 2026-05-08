@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { ShoppingBag, Plus, Loader2, AlertCircle } from "lucide-react";
-import { getAll, deleteProduct } from "../../services/produit.service";
+import { getAll, deleteProduct } from "../../services/product.service";
 
 const ProduitList = () => {
   const [products, setProducts] = useState([]);
@@ -27,12 +27,12 @@ const ProduitList = () => {
 
   const handleDeleteProduct = async (id) => {
     if (!window.confirm("Voulez-vous vraiment supprimer ce produit ?")) return;
-    
+
     try {
       const response = await deleteProduct(id);
       if (response.ok) {
         setStatus(`✅ Produit #${id} supprimé`);
-        setProducts(products.filter(p => p.id !== id));
+        setProducts(products.filter((p) => p.id !== id));
       } else {
         setStatus(`❌ Erreur lors de la suppression`);
       }
@@ -48,7 +48,9 @@ const ProduitList = () => {
       virtual: "bg-purple-100 text-purple-700",
     };
     return (
-      <span className={`px-2 py-1 rounded text-[10px] font-bold uppercase ${styles[type] ?? "bg-slate-100 text-slate-600"}`}>
+      <span
+        className={`px-2 py-1 rounded text-[10px] font-bold uppercase ${styles[type] ?? "bg-slate-100 text-slate-600"}`}
+      >
         {type || "simple"}
       </span>
     );
@@ -56,11 +58,14 @@ const ProduitList = () => {
 
   return (
     <div className="p-8 max-w-7xl mx-auto">
-      
       <div className="flex items-center justify-between mb-8 border-b border-slate-200 pb-6">
         <div>
-          <h1 className="text-2xl font-bold text-slate-900">Gestion des Produits</h1>
-          <p className="text-slate-500 text-sm">Catalogue PrestaShop — {products.length} articles</p>
+          <h1 className="text-2xl font-bold text-slate-900">
+            Gestion des Produits
+          </h1>
+          <p className="text-slate-500 text-sm">
+            Catalogue PrestaShop — {products.length} articles
+          </p>
         </div>
 
         <Link
@@ -80,7 +85,10 @@ const ProduitList = () => {
 
       {loading && products.length === 0 ? (
         <div className="py-20 text-center bg-white border border-slate-200 rounded-xl">
-          <Loader2 size={30} className="mx-auto mb-3 text-slate-300 animate-spin" />
+          <Loader2
+            size={30}
+            className="mx-auto mb-3 text-slate-300 animate-spin"
+          />
           <p className="text-slate-400">Chargement des données...</p>
         </div>
       ) : error ? (
@@ -94,12 +102,24 @@ const ProduitList = () => {
             <table className="w-full text-left border-collapse">
               <thead>
                 <tr className="bg-slate-50 border-b border-slate-200">
-                  <th className="px-6 py-4 text-xs font-bold text-slate-500 uppercase w-[15%]">Référence</th>
-                  <th className="px-6 py-4 text-xs font-bold text-slate-500 uppercase w-[20%]">Nom</th>
-                  <th className="px-6 py-4 text-xs font-bold text-slate-500 uppercase w-[10%]">Type</th>
-                  <th className="px-6 py-4 text-xs font-bold text-slate-500 uppercase w-[30%]">Description</th>
-                  <th className="px-6 py-4 text-xs font-bold text-slate-500 uppercase w-[10%]">Prix HT</th>
-                  <th className="px-6 py-4 text-xs font-bold text-slate-500 uppercase w-[15%] text-right">Actions</th>
+                  <th className="px-6 py-4 text-xs font-bold text-slate-500 uppercase w-[15%]">
+                    Référence
+                  </th>
+                  <th className="px-6 py-4 text-xs font-bold text-slate-500 uppercase w-[20%]">
+                    Nom
+                  </th>
+                  <th className="px-6 py-4 text-xs font-bold text-slate-500 uppercase w-[10%]">
+                    Type
+                  </th>
+                  <th className="px-6 py-4 text-xs font-bold text-slate-500 uppercase w-[30%]">
+                    Description
+                  </th>
+                  <th className="px-6 py-4 text-xs font-bold text-slate-500 uppercase w-[10%]">
+                    Prix HT
+                  </th>
+                  <th className="px-6 py-4 text-xs font-bold text-slate-500 uppercase w-[15%] text-right">
+                    Actions
+                  </th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100">
@@ -115,23 +135,27 @@ const ProduitList = () => {
                       <TypeBadge type={product.type} />
                     </td>
                     <td className="px-6 py-4">
-                      <div 
+                      <div
                         className="text-xs text-slate-500 line-clamp-2"
-                        dangerouslySetInnerHTML={{ __html: product.descriptionShort || "—" }}
+                        dangerouslySetInnerHTML={{
+                          __html: product.descriptionShort || "—",
+                        }}
                       />
                     </td>
                     <td className="px-6 py-4 text-sm font-bold text-slate-900">
-                      {product.price ? `${Number(product.price).toFixed(2)} €` : "0.00 €"}
+                      {product.price
+                        ? `${Number(product.price).toFixed(2)} €`
+                        : "0.00 €"}
                     </td>
                     <td className="px-6 py-4 text-right">
                       <div className="flex justify-end gap-3">
-                        <Link 
-                          to={`/products/${product.id}`} 
+                        <Link
+                          to={`/products/${product.id}`}
                           className="text-xs font-bold text-sky-600 hover:underline"
                         >
                           Détails
                         </Link>
-                        <button 
+                        <button
                           onClick={() => handleDeleteProduct(product.id)}
                           className="text-xs font-bold text-red-600 hover:underline"
                         >

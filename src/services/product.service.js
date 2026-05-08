@@ -1,5 +1,6 @@
+import { buildProductXML } from "../XMLUtil/builder/Product.builder";
 import parseProducts from "../XMLUtil/parser/Product.parser";
-import { API_URL, WS_KEY } from "../config/config.service";
+import { API_URL, WS_KEY, authHeaders } from "../config/config.service";
 
 const DEFAULT_DISPLAY = "full";
 
@@ -22,6 +23,24 @@ export const getAll = async (display = DEFAULT_DISPLAY) => {
     return parseProducts(xmlText);
   } catch (error) {
     throw error;
+  }
+};
+
+export const postProduct = async (category) => {
+  const xml = buildProductXML(category);
+  try {
+    const response = await fetch(`${API_URL()}/products?output_format=XML`, {
+      method: "POST",
+      headers: authHeaders(),
+      body: xml,
+    });
+    if (!response.ok) {
+      const errText = await response.text();
+      throw new Error(`HTTP ${response.status} — ${errText}`);
+    }
+    return { success: true, name: category.name };
+  } catch (err) {
+    return { success: false, name: category.name, error: err.message };
   }
 };
 
