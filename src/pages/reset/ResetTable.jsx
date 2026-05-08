@@ -30,108 +30,126 @@ const RESET_TABLES = [
 	{
 		id: "products",
 		label: "Produits",
+		table: "ps_product",
 		description: "Catalogue des produits",
 		reset: resetProducts,
 	},
 	{
 		id: "categories",
 		label: "Categories",
+		table: "ps_category",
 		description: "Arborescence des categories",
 		reset: resetCategories,
 	},
 	{
 		id: "combinations",
 		label: "Combinaisons",
+		table: "ps_product_attribute",
 		description: "Declinaisons produits",
 		reset: resetCombinations,
 	},
 	{
 		id: "feature-values",
 		label: "Caracteristiques",
+		table: "ps_feature_value",
 		description: "Valeurs des caracteristiques",
 		reset: resetProductFeatureValues,
 	},
 	{
 		id: "stocks",
 		label: "Stocks",
+		table: "ps_stock_available",
 		description: "Disponibilites de stock",
 		reset: resetStockAvailables,
 	},
 	{
 		id: "manufacturers",
 		label: "Fabricants",
+		table: "ps_manufacturer",
 		description: "Marques et fabricants",
 		reset: resetManufacturers,
 	},
 	{
 		id: "customers",
 		label: "Clients",
+		table: "ps_customer",
 		description: "Comptes clients",
 		reset: resetCustomers,
 	},
 	{
 		id: "addresses",
 		label: "Adresses",
+		table: "ps_address",
 		description: "Carnet d'adresses",
 		reset: resetAddresses,
 	},
 	{
 		id: "guests",
 		label: "Guests",
+		table: "ps_guest",
 		description: "Visiteurs non identifies",
 		reset: resetGuests,
 	},
 	{
 		id: "orders",
 		label: "Commandes",
+		table: "ps_orders",
 		description: "Commandes principales",
 		reset: resetOrders,
 	},
 	{
 		id: "order-details",
 		label: "Details commandes",
+		table: "ps_order_detail",
 		description: "Lignes de commande",
 		reset: resetOrderDetails,
 	},
 	{
 		id: "order-carriers",
 		label: "Transporteurs",
+		table: "ps_order_carrier",
 		description: "Liaisons commande/transporteur",
 		reset: resetOrderCarriers,
 	},
 	{
 		id: "order-cart-rules",
 		label: "Regles panier",
+		table: "ps_order_cart_rule",
 		description: "Remises sur commandes",
 		reset: resetOrderCartRules,
 	},
 	{
 		id: "order-histories",
 		label: "Historiques",
+		table: "ps_order_history",
 		description: "Historique des commandes",
 		reset: resetOrderHistories,
 	},
 	{
 		id: "order-invoices",
 		label: "Factures",
+		table: "ps_order_invoice",
 		description: "Factures des commandes",
 		reset: resetOrderInvoices,
 	},
 	{
 		id: "order-payments",
 		label: "Paiements",
+		table: "ps_order_payment",
 		description: "Paiements associes",
 		reset: resetOrderPayments,
 	},
 	{
 		id: "order-slips",
 		label: "Avoirs",
+		table: "ps_order_slip",
 		description: "Avoirs clients",
 		reset: resetOrderSlips,
 	},
 	{
 		id: "order-states",
 		label: "Etats commandes",
+		table: "ps_order_state",
 		description: "Statuts de commande",
 		reset: resetOrderStates,
 	},
@@ -346,6 +364,10 @@ const ResetTable = () => {
 								<th className="px-5 py-3 text-xs font-semibold uppercase tracking-wider text-slate-400">
 									Table
 								</th>
+								{/* ── Colonne ajoutée ── */}
+								<th className="px-5 py-3 text-xs font-semibold uppercase tracking-wider text-slate-400">
+									Table PrestaShop
+								</th>
 								<th className="px-5 py-3 text-xs font-semibold uppercase tracking-wider text-slate-400">
 									Description
 								</th>
@@ -375,6 +397,12 @@ const ResetTable = () => {
 										</td>
 										<td className="px-5 py-3.5 font-semibold text-slate-900">
 											{table.label}
+										</td>
+										{/* ── Valeur ajoutée ── */}
+										<td className="px-5 py-3.5">
+											<code className="px-2 py-0.5 rounded bg-slate-100 text-slate-600 text-xs font-mono">
+												{table.table}
+											</code>
 										</td>
 										<td className="px-5 py-3.5 text-slate-500">
 											{table.description}
