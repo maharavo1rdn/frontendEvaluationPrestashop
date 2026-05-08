@@ -4,6 +4,7 @@ import {
   User,
   Box,
   ListRestartIcon,
+  Upload,
 } from 'lucide-react'
 import SidebarItem from './SidebarItem'
 import './sidebar.css'
@@ -20,6 +21,15 @@ export const NAV_ITEMS = [
     label: 'Réinitialisation',
     icon: ListRestartIcon,
     path: '/reset',
+  },
+  {
+    id: 'csvimport',
+    label: 'Import CSV',
+    icon: Upload,
+    children: [
+      { id: 'category',    label: 'Catégorie',   path: '/category/import' },
+    ],
+    
   },
   {
     id: 'commandes',

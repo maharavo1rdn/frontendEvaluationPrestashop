@@ -3,6 +3,7 @@ import ClientsRoutes from "./client/ClientsRoutes";
 import Dashboard from "../components/Dashboard";
 import ProduitsRoutes from "./produit/ProduitsRoutes";
 import ResetTable from "../pages/reset/ResetTable";
+import ImportRoutes from "./import/ImportRoutes";
 
 export default function AppRoutes() {
   return (
@@ -13,6 +14,7 @@ export default function AppRoutes() {
       </Routes>
       <ClientsRoutes />
       <ProduitsRoutes />
+      <ImportRoutes />
     </>
   );
 }
