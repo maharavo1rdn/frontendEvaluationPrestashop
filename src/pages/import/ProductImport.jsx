@@ -1,7 +1,7 @@
 import { useRef, useState } from "react";
-import { importCategoriesFromCSV } from "../../services/csv/category.csv.service";
+import { importProductsFromCSV } from "../../services/csv/product.csv.service";
 
-const CategoryImport = () => {
+const ProductImport = () => {
   const fileRef = useRef(null);
   const [progress, setProgress] = useState(null);
   const [results, setResults] = useState(null);
@@ -15,7 +15,7 @@ const CategoryImport = () => {
     setResults(null);
     setProgress({ done: 0, total: 0 });
 
-    const result = await importCategoriesFromCSV(file, ({ done, total }) => {
+    const result = await importProductsFromCSV(file, ({ done, total }) => {
       setProgress({ done, total });
     });
 
@@ -26,7 +26,7 @@ const CategoryImport = () => {
   return (
     <div className="p-8 max-w-xl space-y-4">
       <h2 className="text-lg font-bold text-slate-900">
-        Import CSV — Catégories
+        Import CSV — Produits
       </h2>
 
       {/* Input file — pas de nom en dur */}
@@ -53,7 +53,7 @@ const CategoryImport = () => {
       {progress && progress.total > 0 && (
         <div className="space-y-1">
           <p className="text-xs text-slate-500">
-            {progress.done} / {progress.total} catégories traitées
+            {progress.done} / {progress.total} produits traitées
           </p>
           <div className="w-full bg-slate-200 rounded-full h-1.5">
             <div
@@ -87,4 +87,4 @@ const CategoryImport = () => {
     </div>
   );
 };
-export default CategoryImport;
+export default ProductImport;

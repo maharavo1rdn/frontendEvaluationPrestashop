@@ -43,10 +43,10 @@ export const postCategory = async (category) => {
   }
 };
 
-export const findByName = async (name) => {
+export const findCategoryByKeyValue = async (key, value) => {
   try {
     const params = new URLSearchParams({
-      "filter[name]": `[${name}]`,
+      [`filter[${key}]`]: `[${value}]`,
       output_format: "XML",
       display: "full",
     });
