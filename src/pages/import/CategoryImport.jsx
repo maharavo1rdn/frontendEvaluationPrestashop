@@ -1,7 +1,8 @@
 // src/components/CategoryImport.jsx
 
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { importCategoriesFromCSV } from "../../services/csv/category.csv.service";
+import { findByName } from "../../services/category.service";
 
 export default function CategoryImport() {
   const fileRef = useRef(null);
@@ -9,6 +10,17 @@ export default function CategoryImport() {
   const [results, setResults] = useState(null);
   const [running, setRunning] = useState(false);
 
+  useEffect(() => {
+    fecthName();
+  }, []);
+  const fecthName = async () => {
+    try {
+      const result = await findByName("Accessoires");
+      console.log(result);
+    } catch (error) {
+      console.error(error.message);
+    }
+  };
   const handleImport = async () => {
     const file = fileRef.current?.files?.[0];
     if (!file) return alert("Sélectionnez un fichier CSV.");
