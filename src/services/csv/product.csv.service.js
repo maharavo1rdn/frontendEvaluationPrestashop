@@ -10,7 +10,10 @@ import { parseCSVFile } from "./csv.service";
 export const mapRowToProduct = async (row) => {
   const categories = await findCategoryByKeyValue("name", row.category_name);
   const id_category_default =
-    categories.length > 0 ? categories[0].id_category_default : undefined;
+    categories.length > 0 ? Number(categories[0].id) : undefined;
+  const manufacturers = await findManufacturerByKeyValue("name");
+  const id_manufacturer =
+    manufacturers.length > 0 ? Number(manufacturers[0].id) : undefined;
   return {
     name: row.name,
     reference: row.reference,
@@ -19,6 +22,7 @@ export const mapRowToProduct = async (row) => {
     description: row.description || undefined,
     category_name: row.category_name ? row.category_name : "",
     id_category_default: id_category_default,
+    id_manufacturer: id_manufacturer,
     manufacturer_name: row.manufacturer_name ? row.manufacturer_name : "",
     weight: row.weight ? Number(row.weight) : undefined,
     quantity: row.quantity ? Number(row.quantity) : undefined,
