@@ -89,7 +89,7 @@ export default function Sidebar({ collapsed, onToggle }) {
           <div className="sidebar__logo-icon" aria-hidden="true">
             <Layers size={18} color="#ffffff" strokeWidth={2} />
           </div>
-          <span className="sidebar__logo-text">MyApp</span>
+          <span className="sidebar__logo-text">NewApp</span>
         </div>
         <button
           className="sidebar__toggle"

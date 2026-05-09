@@ -31,12 +31,15 @@ export const deleteProductFeatureValue = async (id) => {
       method: "DELETE",
       headers: {
         Authorization: `Basic ${btoa(WS_KEY() + ":")}`,
+        Accept: "application/xml",
       },
     });
-    if (!response.ok)
+    if (!response.ok) {
+      const errText = await response.text();
       throw new Error(
-        `Erreur HTTP ${response.status} — ${response.statusText}`,
+        `Erreur HTTP ${response.status} — ${errText || response.statusText}`,
       );
+    }
     return response;
   } catch (error) {
     throw error;
@@ -46,9 +49,9 @@ export const deleteProductFeatureValue = async (id) => {
 export const resetProductFeatureValues = async () => {
   try {
     const values = await getAll();
-    values.forEach((value) => {
-      deleteProductFeatureValue(value.id);
-    });
+    for (const value of values) {
+      await deleteProductFeatureValue(value.id);
+    }
   } catch (error) {
     throw error;
   }
