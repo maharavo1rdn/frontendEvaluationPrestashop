@@ -31,12 +31,15 @@ export const deleteOrderHistory = async (id) => {
       method: "DELETE",
       headers: {
         Authorization: `Basic ${btoa(WS_KEY() + ":")}`,
+        Accept: "application/xml",
       },
     });
-    if (!response.ok)
+    if (!response.ok) {
+      const errText = await response.text();
       throw new Error(
-        `Erreur HTTP ${response.status} — ${response.statusText}`,
+        `Erreur HTTP ${response.status} — ${errText || response.statusText}`,
       );
+    }
     return response;
   } catch (error) {
     throw error;
@@ -46,9 +49,9 @@ export const deleteOrderHistory = async (id) => {
 export const resetOrderHistories = async () => {
   try {
     const histories = await getAll();
-    histories.forEach((history) => {
-      deleteOrderHistory(history.id);
-    });
+    for (const history of histories) {
+      await deleteOrderHistory(history.id);
+    }
   } catch (error) {
     throw error;
   }

@@ -31,12 +31,15 @@ export const deleteOrderState = async (id) => {
       method: "DELETE",
       headers: {
         Authorization: `Basic ${btoa(WS_KEY() + ":")}`,
+        Accept: "application/xml",
       },
     });
-    if (!response.ok)
+    if (!response.ok) {
+      const errText = await response.text();
       throw new Error(
-        `Erreur HTTP ${response.status} — ${response.statusText}`,
+        `Erreur HTTP ${response.status} — ${errText || response.statusText}`,
       );
+    }
     return response;
   } catch (error) {
     throw error;
@@ -46,9 +49,9 @@ export const deleteOrderState = async (id) => {
 export const resetOrderStates = async () => {
   try {
     const states = await getAll();
-    states.forEach((state) => {
-      deleteOrderState(state.id);
-    });
+    for (const state of states) {
+      await deleteOrderState(state.id);
+    }
   } catch (error) {
     throw error;
   }

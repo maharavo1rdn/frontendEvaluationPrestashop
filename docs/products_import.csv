@@ -1,2 +1,16 @@
 name,reference,price,active,type,description,category_name,manufacturer_name,weight,quantity
-T-Shirt Bleu Marine,TSH-BLU-001,19.99,true,simple,T-shirt en coton bio col rond coupe droite,Accesgegsoires,Nike,0.2,150
+T-Shirt Col Rond Blanc,TSH-BLC-001,19.99,true,simple,T-shirt en coton bio col rond coupe droite unisexe,Vêtements,Studio Design,0.2,150
+Jean Slim Bleu Délavé,JEA-SLM-002,49.99,true,simple,Jean slim coupe ajustée 98% coton 2% élasthanne,Hommes,Studio Design,0.6,80
+Robe Fleurie Été,ROB-FLE-003,39.99,true,simple,Robe légère imprimé floral 100% viscose col V,Femmes,Studio Design,0.3,60
+Carnet Bullet Journal A5,CAR-BUL-004,12.99,true,simple,Carnet pointillé 200 pages couverture rigide noire,Papeterie,Graphic Corner,0.25,200
+Poster Abstrait Géométrique,POS-ABS-005,24.99,true,simple,Impression haute qualité sur papier 250g format 40x60cm,Art,Graphic Corner,0.1,120
+Veste Blazer Homme Gris,VES-BLZ-006,89.99,true,simple,Blazer coupe slim 100% laine vierge doublure intérieure,Hommes,Studio Design,0.9,40
+Tote Bag Sérigraphié,TOT-SER-007,14.99,true,simple,Sac en coton bio 320g anses longues sérigraphie artisanale,Accessoires,Graphic Corner,0.15,180
+Bougie Parfumée Soja,BOU-PAR-008,18.99,true,simple,Bougie en cire de soja naturelle parfum lin et bois de cèdre,Accessoires de maison,Studio Design,0.35,90
+Carnet Aquarelle A4,CAR-AQU-009,16.99,true,simple,Carnet 30 feuilles 300g/m² grain torchon idéal aquarelle,Papeterie,Graphic Corner,0.4,75
+Sweat Hoodie Femme Kaki,SWE-HOD-010,54.99,true,simple,Sweat à capuche oversize 80% coton 20% polyester poche kangourou,Femmes,Studio Design,0.55,65
+Affiche Typographique Citation,AFF-TYP-011,19.99,true,simple,Affiche citation minimaliste impression numérique format A3,Art,Graphic Corner,0.08,150
+Stylo Plume Professionnel,STY-PLU-012,34.99,true,simple,Stylo plume corps en résine noire plume acier inoxydable M,Papeterie,Graphic Corner,0.12,55
+Coussin Velours Moutarde,COU-VEL-013,29.99,true,simple,Coussin 45x45cm velours côtelé garnissage en fibre recyclée,Accessoires de maison,Studio Design,0.5,70
+Pantalon Chino Beige,PAN-CHI-014,44.99,true,simple,Chino coupe droite 98% coton 2% élasthanne 5 poches,Hommes,Studio Design,0.65,85
+Lot 3 Stickers Botaniques,STK-BOT-015,8.99,true,simple,Set de 3 stickers vinyle résistant à l'eau motifs plantes tropicales,Art,Graphic Corner,0.05,300

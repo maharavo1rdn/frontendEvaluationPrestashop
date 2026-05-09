@@ -162,6 +162,7 @@ export const buildProductXML = (product) => {
     ${field("type",                product.type             ?? "simple")}
     ${field("id_tax_rules_group",  product.taxRulesGroupId  ?? 1)}
     ${field("id_category_default", product.categoryId       )}
+    ${field("id_manufacturer",     product.manufacturerId       )}
 
     ${langField("name",              product.name        ?? "",  langId)}
     ${langField("description_short", product.description ?? "",  langId)}

@@ -50,12 +50,15 @@ export const deleteProduct = async (id) => {
       method: "DELETE",
       headers: {
         Authorization: `Basic ${btoa(WS_KEY() + ":")}`,
+        Accept: "application/xml",
       },
     });
-    if (!response.ok)
+    if (!response.ok) {
+      const errText = await response.text();
       throw new Error(
-        `Erreur HTTP ${response.status} — ${response.statusText}`,
+        `Erreur HTTP ${response.status} — ${errText || response.statusText}`,
       );
+    }
     return response;
   } catch (error) {
     throw error;
@@ -65,9 +68,9 @@ export const deleteProduct = async (id) => {
 export const resetProducts = async () => {
   try {
     const products = await getAll();
-    products.forEach((product) => {
-      deleteProduct(product.id);
-    });
+    for (const product of products) {
+      await deleteProduct(product.id);
+    }
   } catch (error) {
     throw error;
   }

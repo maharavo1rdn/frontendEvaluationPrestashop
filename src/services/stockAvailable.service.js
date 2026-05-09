@@ -31,12 +31,15 @@ export const deleteStockAvailable = async (id) => {
       method: "DELETE",
       headers: {
         Authorization: `Basic ${btoa(WS_KEY() + ":")}`,
+        Accept: "application/xml",
       },
     });
-    if (!response.ok)
+    if (!response.ok) {
+      const errText = await response.text();
       throw new Error(
-        `Erreur HTTP ${response.status} — ${response.statusText}`,
+        `Erreur HTTP ${response.status} — ${errText || response.statusText}`,
       );
+    }
     return response;
   } catch (error) {
     throw error;
@@ -46,9 +49,9 @@ export const deleteStockAvailable = async (id) => {
 export const resetStockAvailables = async () => {
   try {
     const stocks = await getAll();
-    stocks.forEach((stock) => {
-      deleteStockAvailable(stock.id);
-    });
+    for (const stock of stocks) {
+      await deleteStockAvailable(stock.id);
+    }
   } catch (error) {
     throw error;
   }

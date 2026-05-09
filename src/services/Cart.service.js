@@ -50,12 +50,15 @@ export const deleteCart = async (id) => {
 			method: "DELETE",
 			headers: {
 				Authorization: `Basic ${btoa(WS_KEY() + ":")}`,
+				Accept: "application/xml",
 			},
 		});
-		if (!response.ok)
+		if (!response.ok) {
+			const errText = await response.text();
 			throw new Error(
-				`Erreur HTTP ${response.status} — ${response.statusText}`,
+				`Erreur HTTP ${response.status} — ${errText || response.statusText}`,
 			);
+		}
 		return response;
 	} catch (error) {
 		throw error;
@@ -65,9 +68,9 @@ export const deleteCart = async (id) => {
 export const resetCarts = async () => {
 	try {
 		const carts = await getAll();
-		carts.forEach((cart) => {
-			deleteCart(cart.id);
-		});
+		for (const cart of carts) {
+			await deleteCart(cart.id);
+		}
 	} catch (error) {
 		throw error;
 	}
