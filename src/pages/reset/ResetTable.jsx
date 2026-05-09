@@ -14,6 +14,7 @@ import { resetCustomers } from "../../services/customer.service";
 import { resetGuests } from "../../services/guest.service";
 import { resetManufacturers } from "../../services/manufacturer.service";
 import { resetOrders } from "../../services/order.service";
+import { resetCarts } from "../../services/Cart.service";
 import { resetOrderCarriers } from "../../services/orderCarrier.service";
 import { resetOrderCartRules } from "../../services/orderCartRule.service";
 import { resetOrderDetails } from "../../services/orderDetail.service";
@@ -89,6 +90,13 @@ const RESET_TABLES = [
     table: "ps_guest",
     description: "Visiteurs non identifies",
     reset: resetGuests,
+  },
+  {
+    id: "carts",
+    label: "Paniers",
+    table: "ps_cart",
+    description: "Paniers clients",
+    reset: resetCarts,
   },
   {
     id: "orders",

@@ -1,39 +1,54 @@
-# Guide complet : PapaParse
+# PapaParse — Guide complet et gestion des cas problématiques
 
 ## Sommaire
-1. [Qu'est-ce que PapaParse ?](#1-quest-ce-que-papaparse-)
-2. [Installation](#2-installation)
-3. [Anatomie d'un CSV](#3-anatomie-dun-csv)
-4. [Les deux modes de parsing](#4-les-deux-modes-de-parsing)
-5. [Configuration — toutes les options expliquées](#5-configuration--toutes-les-options-expliquées)
-6. [L'objet résultat](#6-lobjet-résultat)
-7. [Cas d'usage concrets](#7-cas-dusage-concrets)
-8. [Lecture de fichier via input type="file"](#8-lecture-de-fichier-via-input-typefile)
-9. [Parsing en streaming (gros fichiers)](#9-parsing-en-streaming-gros-fichiers)
-10. [Générer du CSV depuis un tableau JS](#10-générer-du-csv-depuis-un-tableau-js)
-11. [Erreurs fréquentes et comment les éviter](#11-erreurs-fréquentes-et-comment-les-éviter)
-12. [Intégration avec React](#12-intégration-avec-react)
+
+- [PapaParse — Guide complet et gestion des cas problématiques](#papaparse--guide-complet-et-gestion-des-cas-problématiques)
+  - [Sommaire](#sommaire)
+  - [1. Qu'est-ce que PapaParse](#1-quest-ce-que-papaparse)
+  - [2. Installation et import](#2-installation-et-import)
+  - [3. Fonctionnement général](#3-fonctionnement-général)
+  - [4. Les options essentielles](#4-les-options-essentielles)
+  - [5. L'objet résultat](#5-lobjet-résultat)
+    - [results.data](#resultsdata)
+    - [results.errors](#resultserrors)
+    - [results.meta](#resultsmeta)
+  - [6. Les deux modes de parsing](#6-les-deux-modes-de-parsing)
+    - [Mode synchrone — chaîne de texte](#mode-synchrone--chaîne-de-texte)
+    - [Mode asynchrone — fichier (obligatoire pour File object)](#mode-asynchrone--fichier-obligatoire-pour-file-object)
+  - [7. Gestion des cas problématiques](#7-gestion-des-cas-problématiques)
+    - [7.1 Nombres décimaux](#71-nombres-décimaux)
+    - [7.2 Espaces dans les nombres](#72-espaces-dans-les-nombres)
+    - [7.3 Conflit délimiteur et décimale](#73-conflit-délimiteur-et-décimale)
+    - [7.4 Valeurs vides ou manquantes](#74-valeurs-vides-ou-manquantes)
+    - [7.5 Booléens non standards](#75-booléens-non-standards)
+    - [7.6 En-têtes avec espaces ou majuscules](#76-en-têtes-avec-espaces-ou-majuscules)
+    - [7.7 Encodage et caractères spéciaux](#77-encodage-et-caractères-spéciaux)
+    - [7.8 Lignes incomplètes](#78-lignes-incomplètes)
+    - [7.9 Guillemets mal formés](#79-guillemets-mal-formés)
+    - [7.10 Doublons dans le fichier](#710-doublons-dans-le-fichier)
+  - [8. Utilitaire complet de nettoyage](#8-utilitaire-complet-de-nettoyage)
+  - [9. Validation avant import](#9-validation-avant-import)
+  - [10. Intégration dans un service d'import](#10-intégration-dans-un-service-dimport)
+  - [11. Récapitulatif des cas gérés](#11-récapitulatif-des-cas-gérés)
 
 ---
 
-## 1. Qu'est-ce que PapaParse ?
+## 1. Qu'est-ce que PapaParse
 
-PapaParse est la librairie de parsing CSV la plus utilisée en JavaScript. Elle prend en entrée un **fichier CSV, une chaîne de texte ou une URL**, et retourne des **objets JavaScript** directement utilisables.
+PapaParse est la librairie JavaScript de référence pour lire et écrire des fichiers CSV.
+Elle prend en entrée un fichier, une URL ou une chaîne de texte, et retourne un
+**tableau d'objets JavaScript** directement exploitables.
 
 ```
-Fichier CSV  →  PapaParse  →  Tableau d'objets JS
+Fichier .csv  →  PapaParse  →  [{ col1: val1, col2: val2 }, ...]
 ```
 
-Pourquoi l'utiliser plutôt que de parser manuellement avec `split(",")` ?
-
-- Un CSV peut contenir des virgules **à l'intérieur de valeurs** entre guillemets → `split(",")` casse tout
-- Les sauts de ligne, l'encodage UTF-8, le BOM (Byte Order Mark) sont gérés automatiquement
-- Les types (nombres, booléens) peuvent être convertis automatiquement
-- Il supporte le streaming pour les fichiers volumineux
+Sans PapaParse, parser manuellement un CSV avec `split(",")` échoue dès qu'une valeur
+contient une virgule entre guillemets. PapaParse gère ces cas automatiquement.
 
 ---
 
-## 2. Installation
+## 2. Installation et import
 
 ```bash
 npm install papaparse
@@ -45,742 +60,955 @@ import Papa from "papaparse";
 
 ---
 
-## 3. Anatomie d'un CSV
+## 3. Fonctionnement général
 
-Avant de comprendre PapaParse, il faut comprendre ce qu'il parse.
+PapaParse lit le fichier ligne par ligne :
 
-### CSV simple
+1. **Ligne 1** (si `header: true`) → noms des colonnes
+2. **Lignes suivantes** → valeurs associées aux colonnes
+3. Chaque ligne devient un **objet JavaScript**
 
-```csv
+```
+CSV :
 name,price,active
-T-Shirt Bleu,19.99,true
-Jean Slim,49.99,false
-Veste Cuir,129.99,true
+T-Shirt,19.99,true
+Jean,49.99,false
+
+Résultat avec header: true :
+[
+  { name: "T-Shirt", price: "19.99", active: "true" },
+  { name: "Jean",    price: "49.99", active: "false" },
+]
 ```
 
-- La **première ligne** est optionnellement un en-tête (noms des colonnes)
-- Les **valeurs** sont séparées par un délimiteur (`,` par défaut)
-- Chaque **ligne** = un enregistrement
-
-### CSV avec cas spéciaux
-
-```csv
-name,description,price
-"Pull Laine","Chaud, doux et léger",39.99
-"Robe ""Soirée""","Avec guillemets dans la valeur",89.99
-"Article
-multi-ligne","Description sur
-plusieurs lignes",59.99
-```
-
-**Règles importantes :**
-- Une valeur contenant une virgule doit être entourée de `"guillemets"`
-- Un guillemet dans une valeur se double : `""` → `"`
-- Une valeur peut contenir des sauts de ligne si entre guillemets
-- PapaParse gère tout cela automatiquement
+> ⚠️ **Important** : par défaut tout est retourné en string.
+> "19.99" n'est pas 19.99 et "true" n'est pas true.
+> C'est volontaire — la conversion manuelle dans un mapper est plus sûre.
 
 ---
 
-## 4. Les deux modes de parsing
-
-### Mode synchrone — `Papa.parse(string, config)`
-
-Bloque l'exécution jusqu'à la fin. Utilisé pour les petits CSV en mémoire.
-
-```js
-const csv = `name,price\nT-Shirt,19.99\nJean,49.99`;
-
-const result = Papa.parse(csv, { header: true });
-console.log(result.data);
-// [{ name: "T-Shirt", price: "19.99" }, { name: "Jean", price: "49.99" }]
-```
-
-### Mode asynchrone — `Papa.parse(file, { complete: callback })`
-
-Non-bloquant. **Obligatoire pour les fichiers** (File object du navigateur).
+## 4. Les options essentielles
 
 ```js
 Papa.parse(file, {
+
+  // Structure
   header: true,
-  complete: (results) => {
-    console.log(results.data); // tableau d'objets
-  },
-  error: (err) => {
-    console.error(err.message);
-  }
-});
-```
+  // true  → ligne 1 = colonnes, data = tableau d'objets { col: val }
+  // false → data = tableau de tableaux [["val1", "val2"]]
 
-### Mode Promise (wrapper manuel — le plus pratique)
-
-PapaParse n'expose pas nativement une API Promise, mais on peut l'encapsuler :
-
-```js
-const parseCSV = (file, options = {}) =>
-  new Promise((resolve, reject) => {
-    Papa.parse(file, {
-      ...options,
-      complete: (results) => resolve(results),
-      error:    (err)     => reject(new Error(err.message)),
-    });
-  });
-
-// Utilisation avec async/await
-const results = await parseCSV(file, { header: true });
-console.log(results.data);
-```
-
----
-
-## 5. Configuration — toutes les options expliquées
-
-```js
-Papa.parse(input, {
-
-  // ── Délimiteur ────────────────────────────────────────────
   delimiter: ",",
-  // Séparateur entre les valeurs. Défaut : auto-détecté.
-  // Autres valeurs courantes : ";" (Excel français), "\t" (TSV)
+  // Séparateur de colonnes. Défaut : auto-détecté.
+  // Valeurs courantes : "," (anglais), ";" (Excel français), "\t" (TSV)
 
-  // ── Fin de ligne ──────────────────────────────────────────
   newline: "",
-  // Caractère de fin de ligne. Défaut : auto-détecté (\r\n, \n, \r)
+  // Fin de ligne. Défaut : auto-détecté (\n, \r\n, \r)
 
-  // ── En-tête ───────────────────────────────────────────────
-  header: true,
-  // true  → première ligne = noms des colonnes
-  //         data = tableau d'objets { colonne: valeur }
-  // false → data = tableau de tableaux [ ["val1", "val2"] ]
-
-  // ── Nettoyage des en-têtes ────────────────────────────────
-  transformHeader: (header) => header.trim().toLowerCase(),
-  // Transforme les noms de colonnes avant utilisation.
-  // Utile pour normaliser "  Name " → "name"
-
-  // ── Conversion automatique des types ─────────────────────
-  dynamicTyping: true,
-  // true  → "19.99" → 19.99 (number), "true" → true (boolean)
-  // false → tout reste en string (défaut)
-  // ⚠️ Attention : peut convertir des codes comme "007" → 7
-
-  // ── Lignes vides ──────────────────────────────────────────
+  // Nettoyage
   skipEmptyLines: true,
-  // true          → ignore les lignes entièrement vides
-  // "greedy"      → ignore aussi les lignes ne contenant que des espaces
-  // false         → conserve les lignes vides (défaut)
+  // true     → ignore les lignes entièrement vides
+  // "greedy" → ignore aussi les lignes avec seulement des espaces
 
-  // ── Encodage ──────────────────────────────────────────────
-  encoding: "UTF-8",
-  // Encodage du fichier. Défaut : UTF-8.
-  // Autres : "ISO-8859-1" pour les vieux exports Excel français
+  transformHeader: (header) => header.trim().toLowerCase(),
+  // Transforme les noms de colonnes. Appliqué une fois sur la ligne d'en-tête.
 
-  // ── Transformation des valeurs ────────────────────────────
-  transform: (value, header) => value.trim(),
-  // Appelé sur chaque valeur individuelle après parsing.
-  // Reçoit la valeur et le nom de colonne (si header: true).
-  // Utile pour nettoyer les espaces, normaliser les valeurs.
+  transform: (value, column) => value.trim(),
+  // Transforme chaque valeur individuelle. Reçoit la valeur et le nom de colonne.
 
-  // ── Commentaires ──────────────────────────────────────────
-  comments: "#",
-  // Les lignes commençant par ce caractère sont ignorées.
-  // false = désactivé (défaut)
+  // Typage
+  dynamicTyping: false,
+  // true  → "19.99" → 19.99, "true" → true, "" → null (automatique)
+  // false → tout reste string (recommandé pour les imports — plus de contrôle)
 
-  // ── Callbacks ─────────────────────────────────────────────
+  // Aperçu
+  preview: 0,
+  // 0 = toutes les lignes. N = seulement les N premières.
+
+  // Callbacks
   complete: (results, file) => { },
-  // Appelé quand le parsing est terminé.
-  // results = { data, errors, meta }
+  error:    (error, file)   => { },
+  step:     (row, parser)   => { },  // mode streaming ligne par ligne
 
-  error: (error, file) => { },
-  // Appelé en cas d'erreur fatale.
-
-  step: (row, parser) => { },
-  // Appelé pour chaque ligne (mode streaming).
-  // Permet de traiter ligne par ligne sans tout charger en mémoire.
-
-  chunk: (results, parser) => { },
-  // Appelé par blocs de lignes (pour les très gros fichiers).
-
-  // ── Streaming ─────────────────────────────────────────────
-  worker: false,
-  // true → parse dans un Web Worker (non-bloquant pour le UI)
-  // Utile pour les fichiers > 10 Mo
-
-  // ── Nombre de lignes ──────────────────────────────────────
-  preview: 5,
-  // Parse seulement les N premières lignes (aperçu).
-  // 0 = toutes les lignes (défaut)
-
-  // ── Guillemets ────────────────────────────────────────────
-  quoteChar: '"',
-  // Caractère utilisé pour délimiter les valeurs avec caractères spéciaux.
-
-  escapeChar: '"',
-  // Caractère d'échappement dans les valeurs entre guillemets.
-  // "" → guillemet doublé (standard CSV)
+  // Encodage
+  encoding: "UTF-8",
+  // Changer en "ISO-8859-1" pour les vieux exports Excel français.
 });
 ```
 
 ---
 
-## 6. L'objet résultat
-
-`Papa.parse()` retourne toujours un objet avec trois propriétés :
+## 5. L'objet résultat
 
 ```js
 {
-  data: [],    // le contenu parsé
-  errors: [],  // les erreurs rencontrées (non fatales)
-  meta: {}     // métadonnées du fichier
+  data:   [],   // tableau de lignes (objets ou tableaux selon header)
+  errors: [],   // erreurs non fatales rencontrées pendant le parsing
+  meta:   {},   // métadonnées du fichier
 }
 ```
 
-### `results.data` — avec `header: true`
+### results.data
 
 ```js
+// Avec header: true
 [
-  { name: "T-Shirt Bleu", price: "19.99", active: "true" },
-  { name: "Jean Slim",    price: "49.99", active: "false" },
+  { name: "T-Shirt", price: "19.99", active: "true" },
+  { name: "Jean",    price: "49.99", active: "false" },
 ]
 ```
 
-### `results.data` — avec `header: false`
-
-```js
-[
-  ["name",         "price",  "active"],   // ← en-tête incluse comme ligne
-  ["T-Shirt Bleu", "19.99",  "true"],
-  ["Jean Slim",    "49.99",  "false"],
-]
-```
-
-### `results.errors` — tableau d'erreurs non fatales
+### results.errors
 
 ```js
 [
   {
-    type:    "Quotes",    // type d'erreur : Quotes, Delimiter, FieldMismatch
-    code:    "InvalidQuotes",
-    message: "Guillemets incorrects à la ligne 3",
-    row:     2,           // index de ligne (0-based)
+    type:    "FieldMismatch",   // Quotes | Delimiter | FieldMismatch
+    code:    "TooManyFields",
+    message: "Trop de champs à la ligne 3",
+    row:     2,                 // index 0-based
   }
 ]
 ```
 
-Types d'erreurs possibles :
-- `Quotes` — guillemets mal formés
-- `Delimiter` — délimiteur inattendu
-- `FieldMismatch` — nombre de colonnes différent de l'en-tête
-
-### `results.meta` — métadonnées
+### results.meta
 
 ```js
 {
-  delimiter:    ",",       // délimiteur détecté
-  linebreak:    "\r\n",    // type de saut de ligne détecté
-  aborted:      false,     // true si Papa.abort() a été appelé
-  fields:       ["name", "price", "active"],  // noms des colonnes (si header: true)
-  truncated:    false,     // true si preview a limité les lignes
+  delimiter: ",",
+  linebreak:  "\r\n",
+  aborted:    false,
+  fields:     ["name", "price", "active"],
+  truncated:  false,
 }
 ```
 
 ---
 
-## 7. Cas d'usage concrets
+## 6. Les deux modes de parsing
 
-### Cas 1 : CSV avec en-tête, valeurs string
-
-```js
-const csv = `
-name,idParent,active,description
-Vêtements,2,true,Tous nos vêtements
-Chaussures,2,true,
-Accessoires,2,false,Ceintures et sacs
-`.trim();
-
-const result = Papa.parse(csv, {
-  header:         true,
-  skipEmptyLines: true,
-  transform:      (v) => v.trim(),
-});
-
-console.log(result.data);
-// [
-//   { name: "Vêtements",   idParent: "2", active: "true",  description: "Tous nos vêtements" },
-//   { name: "Chaussures",  idParent: "2", active: "true",  description: "" },
-//   { name: "Accessoires", idParent: "2", active: "false", description: "Ceintures et sacs" },
-// ]
-```
-
-> ⚠️ Sans `dynamicTyping`, tout est string — `"2"` pas `2`, `"true"` pas `true`.
-> Il faut convertir manuellement dans le mapper.
-
----
-
-### Cas 2 : CSV avec `dynamicTyping`
+### Mode synchrone — chaîne de texte
 
 ```js
-const result = Papa.parse(csv, {
-  header:       true,
-  dynamicTyping: true,   // ← conversion automatique
-});
-
-console.log(result.data);
-// [
-//   { name: "Vêtements",   idParent: 2, active: true,  description: "Tous nos vêtements" },
-//   { name: "Chaussures",  idParent: 2, active: true,  description: null },
-//   { name: "Accessoires", idParent: 2, active: false, description: "Ceintures et sacs" },
-// ]
-```
-
-> Les cases vides deviennent `null`, les nombres sont convertis, les booléens aussi.
-
----
-
-### Cas 3 : CSV avec séparateur `;` (export Excel français)
-
-```js
-const csv = `nom;prix;actif\nT-Shirt;19,99;vrai`;
-
-const result = Papa.parse(csv, {
-  header:    true,
-  delimiter: ";",     // ← point-virgule
-});
-```
-
-> Excel en français utilise `;` comme délimiteur car `,` est le séparateur décimal.
-
----
-
-### Cas 4 : Normaliser les en-têtes
-
-```js
-// CSV avec espaces et majuscules dans les en-têtes
-const csv = `  Name  ,  ID Parent  , Active\nVêtements,2,true`;
-
-const result = Papa.parse(csv, {
-  header:          true,
-  transformHeader: (h) => h.trim()            // "  Name  " → "Name"
-                            .toLowerCase()    // "Name"     → "name"
-                            .replace(/\s+/g, "_"), // "id parent" → "id_parent"
-});
-
-console.log(result.meta.fields);
-// ["name", "id_parent", "active"]
-```
-
----
-
-### Cas 5 : Aperçu des 3 premières lignes
-
-```js
-const result = Papa.parse(file, {
-  header:  true,
-  preview: 3,          // ← seulement les 3 premières lignes de données
-  complete: (r) => console.log(r.data), // 3 objets max
-});
-```
-
-Utile pour afficher un aperçu avant l'import complet.
-
----
-
-### Cas 6 : Vérifier les erreurs après parsing
-
-```js
+const csv    = `name,price\nT-Shirt,19.99`;
 const result = Papa.parse(csv, { header: true });
-
-if (result.errors.length > 0) {
-  result.errors.forEach((err) => {
-    console.warn(`Ligne ${err.row + 1} — ${err.type} : ${err.message}`);
-  });
-}
-
-// Les erreurs non fatales n'empêchent pas result.data d'exister
-// PapaParse fait de son mieux même en cas d'erreur partielle
+console.log(result.data);
+// [{ name: "T-Shirt", price: "19.99" }]
 ```
 
----
-
-## 8. Lecture de fichier via `input type="file"`
-
-C'est le cas le plus courant en front-end : l'utilisateur sélectionne un fichier.
+### Mode asynchrone — fichier (obligatoire pour File object)
 
 ```js
-// Encapsulation Promise — à mettre dans un fichier utilitaire
+// Encapsulation Promise réutilisable dans tous les services
 export const parseCSVFile = (file, options = {}) =>
   new Promise((resolve, reject) => {
-    if (!file) return reject(new Error("Aucun fichier fourni"));
-    if (!file.name.endsWith(".csv"))
-      return reject(new Error("Le fichier doit être un .csv"));
-
     Papa.parse(file, {
       header:          true,
       skipEmptyLines:  true,
       transformHeader: (h) => h.trim(),
       transform:       (v) => v.trim(),
-      ...options,           // options supplémentaires si besoin
+      ...options,
       complete: (results) => {
-        if (results.errors.length > 0) {
-          // Erreurs non fatales — on les log mais on continue
+        if (results.errors.length)
           console.warn("Avertissements CSV :", results.errors);
-        }
         resolve(results.data);
       },
-      error: (err) => reject(new Error(`Erreur de parsing : ${err.message}`)),
+      error: (err) => reject(new Error(`Erreur parsing : ${err.message}`)),
+    });
+  });
+
+// Utilisation avec async/await
+const rows = await parseCSVFile(file);
+```
+
+---
+
+## 7. Gestion des cas problématiques
+
+### 7.1 Nombres décimaux
+
+**Problème** : un nombre décimal peut utiliser `.` (anglais) ou `,` (français).
+PapaParse retourne tout en string, la conversion doit être explicite.
+
+```
+CSV anglais  : 19.99  → parseFloat("19.99") = 19.99  ✅
+CSV français : 19,99  → parseFloat("19,99") = 19      ❌ (la virgule est ignorée)
+```
+
+**Solution** :
+
+```js
+/**
+ * Convertit une valeur en nombre flottant.
+ * Gère les deux formats décimaux : "12.2" et "12,2".
+ * Gère aussi les espaces comme séparateurs de milliers : "1 200,50".
+ *
+ * @param {any}    value    - Valeur brute du CSV
+ * @param {number} fallback - Valeur si conversion impossible (défaut : 0)
+ * @returns {number}
+ */
+export const parseDecimal = (value, fallback = 0) => {
+  if (value === null || value === undefined || value === "") return fallback;
+
+  const str = String(value).trim();
+
+  // Cas : "1.200,50" (format européen avec point comme séparateur de milliers)
+  if (/^\d{1,3}(\.\d{3})+(,\d+)?$/.test(str)) {
+    const normalized = str.replace(/\./g, "").replace(",", ".");
+    const parsed     = parseFloat(normalized);
+    return isNaN(parsed) ? fallback : parsed;
+  }
+
+  // Cas standard : remplacer la virgule décimale par un point
+  const normalized = str
+    .replace(/\s/g, "")    // espaces (1 000,50 → 1000,50)
+    .replace(",", ".");    // virgule → point (12,2 → 12.2)
+
+  const parsed = parseFloat(normalized);
+  return isNaN(parsed) ? fallback : parsed;
+};
+```
+
+```js
+// Exemples
+parseDecimal("19.99")      // → 19.99  ✅
+parseDecimal("19,99")      // → 19.99  ✅
+parseDecimal("1 200,50")   // → 1200.5 ✅
+parseDecimal("1.200,50")   // → 1200.5 ✅
+parseDecimal("")           // → 0      ✅
+parseDecimal("abc")        // → 0      ✅
+parseDecimal("abc", null)  // → null   ✅ (fallback personnalisé)
+```
+
+---
+
+### 7.2 Espaces dans les nombres
+
+**Problème** : les nombres longs sont souvent formatés avec des espaces dans les tableurs.
+
+```
+"1 200"    → séparateur de milliers (espace normal)
+"1 200"    → espace insécable (alt+espace sous Excel — invisible !)
+"1,200.50" → format anglais avec virgule comme séparateur de milliers
+```
+
+**Solution** :
+
+```js
+/**
+ * Supprime tous les séparateurs de milliers et normalise un nombre.
+ *
+ * @param {any} value
+ * @returns {string} - Nombre normalisé prêt pour parseFloat
+ */
+export const cleanNumber = (value) => {
+  if (value === null || value === undefined) return "";
+
+  return String(value)
+    .trim()
+    .replace(/\u00A0/g, "")  // espace insécable (fréquent dans Excel)
+    .replace(/\u202F/g, "")  // espace fine insécable
+    .replace(/\s/g,    "")   // autres espaces
+    .replace(/^(\d{1,3})(,\d{3})+(\.\d+)?$/, (m) =>
+      m.replace(/,/g, "")    // "1,200.50" → "1200.50" (format anglais)
+    )
+    .replace(",", ".");       // virgule décimale → point
+};
+
+// Combiné avec parseDecimal
+export const parseDecimal = (value, fallback = 0) => {
+  const parsed = parseFloat(cleanNumber(value));
+  return isNaN(parsed) ? fallback : parsed;
+};
+```
+
+```js
+// Exemples
+cleanNumber("1 200,50")   // → "1200.50"
+cleanNumber("1\u00A050")  // → "150"   (espace insécable supprimé)
+cleanNumber("1,200.50")   // → "1200.50"
+cleanNumber("  42  ")     // → "42"
+```
+
+---
+
+### 7.3 Conflit délimiteur et décimale
+
+**Problème** : quand le délimiteur CSV est `,` ET que les décimales utilisent aussi `,`.
+
+```csv
+name,price,active
+T-Shirt,12,2,true    ← PapaParse voit 4 colonnes au lieu de 3 !
+```
+
+**Solution 1 — Détecter automatiquement le délimiteur** :
+
+```js
+/**
+ * Détecte le délimiteur d'un CSV en analysant la première ligne.
+ *
+ * @param {string} firstLine - Première ligne du fichier
+ * @returns {"," | ";" | "\t"}
+ */
+export const detectDelimiter = (firstLine) => {
+  const counts = {
+    ",":  (firstLine.match(/,/g)  || []).length,
+    ";":  (firstLine.match(/;/g)  || []).length,
+    "\t": (firstLine.match(/\t/g) || []).length,
+  };
+  return Object.entries(counts).sort(([, a], [, b]) => b - a)[0][0];
+};
+
+export const parseCSVFile = (file, options = {}) =>
+  new Promise((resolve, reject) => {
+    const previewReader = new FileReader();
+    previewReader.onload = (e) => {
+      const firstLine = e.target.result.split(/\r?\n/)[0];
+      const delimiter = detectDelimiter(firstLine);
+
+      Papa.parse(file, {
+        header:          true,
+        skipEmptyLines:  true,
+        delimiter,                   // ← détecté automatiquement
+        transformHeader: (h) => h.trim(),
+        transform:       (v) => v.trim(),
+        ...options,
+        complete: (results) => resolve(results.data),
+        error:    (err)     => reject(new Error(err.message)),
+      });
+    };
+    previewReader.readAsText(file.slice(0, 500));
+  });
+```
+
+**Solution 2 — Valider la cohérence des colonnes** :
+
+```js
+/**
+ * Vérifie que toutes les lignes ont le bon nombre de colonnes.
+ *
+ * @param {Object[]} rows           - Lignes parsées
+ * @param {string[]} expectedFields - Colonnes attendues
+ * @returns {{ valid: boolean, badRows: Object[], suggestion: string }}
+ */
+export const validateColumnCount = (rows, expectedFields) => {
+  const expected = expectedFields.length;
+  const badRows  = rows.reduce((acc, row, i) => {
+    const actual = Object.keys(row).length;
+    if (actual !== expected)
+      acc.push({ line: i + 2, expected, actual });
+    return acc;
+  }, []);
+
+  return {
+    valid:      badRows.length === 0,
+    badRows,
+    suggestion: badRows.length > 0
+      ? "Vérifiez les décimales (point vs virgule) et le délimiteur."
+      : "",
+  };
+};
+```
+
+---
+
+### 7.4 Valeurs vides ou manquantes
+
+**Problème** : une cellule vide peut devenir `""`, `null`, `undefined` ou `"NULL"`.
+
+```csv
+name,description,price
+T-Shirt,,19.99       ← description vide → ""
+Jean,NULL,49.99      ← export SQL → "NULL" (string)
+Veste,N/A,129.99     ← valeur inconnue → "N/A" (string)
+```
+
+**Solution** :
+
+```js
+const EMPTY_VALUES = new Set(["", "null", "undefined", "n/a", "na", "-", "—", "none"]);
+
+/**
+ * Retourne null si la valeur est considérée vide, sinon la valeur nettoyée.
+ */
+export const cleanString = (value, fallback = null) => {
+  if (value === null || value === undefined) return fallback;
+  const str = String(value).trim();
+  return EMPTY_VALUES.has(str.toLowerCase()) ? fallback : str;
+};
+
+/**
+ * Version pour les champs optionnels : retourne undefined si vide.
+ * Évite d'envoyer des balises vides à PrestaShop.
+ */
+export const optionalString = (value) => cleanString(value, undefined);
+```
+
+```js
+cleanString("")        // → null
+cleanString("NULL")    // → null
+cleanString("N/A")     // → null
+cleanString("T-Shirt") // → "T-Shirt"
+optionalString("")     // → undefined
+```
+
+---
+
+### 7.5 Booléens non standards
+
+**Problème** : `true`/`false` s'écrivent de dizaines de façons différentes.
+
+```csv
+active
+true    ← JS standard
+TRUE    ← majuscules
+1       ← numérique
+oui     ← français
+yes     ← anglais
+on      ← HTML checkbox
+```
+
+**Solution** :
+
+```js
+const TRUE_VALUES  = new Set(["true",  "1", "yes", "oui", "vrai", "on", "y", "o"]);
+const FALSE_VALUES = new Set(["false", "0", "no",  "non", "faux", "off", "n"]);
+
+/**
+ * Convertit une valeur CSV en booléen.
+ *
+ * @param {any}     value    - Valeur brute
+ * @param {boolean} fallback - Valeur par défaut si non reconnu
+ * @returns {boolean}
+ */
+export const parseBoolean = (value, fallback = false) => {
+  if (value === null || value === undefined || value === "") return fallback;
+  const str = String(value).trim().toLowerCase();
+  if (TRUE_VALUES.has(str))  return true;
+  if (FALSE_VALUES.has(str)) return false;
+  return fallback;
+};
+```
+
+```js
+parseBoolean("true")   // → true
+parseBoolean("oui")    // → true
+parseBoolean("1")      // → true
+parseBoolean("non")    // → false
+parseBoolean("maybe")  // → false (fallback)
+parseBoolean("", true) // → true  (fallback personnalisé)
+```
+
+---
+
+### 7.6 En-têtes avec espaces ou majuscules
+
+**Problème** : les en-têtes viennent souvent avec des formulations variables.
+
+```
+"  Name  "   ← espaces entourants
+"ID Parent"  ← espace dans le nom
+"PRICE"      ← tout en majuscules
+"Méta Titre" ← accents et espaces
+```
+
+**Solution** :
+
+```js
+/**
+ * Normalise un nom de colonne en clé JavaScript camelCase valide.
+ * "  ID Parent  " → "idParent"
+ * "Méta Titre"    → "metaTitre"
+ */
+export const normalizeHeader = (header) =>
+  header
+    .trim()
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")     // supprime les accents
+    .replace(/[^a-zA-Z0-9\s_]/g, "")    // supprime les caractères spéciaux
+    .trim()
+    .replace(/\s+(.)/g, (_, c) => c.toUpperCase())  // camelCase
+    .replace(/^(.)/, (c) => c.toLowerCase());        // 1ère lettre minuscule
+
+// Dans PapaParse
+Papa.parse(file, {
+  header:          true,
+  transformHeader: normalizeHeader,
+});
+```
+
+```js
+normalizeHeader("  Name  ")          // → "name"
+normalizeHeader("ID Parent")         // → "idParent"
+normalizeHeader("Méta Titre")        // → "metaTitre"
+normalizeHeader("description_short") // → "descriptionShort"
+```
+
+---
+
+### 7.7 Encodage et caractères spéciaux
+
+**Problème** : les vieux exports Excel utilisent ISO-8859-1.
+Les accents apparaissent comme `VÃªtements` au lieu de `Vêtements`.
+
+```js
+/**
+ * Détecte l'encodage probable d'un fichier à partir de ses premiers octets.
+ * Le BOM UTF-8 est 0xEF 0xBB 0xBF.
+ */
+export const detectEncoding = (buffer) => {
+  const bytes = new Uint8Array(buffer);
+  if (bytes[0] === 0xEF && bytes[1] === 0xBB && bytes[2] === 0xBF)
+    return "UTF-8";
+  for (let i = 0; i < Math.min(bytes.length, 1000); i++) {
+    if (bytes[i] > 0x7F) {
+      const isUTF8 =
+        (bytes[i] & 0xE0) === 0xC0 &&
+        i + 1 < bytes.length &&
+        (bytes[i + 1] & 0xC0) === 0x80;
+      if (!isUTF8) return "ISO-8859-1";
+    }
+  }
+  return "UTF-8";
+};
+
+// Dans parseCSVFile
+const detectReader = new FileReader();
+detectReader.onload = (e) => {
+  const encoding = detectEncoding(e.target.result);
+  Papa.parse(file, { encoding, ... });
+};
+detectReader.readAsArrayBuffer(file.slice(0, 1000));
+```
+
+---
+
+### 7.8 Lignes incomplètes
+
+**Problème** : une ligne peut avoir moins de colonnes que l'en-tête.
+
+```csv
+name,price,active,description
+T-Shirt,19.99,true,Un super t-shirt
+Jean,49.99                           ← active et description manquants
+```
+
+PapaParse génère `{ active: undefined, description: undefined }`.
+
+**Solution** :
+
+```js
+/**
+ * Complète les champs manquants d'une ligne avec des valeurs par défaut.
+ *
+ * @param {Object} row      - Ligne parsée
+ * @param {Object} defaults - Valeurs par défaut par colonne
+ * @returns {Object}
+ */
+export const fillMissingFields = (row, defaults = {}) => {
+  const filled = { ...row };
+  for (const [key, def] of Object.entries(defaults)) {
+    if (filled[key] === undefined || filled[key] === null || filled[key] === "") {
+      filled[key] = def;
+    }
+  }
+  return filled;
+};
+```
+
+```js
+// Dans le mapper produit
+const filled = fillMissingFields(row, {
+  active:      "true",
+  type:        "simple",
+  description: "",
+  weight:      "0",
+  quantity:    "0",
+});
+```
+
+---
+
+### 7.9 Guillemets mal formés
+
+**Problème** : guillemets non doublés dans les valeurs.
+
+```csv
+"T-Shirt","Coton "bio" certifié"   ← cassé → erreur type "Quotes"
+"Jean","Slim fit"                   ← correct
+```
+
+**Solution** :
+
+```js
+/**
+ * Parse avec tolérance aux erreurs de guillemets.
+ */
+export const parseCSVTolerant = (file) =>
+  new Promise((resolve, reject) => {
+    Papa.parse(file, {
+      header:          true,
+      skipEmptyLines:  true,
+      transformHeader: normalizeHeader,
+      transform:       (v) => v.trim(),
+      complete: (results) => {
+        const warnings = results.errors.filter(
+          (e) => e.type === "Quotes" || e.type === "FieldMismatch"
+        );
+        const fatals = results.errors.filter(
+          (e) => e.type !== "Quotes" && e.type !== "FieldMismatch"
+        );
+
+        if (fatals.length > 0)
+          return reject(new Error(`Erreur fatale : ${fatals[0].message}`));
+
+        if (warnings.length > 0)
+          console.warn(
+            `${warnings.length} ligne(s) avec des guillemets incorrects :`,
+            warnings.map((w) => `ligne ${w.row + 2}`).join(", ")
+          );
+
+        resolve({ rows: results.data, warnings });
+      },
+      error: (err) => reject(new Error(err.message)),
     });
   });
 ```
 
-```jsx
-// Dans un composant React
-const fileRef = useRef(null);
+---
 
-const handleImport = async () => {
-  const file = fileRef.current?.files?.[0];
-  if (!file) return;
+### 7.10 Doublons dans le fichier
 
-  try {
-    const rows = await parseCSVFile(file);
-    console.log(`${rows.length} lignes parsées`, rows);
-  } catch (err) {
-    console.error(err.message);
+**Problème** : deux lignes avec la même référence.
+
+```csv
+reference,name,price
+REF-001,T-Shirt,19.99
+REF-001,T-Shirt Bleu,24.99   ← doublon !
+```
+
+**Solution** :
+
+```js
+/**
+ * Détecte et supprime les doublons dans un tableau de lignes.
+ *
+ * @param {Object[]} rows     - Lignes parsées
+ * @param {string}   keyField - Colonne servant de clé unique
+ * @returns {{ unique: Object[], duplicates: Object[] }}
+ */
+export const deduplicateRows = (rows, keyField) => {
+  const seen       = new Map();
+  const unique     = [];
+  const duplicates = [];
+
+  for (const row of rows) {
+    const key = cleanString(row[keyField]);
+    if (!key) { unique.push(row); continue; }
+    if (seen.has(key)) {
+      duplicates.push({ ...row, _duplicateOf: key });
+    } else {
+      seen.set(key, true);
+      unique.push(row);
+    }
   }
+
+  return { unique, duplicates };
+};
+```
+
+---
+
+## 8. Utilitaire complet de nettoyage
+
+```js
+// src/utils/csv.utils.js
+
+const EMPTY_VALUES = new Set(["", "null", "undefined", "n/a", "na", "-", "—", "none"]);
+const TRUE_VALUES  = new Set(["true", "1", "yes", "oui", "vrai", "on", "y", "o"]);
+const FALSE_VALUES = new Set(["false", "0", "no", "non", "faux", "off", "n"]);
+
+// Strings
+export const cleanString    = (value, fallback = null) => {
+  if (value === null || value === undefined) return fallback;
+  const str = String(value).trim();
+  return EMPTY_VALUES.has(str.toLowerCase()) ? fallback : str;
+};
+export const optionalString = (value) => cleanString(value, undefined);
+
+export const normalizeHeader = (header) =>
+  header.trim()
+    .normalize("NFD").replace(/[\u0300-\u036f]/g, "")
+    .replace(/[^a-zA-Z0-9\s_]/g, "").trim()
+    .replace(/\s+(.)/g, (_, c) => c.toUpperCase())
+    .replace(/^(.)/, (c) => c.toLowerCase());
+
+// Nombres
+export const cleanNumber = (value) => {
+  if (value === null || value === undefined) return "";
+  return String(value).trim()
+    .replace(/\u00A0/g, "").replace(/\u202F/g, "").replace(/\s/g, "")
+    .replace(/^(\d{1,3})(,\d{3})+(\.\d+)?$/, (m) => m.replace(/,/g, ""))
+    .replace(",", ".");
+};
+export const parseDecimal  = (value, fallback = 0) => {
+  const p = parseFloat(cleanNumber(value));
+  return isNaN(p) ? fallback : p;
+};
+export const parseInteger  = (value, fallback = 0) => {
+  const p = parseInt(cleanNumber(value), 10);
+  return isNaN(p) ? fallback : p;
 };
 
-return (
-  <>
-    <input ref={fileRef} type="file" accept=".csv" />
-    <button onClick={handleImport}>Importer</button>
-  </>
-);
+// Booléens
+export const parseBoolean = (value, fallback = false) => {
+  if (value === null || value === undefined || value === "") return fallback;
+  const str = String(value).trim().toLowerCase();
+  if (TRUE_VALUES.has(str))  return true;
+  if (FALSE_VALUES.has(str)) return false;
+  return fallback;
+};
+
+// Lignes
+export const fillMissingFields = (row, defaults = {}) => {
+  const filled = { ...row };
+  for (const [key, def] of Object.entries(defaults))
+    if (filled[key] === undefined || filled[key] === null || filled[key] === "")
+      filled[key] = def;
+  return filled;
+};
+
+export const deduplicateRows = (rows, keyField) => {
+  const seen = new Map(); const unique = []; const duplicates = [];
+  for (const row of rows) {
+    const key = cleanString(row[keyField]);
+    if (!key) { unique.push(row); continue; }
+    if (seen.has(key)) duplicates.push({ ...row, _duplicateOf: key });
+    else { seen.set(key, true); unique.push(row); }
+  }
+  return { unique, duplicates };
+};
+
+// Validation
+export const validateColumnCount = (rows, expectedFields) => {
+  const expected = expectedFields.length;
+  const badRows  = rows.reduce((acc, row, i) => {
+    const actual = Object.keys(row).length;
+    if (actual !== expected) acc.push({ line: i + 2, expected, actual });
+    return acc;
+  }, []);
+  return {
+    valid:      badRows.length === 0,
+    badRows,
+    suggestion: badRows.length > 0
+      ? "Vérifiez les décimales (point vs virgule) et le délimiteur."
+      : "",
+  };
+};
+
+// Détection
+export const detectDelimiter = (firstLine) => {
+  const counts = {
+    ",":  (firstLine.match(/,/g)  || []).length,
+    ";":  (firstLine.match(/;/g)  || []).length,
+    "\t": (firstLine.match(/\t/g) || []).length,
+  };
+  return Object.entries(counts).sort(([, a], [, b]) => b - a)[0][0];
+};
 ```
 
 ---
 
-## 9. Parsing en streaming (gros fichiers)
-
-Pour les fichiers > 5 Mo, charger tout en mémoire peut bloquer le navigateur.
-Le callback `step` traite **ligne par ligne** :
+## 9. Validation avant import
 
 ```js
-Papa.parse(file, {
-  header: true,
-  step: (row, parser) => {
-    // row.data = une seule ligne { col: val }
-    // row.errors = erreurs de cette ligne
+// src/utils/csv.validators.js
 
-    if (row.errors.length > 0) {
-      console.warn("Ligne ignorée :", row.errors);
-      return; // sauter cette ligne
-    }
+export const validateProductRow = (row, index) => {
+  const errors = [];
+  const line   = `Ligne ${index + 2}`;
 
-    processRow(row.data); // traitement immédiat
+  if (!row.name)
+    errors.push(`${line} — "name" est obligatoire`);
 
-    // parser.abort() pour arrêter le parsing
-    // parser.pause() / parser.resume() pour contrôler le débit
-  },
-  complete: () => console.log("Streaming terminé"),
-});
-```
+  if (!row.reference)
+    errors.push(`${line} — "reference" est obligatoire`);
 
-### Streaming avec pause/resume (contrôle du débit)
+  if (row.price === null || isNaN(row.price) || row.price < 0)
+    errors.push(`${line} — "price" invalide : "${row.price}"`);
 
-```js
-const queue = [];
+  if (!["simple", "combinations", "virtual"].includes(row.type))
+    errors.push(`${line} — "type" invalide : "${row.type}"`);
 
-Papa.parse(file, {
-  header: true,
-  step: (row, parser) => {
-    queue.push(row.data);
+  return errors;
+};
 
-    if (queue.length >= 100) {
-      parser.pause();           // stoppe le parsing
-
-      processBatch(queue).then(() => {
-        queue.length = 0;       // vide la queue
-        parser.resume();        // reprend le parsing
-      });
-    }
-  },
-});
+export const validateRows = (rows, validateFn) => {
+  const allErrors = rows.flatMap((row, i) => validateFn(row, i));
+  return {
+    valid:  allErrors.length === 0,
+    errors: allErrors,
+    report: allErrors.length > 0
+      ? `${allErrors.length} erreur(s) :\n${allErrors.join("\n")}`
+      : "Fichier valide",
+  };
+};
 ```
 
 ---
 
-## 10. Générer du CSV depuis un tableau JS
-
-PapaParse fait aussi la **conversion inverse** : JS → CSV via `Papa.unparse()`.
+## 10. Intégration dans un service d'import
 
 ```js
-const data = [
-  { name: "T-Shirt Bleu", price: 19.99, active: true },
-  { name: "Jean Slim",    price: 49.99, active: false },
+// src/services/product.import.service.js
+
+import Papa from "papaparse";
+import { buildProductXML } from "./product.builder";
+import {
+  cleanString, optionalString,
+  parseDecimal, parseInteger, parseBoolean,
+  normalizeHeader, detectDelimiter,
+  fillMissingFields, deduplicateRows, validateColumnCount,
+} from "../utils/csv.utils";
+import { validateProductRow, validateRows } from "../utils/csv.validators";
+
+const BASE_URL = import.meta.env.VITE_API_URL;
+const WS_KEY   = import.meta.env.VITE_WS_KEY;
+
+const EXPECTED_COLUMNS = [
+  "name", "reference", "price", "active",
+  "type", "description", "categoryName",
+  "manufacturerName", "weight", "quantity",
 ];
 
-const csv = Papa.unparse(data);
-// name,price,active
-// T-Shirt Bleu,19.99,true
-// Jean Slim,49.99,false
-```
-
-### Avec options
-
-```js
-const csv = Papa.unparse(data, {
-  delimiter: ";",        // séparateur
-  header:    true,       // inclure l'en-tête (défaut: true)
-  columns:   ["name", "price"],  // seulement ces colonnes, dans cet ordre
-  quotes:    true,       // forcer les guillemets sur toutes les valeurs
-  newline:   "\r\n",     // Windows-style (pour Excel)
-});
-```
-
-### Télécharger le CSV généré
-
-```js
-const downloadCSV = (data, filename = "export.csv") => {
-  const csv  = Papa.unparse(data, { delimiter: ";" });
-  const blob = new Blob(["\uFEFF" + csv], { type: "text/csv;charset=utf-8;" });
-  // "\uFEFF" = BOM UTF-8 — nécessaire pour que Excel affiche correctement les accents
-
-  const url  = URL.createObjectURL(blob);
-  const link = document.createElement("a");
-  link.href     = url;
-  link.download = filename;
-  link.click();
-  URL.revokeObjectURL(url);
+const DEFAULTS = {
+  active:           "true",
+  type:             "simple",
+  description:      "",
+  weight:           "0",
+  quantity:         "0",
+  categoryName:     "",
+  manufacturerName: "",
 };
 
-// Utilisation
-downloadCSV(products, "produits.csv");
-```
+const parseCSVFile = (file) =>
+  new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      const delimiter = detectDelimiter(e.target.result.split(/\r?\n/)[0]);
+      Papa.parse(file, {
+        header:          true,
+        skipEmptyLines:  true,
+        delimiter,
+        transformHeader: normalizeHeader,
+        transform:       (v) => v.trim(),
+        complete: (r) => resolve({ rows: r.data, warnings: r.errors }),
+        error:    (e) => reject(new Error(e.message)),
+      });
+    };
+    reader.readAsText(file.slice(0, 500));
+  });
 
----
+const mapRowToProduct = (row) => {
+  const f = fillMissingFields(row, DEFAULTS);
+  return {
+    name:             cleanString(f.name),
+    reference:        cleanString(f.reference),
+    price:            parseDecimal(f.price),
+    active:           parseBoolean(f.active, true),
+    type:             cleanString(f.type, "simple"),
+    description:      optionalString(f.description),
+    categoryName:     optionalString(f.categoryName),
+    manufacturerName: optionalString(f.manufacturerName),
+    weight:           parseDecimal(f.weight),
+    quantity:         parseInteger(f.quantity),
+  };
+};
 
-## 11. Erreurs fréquentes et comment les éviter
-
-### ❌ Oublier `skipEmptyLines: true`
-
-```js
-// CSV avec ligne vide à la fin (très courant sous Excel)
-// name,price
-// T-Shirt,19.99
-//                 ← ligne vide
-```
-
-Sans `skipEmptyLines`, PapaParse génère un objet vide `{}` ou `[""]`.
-→ Toujours mettre `skipEmptyLines: true` pour les imports.
-
----
-
-### ❌ Faire confiance à `dynamicTyping` pour les codes
-
-```js
-// CSV avec codes produits
-// reference,name
-// 007,James Bond
-// 042,La Réponse
-
-// Avec dynamicTyping: true → "007" devient 7 → perd le zéro !
-```
-
-→ Ne pas utiliser `dynamicTyping` si les valeurs sont des codes ou références.
-→ Convertir manuellement dans le mapper.
-
----
-
-### ❌ Ne pas gérer les valeurs vides
-
-```js
-const row = { name: "Vêtements", description: "" };
-
-// ❌ Sans vérification
-const category = { description: row.description }; // description: ""
-
-// ✅ Convertir les chaînes vides en undefined/null
-const category = { description: row.description || undefined };
-```
-
----
-
-### ❌ Oublier `transform` pour nettoyer les espaces
-
-```js
-// CSV avec espaces autour des valeurs (courant sur les exports manuels)
-// " Vêtements ", " 2 "
-
-// ❌ Sans transform → name = " Vêtements " avec les espaces
-// ✅ Avec transform
-Papa.parse(file, {
-  transform: (v) => v.trim(), // supprime les espaces avant/après chaque valeur
-});
-```
-
----
-
-### ❌ Encodage incorrect sur les exports Excel
-
-```js
-// Les vieux exports Excel sont souvent en ISO-8859-1
-// Les accents apparaissent comme : VÃªtements au lieu de Vêtements
-
-Papa.parse(file, {
-  encoding: "ISO-8859-1",  // ← forcer l'encodage
-});
-```
-
----
-
-## 12. Intégration avec React
-
-### Hook complet `useCSVImport`
-
-```js
-// src/hooks/useCSVImport.js
-import { useRef, useState } from "react";
-import Papa from "papaparse";
+const postProduct = async (product) => {
+  const res = await fetch(`${BASE_URL}/products?output_format=XML`, {
+    method:  "POST",
+    headers: {
+      Authorization:  `Basic ${btoa(WS_KEY + ":")}`,
+      "Content-Type": "application/xml",
+      Accept:         "application/xml",
+    },
+    body: buildProductXML(product),
+  });
+  if (!res.ok) throw new Error(`HTTP ${res.status} — ${await res.text()}`);
+  return { success: true, reference: product.reference };
+};
 
 /**
- * Hook générique pour importer et parser un fichier CSV.
- * @param {Function} onRowsReady - callback appelé avec le tableau de lignes parsées
+ * Import principal — parse, valide, déduplique, puis POST ligne par ligne.
+ *
+ * @param {File}     file       - Fichier CSV via <input type="file">
+ * @param {Function} onProgress - Callback { done, total, result }
+ * @returns {{ success: Object[], errors: Object[], skipped: Object[] }}
  */
-export const useCSVImport = (onRowsReady) => {
-  const fileRef             = useRef(null);
-  const [preview, setPreview] = useState([]);   // aperçu des 5 premières lignes
-  const [error, setError]     = useState(null);
-  const [loading, setLoading] = useState(false);
+export const importProductsFromCSV = async (file, onProgress) => {
+  // 1. Parser
+  const { rows, warnings } = await parseCSVFile(file);
+  if (warnings.length) console.warn("Avertissements :", warnings);
 
-  // Aperçu instantané dès la sélection du fichier
-  const handleFileChange = () => {
-    const file = fileRef.current?.files?.[0];
-    if (!file) return;
-    setError(null);
+  // 2. Vérifier la cohérence des colonnes
+  const colCheck = validateColumnCount(rows, EXPECTED_COLUMNS);
+  if (!colCheck.valid)
+    throw new Error(
+      colCheck.badRows
+        .map((r) => `Ligne ${r.line} : ${r.actual} colonnes (${r.expected} attendues)`)
+        .join("\n") + "\n" + colCheck.suggestion
+    );
 
-    Papa.parse(file, {
-      header:          true,
-      preview:         5,           // seulement 5 lignes pour l'aperçu
-      skipEmptyLines:  true,
-      transformHeader: (h) => h.trim(),
-      transform:       (v) => v.trim(),
-      complete: (r) => setPreview(r.data),
-      error:    (e) => setError(e.message),
-    });
-  };
+  // 3. Mapper
+  const mapped = rows.map(mapRowToProduct);
 
-  // Import complet au clic sur le bouton
-  const handleImport = () => {
-    const file = fileRef.current?.files?.[0];
-    if (!file) return setError("Sélectionnez un fichier CSV.");
-    setLoading(true);
-    setError(null);
+  // 4. Déduplication
+  const { unique, duplicates } = deduplicateRows(mapped, "reference");
+  if (duplicates.length)
+    console.warn(`${duplicates.length} doublon(s) ignoré(s)`);
 
-    Papa.parse(file, {
-      header:          true,
-      skipEmptyLines:  true,
-      transformHeader: (h) => h.trim(),
-      transform:       (v) => v.trim(),
-      complete: (r) => {
-        setLoading(false);
-        onRowsReady(r.data);
-      },
-      error: (e) => {
-        setLoading(false);
-        setError(e.message);
-      },
-    });
-  };
+  // 5. Validation métier
+  const { valid, report } = validateRows(unique, validateProductRow);
+  if (!valid) throw new Error(report);
 
-  return { fileRef, preview, error, loading, handleFileChange, handleImport };
+  // 6. Import séquentiel
+  const success = []; const errors = [];
+
+  for (let i = 0; i < unique.length; i++) {
+    try {
+      const result = await postProduct(unique[i]);
+      success.push(result);
+      onProgress?.({ done: i + 1, total: unique.length, result: { ...result, ok: true } });
+    } catch (err) {
+      const result = { success: false, reference: unique[i].reference, error: err.message };
+      errors.push(result);
+      onProgress?.({ done: i + 1, total: unique.length, result: { ...result, ok: false } });
+    }
+  }
+
+  return { success, errors, skipped: duplicates };
 };
-```
-
-### Utilisation du hook
-
-```jsx
-// src/components/CSVImporter.jsx
-import { useCSVImport } from "../hooks/useCSVImport";
-
-export default function CSVImporter() {
-  const { fileRef, preview, error, loading, handleFileChange, handleImport } =
-    useCSVImport((rows) => {
-      console.log("Lignes importées :", rows);
-      // traiter les lignes ici
-    });
-
-  return (
-    <div className="space-y-4 p-6">
-      <input
-        ref={fileRef}
-        type="file"
-        accept=".csv"
-        onChange={handleFileChange}   // aperçu instantané
-        className="block text-sm text-slate-500
-          file:mr-4 file:py-2 file:px-4 file:rounded-md
-          file:border-0 file:bg-sky-50 file:text-sky-700
-          file:text-sm file:font-semibold hover:file:bg-sky-100"
-      />
-
-      {/* Aperçu des premières lignes */}
-      {preview.length > 0 && (
-        <div className="overflow-x-auto rounded-lg border border-slate-200">
-          <table className="text-xs w-full">
-            <thead className="bg-slate-50">
-              <tr>
-                {Object.keys(preview[0]).map((col) => (
-                  <th key={col} className="px-3 py-2 text-left text-slate-500 font-semibold">
-                    {col}
-                  </th>
-                ))}
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-slate-100">
-              {preview.map((row, i) => (
-                <tr key={i}>
-                  {Object.values(row).map((val, j) => (
-                    <td key={j} className="px-3 py-2 text-slate-700">{val}</td>
-                  ))}
-                </tr>
-              ))}
-            </tbody>
-          </table>
-          <p className="px-3 py-2 text-xs text-slate-400 border-t border-slate-100">
-            Aperçu des 5 premières lignes
-          </p>
-        </div>
-      )}
-
-      {error && (
-        <p className="text-sm text-red-600 font-medium">❌ {error}</p>
-      )}
-
-      <button
-        onClick={handleImport}
-        disabled={loading}
-        className="px-4 py-2 bg-sky-500 hover:bg-sky-600 text-white
-          text-sm font-semibold rounded-md disabled:opacity-50"
-      >
-        {loading ? "Import en cours…" : "Lancer l'import"}
-      </button>
-    </div>
-  );
-}
 ```
 
 ---
 
-## Résumé des options indispensables
+## 11. Récapitulatif des cas gérés
 
-```js
-Papa.parse(file, {
-  header:          true,           // lignes → objets JS
-  skipEmptyLines:  true,           // ignore les lignes vides
-  transformHeader: (h) => h.trim(), // nettoie les noms de colonnes
-  transform:       (v) => v.trim(), // nettoie chaque valeur
-  // dynamicTyping: true,           // à éviter sauf si tu contrôles le CSV
-  complete: (results) => { },
-  error:    (err)     => { },
-});
-```
-
-> 💡 **Règle générale** : utilise `dynamicTyping: false` (défaut) et convertis les types
-> manuellement dans ton mapper — tu as le contrôle total et pas de surprises.
+| Cas problématique | Fonction | Exemple |
+|---|---|---|
+| Décimale avec virgule | `parseDecimal` | `"12,2"` → `12.2` |
+| Espaces dans nombres | `cleanNumber` | `"1 200,50"` → `1200.5` |
+| Espace insécable | `cleanNumber` | `"1\u00A0200"` → `1200` |
+| Milliers format anglais | `cleanNumber` | `"1,200.50"` → `1200.5` |
+| Milliers format européen | `parseDecimal` | `"1.200,50"` → `1200.5` |
+| Délimiteur `;` vs `,` | `detectDelimiter` | Auto-détection |
+| Conflit décimale/délimiteur | `validateColumnCount` | Erreur explicite |
+| Valeurs vides | `cleanString` | `"NULL"` → `null` |
+| Valeurs optionnelles vides | `optionalString` | `""` → `undefined` |
+| Booléens non standards | `parseBoolean` | `"oui"` → `true` |
+| En-têtes mal formatés | `normalizeHeader` | `"ID Parent"` → `"idParent"` |
+| Encodage ISO-8859-1 | `detectEncoding` | Accents corrects |
+| Lignes incomplètes | `fillMissingFields` | Valeurs par défaut |
+| Guillemets incorrects | `parseCSVTolerant` | Avertissement non bloquant |
+| Doublons | `deduplicateRows` | Ignorés avec log |
+| Colonnes incohérentes | `validateColumnCount` | Message d'erreur clair |
