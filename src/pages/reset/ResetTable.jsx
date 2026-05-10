@@ -92,18 +92,18 @@ const RESET_TABLES = [
     reset: resetGuests,
   },
   {
-    id: "carts",
-    label: "Paniers",
-    table: "ps_cart",
-    description: "Paniers clients",
-    reset: resetCarts,
-  },
-  {
     id: "orders",
     label: "Commandes",
     table: "ps_orders",
     description: "Commandes principales",
     reset: resetOrders,
+  },
+  {
+    id: "carts",
+    label: "Paniers",
+    table: "ps_cart",
+    description: "Paniers clients",
+    reset: resetCarts,
   },
   {
     id: "order-details",
@@ -312,6 +312,8 @@ const ResetTable = () => {
             </h1>
             <p className="text-sm text-slate-500">
               Selectionnez les tables a reinitialiser puis lancez l'action.
+              <br />
+              <p className="text-sm text-slate-500"><strong>Note:</strong> Supprimez tous les commandes avant de supprimer les paniers</p>
             </p>
           </div>
         </div>
