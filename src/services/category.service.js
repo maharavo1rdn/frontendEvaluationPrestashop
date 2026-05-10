@@ -1,4 +1,5 @@
 import parseCategories from "../XMLUtil/parser/Category.parser";
+import parseErrors from "../XMLUtil/parser/Error.parser";
 import { API_URL, WS_KEY, authHeaders } from "../config/config.service";
 import { buildCategoryXML } from "../XMLUtil/builder/Category.builder";
 const DEFAULT_DISPLAY = "full";

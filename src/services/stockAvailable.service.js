@@ -1,4 +1,5 @@
 import parseStockAvailables from "../XMLUtil/parser/StockAvailable.parser";
+import parseErrors from "../XMLUtil/parser/Error.parser";
 import { API_URL, WS_KEY } from "../config/config.service";
 
 const DEFAULT_DISPLAY = "full";

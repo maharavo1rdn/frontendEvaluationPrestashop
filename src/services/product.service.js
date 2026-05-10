@@ -1,5 +1,6 @@
 import { buildProductXML } from "../XMLUtil/builder/Product.builder";
 import parseProducts from "../XMLUtil/parser/Product.parser";
+import parseErrors from "../XMLUtil/parser/Error.parser";
 import { API_URL, WS_KEY, authHeaders } from "../config/config.service";
 
 const DEFAULT_DISPLAY = "full";
