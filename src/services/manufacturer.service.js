@@ -16,7 +16,7 @@ export const getAll = async (display = DEFAULT_DISPLAY) => {
     );
     if (!response.ok)
       throw new Error(
-        `Erreur HTTP ${response.status} — ${response.statusText}`,
+        `Erreur HTTP ${response.status} — ${parseErrors(errText)[0].message || "inconnue" }`,
       );
     const xmlText = await response.text();
     return parseManufacturers(xmlText);
@@ -64,7 +64,7 @@ export const deleteManufacturer = async (id) => {
     if (!response.ok) {
       const errText = await response.text();
       throw new Error(
-        `Erreur HTTP ${response.status} — ${errText || response.statusText}`,
+				`Erreur HTTP ${response.status} — ${parseErrors(errText)[0].message || "inconnue" }`,
       );
     }
     return response;

@@ -92,18 +92,18 @@ const RESET_TABLES = [
     reset: resetGuests,
   },
   {
-    id: "carts",
-    label: "Paniers",
-    table: "ps_cart",
-    description: "Paniers clients",
-    reset: resetCarts,
-  },
-  {
     id: "orders",
     label: "Commandes",
     table: "ps_orders",
     description: "Commandes principales",
     reset: resetOrders,
+  },
+  {
+    id: "carts",
+    label: "Paniers",
+    table: "ps_cart",
+    description: "Paniers clients",
+    reset: resetCarts,
   },
   {
     id: "order-details",
