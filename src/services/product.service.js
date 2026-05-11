@@ -31,6 +31,33 @@ export const getAll = async (display = DEFAULT_DISPLAY) => {
   }
 };
 
+export const findProductByKeyValue = async (key, value) => {
+  try {
+    const params = new URLSearchParams({
+      [`filter[${key}]`]: `[${value}]`,
+      output_format: "XML",
+      display: "full",
+    });
+
+    const queryString = params
+      .toString()
+      .replace(/%5B/g, "[")
+      .replace(/%5D/g, "]");
+    const response = await fetch(`${API_URL()}/products?${queryString}`, {
+      method: "GET",
+      headers: {
+        Authorization: `Basic ${btoa(WS_KEY() + ":")}`,
+        Accept: "application/xml",
+      },
+    });
+    if (!response.ok) throw new Error(`Erreur: ${await response.text()}`);
+    const xmlText = await response.text();
+    return parseProducts(xmlText);
+  } catch (error) {
+    throw new Error(error.message);
+  }
+};
+
 export const postProduct = async (category) => {
   const xml = buildProductXML(category);
   try {
