@@ -1,5 +1,11 @@
 
-import { field, langField, wrapPrestashop, toSlug } from "./xml.builder";
+import {
+  field,
+  langField,
+  optionalField,
+  wrapPrestashop,
+  toSlug,
+} from "./xml.builder";
 
 // ─── Associations ─────────────────────────────────────────────────────────────
 
@@ -145,6 +151,7 @@ const buildAssociations = (associations = {}) => {
  * @param {number}  [product.taxRulesGroupId]  - Id groupe TVA (défaut : 1)
  * @param {number}  [product.categoryId]       - Id catégorie par défaut (défaut : 2)
  * @param {number}  [product.langId]           - Id langue (défaut : 1)
+ * @param {string}  [product.availableDate]    - Date de disponibilite (YYYY-MM-DD)
  * @param {Object}  [product.associations]     - Associations (catégories, stocks, etc.)
  *
  * @returns {string} - XML string prêt à envoyer
@@ -163,6 +170,7 @@ export const buildProductXML = (product) => {
     ${field("id_tax_rules_group",  product.taxRulesGroupId  ?? 1)}
     ${field("id_category_default", product.categoryId       )}
     ${field("id_manufacturer",     product.manufacturerId       )}
+    ${optionalField("available_date", product.availableDate)}
 
     ${langField("name",              product.name        ?? "",  langId)}
     ${langField("description_short", product.description ?? "",  langId)}

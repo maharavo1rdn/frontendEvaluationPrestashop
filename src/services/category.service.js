@@ -99,9 +99,16 @@ export const deleteCategory = async (id) => {
 export const resetCategories = async () => {
   try {
     const categories = await getAll();
-    for (const category of categories) {
-      if (category.id < 3) 
-        continue;
+    const toDelete = categories
+      .filter((category) => Number(category.id) >= 3)
+      .sort((a, b) => {
+        const depthA = Number(a.levelDepth) || 0;
+        const depthB = Number(b.levelDepth) || 0;
+        if (depthA !== depthB) return depthB - depthA;
+        return Number(b.id) - Number(a.id);
+      });
+
+    for (const category of toDelete) {
       await deleteCategory(category.id);
     }
   } catch (error) {
