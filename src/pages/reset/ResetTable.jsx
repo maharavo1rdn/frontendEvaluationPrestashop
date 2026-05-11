@@ -7,47 +7,45 @@ import {
   RotateCcw,
   Trash2,
 } from "lucide-react";
-import { resetAddresses } from "../../services/address.service";
-import { resetCategories } from "../../services/category.service";
-import { resetCombinations } from "../../services/combination.service";
 import { resetCustomers } from "../../services/customer.service";
-import { resetGuests } from "../../services/guest.service";
-import { resetManufacturers } from "../../services/manufacturer.service";
 import { resetOrders } from "../../services/order.service";
 import { resetCarts } from "../../services/cart.service";
-import { resetOrderCarriers } from "../../services/orderCarrier.service";
-import { resetOrderCartRules } from "../../services/orderCartRule.service";
 import { resetOrderDetails } from "../../services/orderDetail.service";
-import { resetOrderHistories } from "../../services/orderHistory.service";
-import { resetOrderInvoices } from "../../services/orderInvoice.service";
 import { resetOrderPayments } from "../../services/orderPayment.service";
-import { resetOrderSlips } from "../../services/orderSlip.service";
-import { resetOrderStates } from "../../services/orderState.service";
-import { resetProductFeatureValues } from "../../services/productFeatureValue.service";
 import { resetProducts } from "../../services/product.service";
-import { resetStockAvailables } from "../../services/stockAvailable.service";
+import { resetAllTables } from "../../services/reset.service";
+import { resetProductFeatureValues } from "../../services/productFeatureValue.service";
+import { resetCategories } from "../../services/category.service";
+import { resetCombinations } from "../../services/combination.service";
 
 const RESET_TABLES = [
   {
-    id: "products",
-    label: "Produits",
-    table: "ps_product",
-    description: "Catalogue des produits",
-    reset: resetProducts,
+    id: "customers",
+    label: "customers",
+    table: "ps_customer",
+    description: "Comptes clients",
+    reset: resetCustomers,
   },
   {
-    id: "categories",
-    label: "Categories",
-    table: "ps_category",
-    description: "Arborescence des categories",
-    reset: resetCategories,
+    id: "orders",
+    label: "orders",
+    table: "ps_orders",
+    description: "Commandes principales",
+    reset: resetOrders,
   },
   {
-    id: "combinations",
-    label: "Combinaisons",
-    table: "ps_product_attribute",
-    description: "Declinaisons produits",
-    reset: resetCombinations,
+    id: "order-details",
+    label: "orders_details",
+    table: "ps_order_detail",
+    description: "Lignes de commande",
+    reset: resetOrderDetails,
+  },
+  {
+    id: "order-payments",
+    label: "order_payement",
+    table: "ps_order_payment",
+    description: "Paiements associes",
+    reset: resetOrderPayments,
   },
   {
     id: "feature-values",
@@ -57,109 +55,32 @@ const RESET_TABLES = [
     reset: resetProductFeatureValues,
   },
   {
-    id: "stocks",
-    label: "Stocks",
-    table: "ps_stock_available",
-    description: "Disponibilites de stock",
-    reset: resetStockAvailables,
-  },
-  {
-    id: "manufacturers",
-    label: "Fabricants",
-    table: "ps_manufacturer",
-    description: "Marques et fabricants",
-    reset: resetManufacturers,
-  },
-  {
-    id: "customers",
-    label: "Clients",
-    table: "ps_customer",
-    description: "Comptes clients",
-    reset: resetCustomers,
-  },
-  {
-    id: "addresses",
-    label: "Adresses",
-    table: "ps_address",
-    description: "Carnet d'adresses",
-    reset: resetAddresses,
-  },
-  {
-    id: "guests",
-    label: "Guests",
-    table: "ps_guest",
-    description: "Visiteurs non identifies",
-    reset: resetGuests,
-  },
-  {
-    id: "orders",
-    label: "Commandes",
-    table: "ps_orders",
-    description: "Commandes principales",
-    reset: resetOrders,
+    id: "combinations",
+    label: "combinaisons",
+    table: "ps_product_attribute",
+    description: "Declinaisons produits",
+    reset: resetCombinations,
   },
   {
     id: "carts",
-    label: "Paniers",
+    label: "carts",
     table: "ps_cart",
     description: "Paniers clients",
     reset: resetCarts,
   },
   {
-    id: "order-details",
-    label: "Details commandes",
-    table: "ps_order_detail",
-    description: "Lignes de commande",
-    reset: resetOrderDetails,
+    id: "products",
+    label: "products",
+    table: "ps_product",
+    description: "Catalogue des produits",
+    reset: resetProducts,
   },
   {
-    id: "order-carriers",
-    label: "Transporteurs",
-    table: "ps_order_carrier",
-    description: "Liaisons commande/transporteur",
-    reset: resetOrderCarriers,
-  },
-  {
-    id: "order-cart-rules",
-    label: "Regles panier",
-    table: "ps_order_cart_rule",
-    description: "Remises sur commandes",
-    reset: resetOrderCartRules,
-  },
-  {
-    id: "order-histories",
-    label: "Historiques",
-    table: "ps_order_history",
-    description: "Historique des commandes",
-    reset: resetOrderHistories,
-  },
-  {
-    id: "order-invoices",
-    label: "Factures",
-    table: "ps_order_invoice",
-    description: "Factures des commandes",
-    reset: resetOrderInvoices,
-  },
-  {
-    id: "order-payments",
-    label: "Paiements",
-    table: "ps_order_payment",
-    description: "Paiements associes",
-    reset: resetOrderPayments,
-  },
-  {
-    id: "order-slips",
-    label: "Avoirs",
-    table: "ps_order_slip",
-    description: "Avoirs clients",
-    reset: resetOrderSlips,
-  },
-  {
-    id: "order-states",
-    label: "Etats commandes",
-    table: "ps_order_state",
-    description: "Statuts de commande",
-    reset: resetOrderStates,
+    id: "categories",
+    label: "categories",
+    table: "ps_category",
+    description: "Catalogue des catégories",
+    reset: resetCategories,
   },
 ];
 
@@ -192,7 +113,7 @@ const ResetTable = () => {
 
   const handleToggle = (id) => {
     setSelectedIds((prev) =>
-      prev.includes(id) ? prev.filter((value) => value !== id) : [...prev, id],
+      prev.includes(id) ? prev.filter((value) => value !== id) : [...prev, id]
     );
   };
 
@@ -263,6 +184,47 @@ const ResetTable = () => {
     });
   };
 
+  const handleResetAll = async () => {
+    const confirmMessage = "Reinitialiser toutes les tables ?";
+    if (!window.confirm(confirmMessage)) return;
+
+    setGlobalStatus({
+      type: "info",
+      message: "Reinitialisation de toutes les tables en cours...",
+    });
+
+    const loadingStatus = Object.fromEntries(
+      RESET_TABLES.map((table) => [
+        table.id,
+        { state: "loading", message: "Reinitialisation..." },
+      ])
+    );
+    setStatusById(loadingStatus);
+
+    try {
+      await resetAllTables();
+      setStatusById(
+        Object.fromEntries(
+          RESET_TABLES.map((table) => [
+            table.id,
+            { state: "success", message: "Reinitialisee" },
+          ])
+        )
+      );
+      setGlobalStatus({
+        type: "success",
+        message: "Toutes les tables ont ete reinitialisees.",
+      });
+    } catch (error) {
+      setGlobalStatus({
+        type: "error",
+        message:
+          error?.message ||
+          "Erreur pendant la reinitialisation de toutes les tables",
+      });
+    }
+  };
+
   const renderStatus = (tableId) => {
     const status = statusById[tableId] || { state: "idle", message: "Pret" };
     if (status.state === "loading") {
@@ -310,20 +272,23 @@ const ResetTable = () => {
             <h1 className="text-2xl font-bold text-slate-900">
               Reinitialisation des tables
             </h1>
-            <p className="text-sm text-slate-500">
-              Selectionnez les tables a reinitialiser puis lancez l'action.
-              <br />
-              <p className="text-sm text-slate-500"><strong>Note:</strong> Supprimez tous les commandes avant de supprimer les paniers</p>
-            </p>
+            <div className="text-sm text-slate-500">
+              <p className="mb-2">
+                Selectionnez les tables a reinitialiser puis lancez l'action.
+              </p>
+              <p className="text-sm text-slate-500">
+                <strong>Note:</strong> Supprimez tous les commandes avant de
+                supprimer les paniers
+              </p>
+            </div>
           </div>
         </div>
 
         <div className="flex items-center gap-3">
           <button
             type="button"
-            onClick={handleResetSelection}
-            disabled={selectedCount === 0}
-            className="inline-flex items-center gap-2 px-4 py-2 rounded-md bg-slate-900 text-white text-sm font-semibold hover:bg-slate-800 disabled:opacity-50 disabled:cursor-not-allowed"
+            onClick={handleResetAll}
+            className="inline-flex items-center gap-2 px-4 py-2 rounded-md bg-slate-900 text-white text-sm font-semibold hover:bg-slate-800"
           >
             <Trash2 size={16} />
             Tout reinitialiser
@@ -337,8 +302,8 @@ const ResetTable = () => {
             globalStatus.type === "success"
               ? "bg-emerald-50 border-emerald-200 text-emerald-700"
               : globalStatus.type === "error"
-                ? "bg-red-50 border-red-200 text-red-700"
-                : "bg-slate-50 border-slate-200 text-slate-700"
+              ? "bg-red-50 border-red-200 text-red-700"
+              : "bg-slate-50 border-slate-200 text-slate-700"
           }`}
         >
           {globalStatus.type === "success" ? (

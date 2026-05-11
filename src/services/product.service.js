@@ -1,5 +1,5 @@
 import { buildProductXML } from "../XMLUtil/builder/Product.builder";
-import parseProducts from "../XMLUtil/parser/Product.parser";
+import parseProducts, { parseProduct } from "../XMLUtil/parser/Product.parser";
 import parseErrors from "../XMLUtil/parser/Error.parser";
 import { API_URL, WS_KEY, authHeaders } from "../config/config.service";
 
@@ -14,12 +14,16 @@ export const getAll = async (display = DEFAULT_DISPLAY) => {
           Authorization: `Basic ${btoa(WS_KEY() + ":")}`,
           Accept: "application/xml",
         },
-      },
+      }
     );
-    if (!response.ok)
+    if (!response.ok) {
+      const errText = await response.text();
       throw new Error(
-        `Erreur HTTP ${response.status} — ${parseErrors(errText)[0].message || "inconnue" }`,
+        `Erreur HTTP ${response.status} — ${
+          parseErrors(errText)[0].message || "inconnue"
+        }`
       );
+    }
     const xmlText = await response.text();
     return parseProducts(xmlText);
   } catch (error) {
@@ -35,29 +39,63 @@ export const postProduct = async (category) => {
       headers: authHeaders(),
       body: xml,
     });
+    const xmlText = await response.text();
     if (!response.ok) {
-      const errText = await response.text();
-      throw new Error(`HTTP ${response.status} — ${errText}`);
+      throw new Error(`HTTP ${response.status} — ${xmlText}`);
     }
-    return { success: true, name: category.name };
+    const created = parseProduct(xmlText);
+    return {
+      success: true,
+      name: category.name,
+      id: created?.id,
+    };
   } catch (err) {
     return { success: false, name: category.name, error: err.message };
   }
 };
 
 export const deleteProduct = async (id) => {
+  const safeErrorMessage = (errText) => {
+    try {
+      const parsed = parseErrors(errText);
+      if (parsed?.length) {
+        return parsed[0].message || "inconnue";
+      }
+    } catch (e) {
+      // ignore parsing errors and fall back to raw text
+    }
+    return errText?.trim() || "inconnue";
+  };
+
   try {
-    const response = await fetch(`${API_URL()}/products/${id}`, {
+    const response = await fetch(
+      `${API_URL()}/products/${id}?output_format=XML`,
+      {
       method: "DELETE",
       headers: {
         Authorization: `Basic ${btoa(WS_KEY() + ":")}`,
         Accept: "application/xml",
       },
-    });
+    }
+    );
     if (!response.ok) {
       const errText = await response.text();
+      if (response.status === 500) {
+        const verify = await fetch(
+          `${API_URL()}/products/${id}?output_format=XML`,
+          {
+            headers: {
+              Authorization: `Basic ${btoa(WS_KEY() + ":")}`,
+              Accept: "application/xml",
+            },
+          }
+        );
+        if (verify.status === 404) {
+          return response;
+        }
+      }
       throw new Error(
-				`Erreur HTTP ${response.status} — ${parseErrors(errText)[0].message || "inconnue" }`,
+        `Erreur HTTP ${response.status} — ${safeErrorMessage(errText)}`
       );
     }
     return response;
@@ -67,12 +105,16 @@ export const deleteProduct = async (id) => {
 };
 
 export const resetProducts = async () => {
-  try {
-    const products = await getAll();
-    for (const product of products) {
+  const products = await getAll();
+  const results = { deleted: [], failed: [] };
+
+  for (const product of products) {
+    try {
       await deleteProduct(product.id);
+      results.deleted.push(product.id);
+    } catch (error) {
+      results.failed.push({ id: product.id, reason: error.message });
     }
-  } catch (error) {
-    throw error;
   }
+  return results;
 };

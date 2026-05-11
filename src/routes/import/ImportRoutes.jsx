@@ -1,12 +1,10 @@
 import { Routes, Route } from "react-router-dom";
-import CategoryImport from "../../pages/import/CategoryImport";
-import ProductImport from "../../pages/import/ProductImport";
+import ImportAll from "../../pages/import/ImportAll";
 const ImportRoutes = () => {
   return (
     <>
       <Routes>
-        <Route path="/category/import" element={<CategoryImport />} />
-        <Route path="/product/import" element={<ProductImport />} />
+        <Route path="/import" element={<ImportAll />} />
       </Routes>
     </>
   );

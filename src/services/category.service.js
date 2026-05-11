@@ -1,4 +1,6 @@
-import parseCategories from "../XMLUtil/parser/Category.parser";
+import parseCategories, {
+  parseCategory,
+} from "../XMLUtil/parser/Category.parser";
 import parseErrors from "../XMLUtil/parser/Error.parser";
 import { API_URL, WS_KEY, authHeaders } from "../config/config.service";
 import { buildCategoryXML } from "../XMLUtil/builder/Category.builder";
@@ -13,11 +15,13 @@ export const getAll = async (display = DEFAULT_DISPLAY) => {
           Authorization: `Basic ${btoa(WS_KEY() + ":")}`,
           Accept: "application/xml",
         },
-      },
+      }
     );
     if (!response.ok)
       throw new Error(
-        `Erreur HTTP ${response.status} — ${parseErrors(errText)[0].message || "inconnue" }`,
+        `Erreur HTTP ${response.status} — ${
+          parseErrors(errText)[0].message || "inconnue"
+        }`
       );
     const xmlText = await response.text();
     return parseCategories(xmlText);
@@ -34,11 +38,16 @@ export const postCategory = async (category) => {
       headers: authHeaders(),
       body: xml,
     });
+    const xmlText = await response.text();
     if (!response.ok) {
-      const errText = await response.text();
-      throw new Error(`HTTP ${response.status} — ${errText}`);
+      throw new Error(`HTTP ${response.status} — ${xmlText}`);
     }
-    return { success: true, name: category.name };
+    const created = parseCategory(xmlText);
+    return {
+      success: true,
+      name: category.name,
+      id: created?.id,
+    };
   } catch (err) {
     return { success: false, name: category.name, error: err.message };
   }
@@ -83,7 +92,9 @@ export const deleteCategory = async (id) => {
     if (!response.ok) {
       const errText = await response.text();
       throw new Error(
-				`Erreur HTTP ${response.status} — ${parseErrors(errText)[0].message || "inconnue" }`,
+        `Erreur HTTP ${response.status} — ${
+          parseErrors(errText)[0].message || "inconnue"
+        }`
       );
     }
     return response;
@@ -95,7 +106,16 @@ export const deleteCategory = async (id) => {
 export const resetCategories = async () => {
   try {
     const categories = await getAll();
-    for (const category of categories) {
+    const toDelete = categories
+      .filter((category) => Number(category.id) >= 3)
+      .sort((a, b) => {
+        const depthA = Number(a.levelDepth) || 0;
+        const depthB = Number(b.levelDepth) || 0;
+        if (depthA !== depthB) return depthB - depthA;
+        return Number(b.id) - Number(a.id);
+      });
+
+    for (const category of toDelete) {
       await deleteCategory(category.id);
     }
   } catch (error) {
