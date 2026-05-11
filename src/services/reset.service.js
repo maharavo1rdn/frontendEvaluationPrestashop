@@ -6,6 +6,7 @@ import { resetOrderPayments } from "./orderPayment.service";
 import { resetProducts } from "./product.service";
 import { resetProductFeatureValues } from "./productFeatureValue.service";
 import { resetCategories } from "./category.service";
+import { resetCombinations } from "./combination.service";
 const TABLE_RESETTERS = [
   { id: "customers", reset: resetCustomers },
   { id: "orders", reset: resetOrders },
@@ -13,6 +14,7 @@ const TABLE_RESETTERS = [
   { id: "order-payments", reset: resetOrderPayments },
   { id: "feature-values", reset: resetProductFeatureValues },
   { id: "carts", reset: resetCarts },
+  { id: "combinations", reset: resetCombinations },
   { id: "products", reset: resetProducts },
   { id: "categories", reset: resetCategories },
 ];

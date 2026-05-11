@@ -16,6 +16,7 @@ import { resetProducts } from "../../services/product.service";
 import { resetAllTables } from "../../services/reset.service";
 import { resetProductFeatureValues } from "../../services/productFeatureValue.service";
 import { resetCategories } from "../../services/category.service";
+import { resetCombinations } from "../../services/combination.service";
 
 const RESET_TABLES = [
   {
@@ -54,6 +55,13 @@ const RESET_TABLES = [
     reset: resetProductFeatureValues,
   },
   {
+    id: "combinations",
+    label: "combinaisons",
+    table: "ps_product_attribute",
+    description: "Declinaisons produits",
+    reset: resetCombinations,
+  },
+  {
     id: "carts",
     label: "carts",
     table: "ps_cart",
@@ -74,7 +82,6 @@ const RESET_TABLES = [
     description: "Catalogue des catégories",
     reset: resetCategories,
   },
-  
 ];
 
 const ResetTable = () => {
@@ -190,7 +197,7 @@ const ResetTable = () => {
       RESET_TABLES.map((table) => [
         table.id,
         { state: "loading", message: "Reinitialisation..." },
-      ]),
+      ])
     );
     setStatusById(loadingStatus);
 
@@ -201,8 +208,8 @@ const ResetTable = () => {
           RESET_TABLES.map((table) => [
             table.id,
             { state: "success", message: "Reinitialisee" },
-          ]),
-        ),
+          ])
+        )
       );
       setGlobalStatus({
         type: "success",
@@ -211,7 +218,9 @@ const ResetTable = () => {
     } catch (error) {
       setGlobalStatus({
         type: "error",
-        message: error?.message || "Erreur pendant la reinitialisation de toutes les tables",
+        message:
+          error?.message ||
+          "Erreur pendant la reinitialisation de toutes les tables",
       });
     }
   };
