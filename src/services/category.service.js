@@ -1,4 +1,6 @@
-import parseCategories from "../XMLUtil/parser/Category.parser";
+import parseCategories, {
+  parseCategory,
+} from "../XMLUtil/parser/Category.parser";
 import parseErrors from "../XMLUtil/parser/Error.parser";
 import { API_URL, WS_KEY, authHeaders } from "../config/config.service";
 import { buildCategoryXML } from "../XMLUtil/builder/Category.builder";
@@ -36,11 +38,16 @@ export const postCategory = async (category) => {
       headers: authHeaders(),
       body: xml,
     });
+    const xmlText = await response.text();
     if (!response.ok) {
-      const errText = await response.text();
-      throw new Error(`HTTP ${response.status} — ${errText}`);
+      throw new Error(`HTTP ${response.status} — ${xmlText}`);
     }
-    return { success: true, name: category.name };
+    const created = parseCategory(xmlText);
+    return {
+      success: true,
+      name: category.name,
+      id: created?.id,
+    };
   } catch (err) {
     return { success: false, name: category.name, error: err.message };
   }

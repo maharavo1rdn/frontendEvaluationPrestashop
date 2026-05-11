@@ -4,11 +4,12 @@ import {
   getNumber,
   getBoolean,
   toArray,
+  getTranslatableValue,
 } from "./xml.parser";
 
 export const mapTax = (taxNode) => ({
   id: getValue(taxNode.id),
-  name: getValue(taxNode.name),
+  name: getTranslatableValue(taxNode.name),
   rate: getNumber(taxNode.rate),
   active: getBoolean(taxNode.active),
   deleted: getBoolean(taxNode.deleted),

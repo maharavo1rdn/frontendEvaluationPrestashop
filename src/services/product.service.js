@@ -1,5 +1,5 @@
 import { buildProductXML } from "../XMLUtil/builder/Product.builder";
-import parseProducts from "../XMLUtil/parser/Product.parser";
+import parseProducts, { parseProduct } from "../XMLUtil/parser/Product.parser";
 import parseErrors from "../XMLUtil/parser/Error.parser";
 import { API_URL, WS_KEY, authHeaders } from "../config/config.service";
 
@@ -39,11 +39,16 @@ export const postProduct = async (category) => {
       headers: authHeaders(),
       body: xml,
     });
+    const xmlText = await response.text();
     if (!response.ok) {
-      const errText = await response.text();
-      throw new Error(`HTTP ${response.status} — ${errText}`);
+      throw new Error(`HTTP ${response.status} — ${xmlText}`);
     }
-    return { success: true, name: category.name };
+    const created = parseProduct(xmlText);
+    return {
+      success: true,
+      name: category.name,
+      id: created?.id,
+    };
   } catch (err) {
     return { success: false, name: category.name, error: err.message };
   }

@@ -10,7 +10,7 @@ const DEFAULT_DISPLAY = "full";
 export const getAll = async (display = DEFAULT_DISPLAY) => {
   try {
     const response = await fetch(
-      `${API_URL()}/tax_rules_groups?output_format=XML&display=${display}`,
+      `${API_URL()}/tax_rule_groups?output_format=XML&display=${display}`,
       {
         headers: {
           Authorization: `Basic ${btoa(WS_KEY() + ":")}`,
@@ -45,7 +45,7 @@ export const findTaxRulesGroupByKeyValue = async (key, value) => {
       .toString()
       .replace(/%5B/g, "[")
       .replace(/%5D/g, "]");
-    const response = await fetch(`${API_URL()}/tax_rules_groups?${queryString}`, {
+    const response = await fetch(`${API_URL()}/tax_rule_groups?${queryString}`, {
       method: "GET",
       headers: {
         Authorization: `Basic ${btoa(WS_KEY() + ":")}`,
@@ -64,7 +64,7 @@ export const postTaxRulesGroup = async (group) => {
   const xml = buildTaxRulesGroupXML(group);
   try {
     const response = await fetch(
-      `${API_URL()}/tax_rules_groups?output_format=XML`,
+      `${API_URL()}/tax_rule_groups?output_format=XML`,
       {
         method: "POST",
         headers: authHeaders(),

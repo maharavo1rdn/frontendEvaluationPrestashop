@@ -5,24 +5,21 @@ export const parseNumber = (value) => {
   const raw = String(value).trim();
   if (!raw) return 0;
 
-  const clean = raw.replace(/[%\s\u00A0]/g, "");
-  const unsigned = clean.replace(/^-/, "");
-
-  const lastComma = unsigned.lastIndexOf(",");
-  const lastDot = unsigned.lastIndexOf(".");
+  const cleaned = raw.replace(/[%\s\u00A0]/g, "");
+  const lastComma = cleaned.lastIndexOf(",");
+  const lastDot = cleaned.lastIndexOf(".");
   const decimalIndex = Math.max(lastComma, lastDot);
 
   if (decimalIndex === -1) {
-    const integerOnly = unsigned.replace(/[^0-9]/g, "");
-    const numeric = parseFloat(integerOnly);
+    const digits = cleaned.replace(/[^0-9]/g, "");
+    const numeric = parseFloat(digits);
     return Number.isNaN(numeric) ? 0 : numeric;
   }
 
-  const integerPart = unsigned
+  const integerPart = cleaned
     .slice(0, decimalIndex)
-    .replace(/[.,]/g, "")
     .replace(/[^0-9]/g, "");
-  const fractionalPart = unsigned
+  const fractionalPart = cleaned
     .slice(decimalIndex + 1)
     .replace(/[^0-9]/g, "");
 
@@ -31,7 +28,10 @@ export const parseNumber = (value) => {
   return Number.isNaN(numeric) ? 0 : numeric;
 };
 
-export const parsePercentage = (value) => parseNumber(value);
+export const parsePercentage = (value) => {
+  if (value === null || value === undefined || value === "") return 0;
+  return parseNumber(String(value).replace(/%/g, ""));
+};
 
 const pad2 = (value) => String(value).padStart(2, "0");
 

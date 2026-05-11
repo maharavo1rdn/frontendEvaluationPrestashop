@@ -165,6 +165,7 @@ export const buildProductXML = (product) => {
 
     ${field("reference",           product.reference        ?? "")}
     ${field("price",               product.price            ?? 0)}
+    ${optionalField("wholesale_price", product.wholesalePrice)}
     ${field("active",              product.active ? 1 : 0)}
     ${field("type",                product.type             ?? "simple")}
     ${field("id_tax_rules_group",  product.taxRulesGroupId  ?? 1)}

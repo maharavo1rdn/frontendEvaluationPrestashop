@@ -1,5 +1,5 @@
 import { buildCartXML } from "../XMLUtil/builder/Cart.builder";
-import parseCarts from "../XMLUtil/parser/Cart.parser";
+import parseCarts, { parseCart } from "../XMLUtil/parser/Cart.parser";
 import parseErrors from "../XMLUtil/parser/Error.parser";
 import { API_URL, WS_KEY, authHeaders } from "../config/config.service";
 
@@ -37,11 +37,15 @@ export const postCart = async (cart) => {
       headers: authHeaders(),
       body: xml,
     });
+    const xmlText = await response.text();
     if (!response.ok) {
-      const errText = await response.text();
-      throw new Error(`HTTP ${response.status} — ${errText}`);
+      throw new Error(`HTTP ${response.status} — ${xmlText}`);
     }
-    return { success: true, id: cart.id };
+    const created = parseCart(xmlText);
+    return {
+      success: true,
+      id: created?.id,
+    };
   } catch (err) {
     return { success: false, id: cart.id, error: err.message };
   }

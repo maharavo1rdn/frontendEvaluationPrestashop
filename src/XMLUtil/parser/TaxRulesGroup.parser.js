@@ -16,13 +16,13 @@ export const mapTaxRulesGroup = (groupNode) => ({
 
 export const parseTaxRulesGroup = (xmlString) => {
   const result = parseXML(xmlString);
-  const raw = result?.prestashop?.tax_rules_group;
+  const raw = result?.prestashop?.tax_rule_group;
   return mapTaxRulesGroup(raw);
 };
 
 const parseTaxRulesGroups = (xmlString) => {
   const result = parseXML(xmlString);
-  const raw = result?.prestashop?.tax_rules_groups?.tax_rules_group;
+  const raw = result?.prestashop?.tax_rule_groups?.tax_rule_group;
   return toArray(raw).map(mapTaxRulesGroup);
 };
 
