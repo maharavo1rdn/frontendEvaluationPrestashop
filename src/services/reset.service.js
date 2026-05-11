@@ -7,6 +7,9 @@ import { resetProducts } from "./product.service";
 import { resetProductFeatureValues } from "./productFeatureValue.service";
 import { resetCategories } from "./category.service";
 import { resetCombinations } from "./combination.service";
+import { resetTaxRules } from "./taxRule.service";
+import { resetTaxRulesGroups } from "./taxRulesGroup.service";
+import { resetTaxes } from "./tax.service";
 const TABLE_RESETTERS = [
   { id: "customers", reset: resetCustomers },
   { id: "orders", reset: resetOrders },
@@ -17,6 +20,9 @@ const TABLE_RESETTERS = [
   { id: "combinations", reset: resetCombinations },
   { id: "products", reset: resetProducts },
   { id: "categories", reset: resetCategories },
+  { id: "tax-rules", reset: resetTaxRules },
+  { id: "tax-rule-groups", reset: resetTaxRulesGroups },
+  { id: "taxes", reset: resetTaxes },
 ];
 
 export const resetAllTables = async () => {

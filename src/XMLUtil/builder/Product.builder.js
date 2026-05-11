@@ -170,6 +170,8 @@ export const buildProductXML = (product) => {
     ${field("type",                product.type             ?? "simple")}
     ${field("id_tax_rules_group",  product.taxRulesGroupId  ?? 1)}
     ${field("id_category_default", product.categoryId       )}
+    ${field("state", product.state       )}
+
     ${field("id_manufacturer",     product.manufacturerId       )}
     ${optionalField("available_date", product.availableDate)}
 
