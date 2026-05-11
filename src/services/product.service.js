@@ -73,12 +73,16 @@ export const deleteProduct = async (id) => {
 };
 
 export const resetProducts = async () => {
-  try {
-    const products = await getAll();
-    for (const product of products) {
+  const products = await getAll();
+  const results = { deleted: [], failed: [] };
+
+  for (const product of products) {
+    try {
       await deleteProduct(product.id);
+      results.deleted.push(product.id);
+    } catch (error) {
+      results.failed.push({ id: product.id, reason: error.message });
     }
-  } catch (error) {
-    throw error;
   }
+  return results;
 };

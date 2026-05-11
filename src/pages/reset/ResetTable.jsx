@@ -14,7 +14,8 @@ import { resetOrderDetails } from "../../services/orderDetail.service";
 import { resetOrderPayments } from "../../services/orderPayment.service";
 import { resetProducts } from "../../services/product.service";
 import { resetAllTables } from "../../services/reset.service";
-import { resetStockAvailables } from "../../services/stockAvailable.service";
+import { resetProductFeatureValues } from "../../services/productFeatureValue.service";
+import { resetCategories } from "../../services/category.service";
 
 const RESET_TABLES = [
   {
@@ -46,11 +47,18 @@ const RESET_TABLES = [
     reset: resetOrderPayments,
   },
   {
-    id: "stocks",
-    label: "stocks",
-    table: "ps_stock_available",
-    description: "Stock disponibles",
-    reset: resetStockAvailables,
+    id: "feature-values",
+    label: "Caracteristiques",
+    table: "ps_feature_value",
+    description: "Valeurs des caracteristiques",
+    reset: resetProductFeatureValues,
+  },
+  {
+    id: "carts",
+    label: "carts",
+    table: "ps_cart",
+    description: "Paniers clients",
+    reset: resetCarts,
   },
   {
     id: "products",
@@ -60,12 +68,13 @@ const RESET_TABLES = [
     reset: resetProducts,
   },
   {
-    id: "carts",
-    label: "carts",
-    table: "ps_cart",
-    description: "Paniers clients",
-    reset: resetCarts,
+    id: "categories",
+    label: "categories",
+    table: "ps_category",
+    description: "Catalogue des catégories",
+    reset: resetCategories,
   },
+  
 ];
 
 const ResetTable = () => {

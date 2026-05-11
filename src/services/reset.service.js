@@ -4,15 +4,17 @@ import { resetCarts } from "./cart.service";
 import { resetOrderDetails } from "./orderDetail.service";
 import { resetOrderPayments } from "./orderPayment.service";
 import { resetProducts } from "./product.service";
-import { resetStockAvailables } from "./stockAvailable.service";
+import { resetProductFeatureValues } from "./productFeatureValue.service";
+import { resetCategories } from "./category.service";
 const TABLE_RESETTERS = [
   { id: "customers", reset: resetCustomers },
   { id: "orders", reset: resetOrders },
   { id: "order-details", reset: resetOrderDetails },
   { id: "order-payments", reset: resetOrderPayments },
-  { id: "stocks", reset: resetStockAvailables },
-  { id: "products", reset: resetProducts },
+  { id: "feature-values", reset: resetProductFeatureValues },
   { id: "carts", reset: resetCarts },
+  { id: "products", reset: resetProducts },
+  { id: "categories", reset: resetCategories },
 ];
 
 export const resetAllTables = async () => {
