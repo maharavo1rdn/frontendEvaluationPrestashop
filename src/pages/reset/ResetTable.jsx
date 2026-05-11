@@ -17,6 +17,9 @@ import { resetAllTables } from "../../services/reset.service";
 import { resetProductFeatureValues } from "../../services/productFeatureValue.service";
 import { resetCategories } from "../../services/category.service";
 import { resetCombinations } from "../../services/combination.service";
+import { resetTaxRules } from "../../services/taxRule.service";
+import { resetTaxRulesGroups } from "../../services/taxRulesGroup.service";
+import { resetTaxes } from "../../services/tax.service";
 
 const RESET_TABLES = [
   {
@@ -60,6 +63,27 @@ const RESET_TABLES = [
     table: "ps_product_attribute",
     description: "Declinaisons produits",
     reset: resetCombinations,
+  },
+  {
+    id: "tax-rules",
+    label: "tax_rules",
+    table: "ps_tax_rule",
+    description: "Regles de taxe",
+    reset: resetTaxRules,
+  },
+  {
+    id: "tax-rule-groups",
+    label: "tax_rule_groups",
+    table: "ps_tax_rules_group",
+    description: "Groupes de regles de taxe",
+    reset: resetTaxRulesGroups,
+  },
+  {
+    id: "taxes",
+    label: "taxes",
+    table: "ps_tax",
+    description: "Taux de taxe",
+    reset: resetTaxes,
   },
   {
     id: "carts",

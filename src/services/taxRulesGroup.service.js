@@ -81,3 +81,37 @@ export const postTaxRulesGroup = async (group) => {
     return { success: false, name: group.name, error: err.message };
   }
 };
+
+export const deleteTaxRulesGroup = async (id) => {
+  try {
+    const response = await fetch(`${API_URL()}/tax_rule_groups/${id}`, {
+      method: "DELETE",
+      headers: {
+        Authorization: `Basic ${btoa(WS_KEY() + ":")}`,
+        Accept: "application/xml",
+      },
+    });
+    if (!response.ok) {
+      const errText = await response.text();
+      throw new Error(
+        `Erreur HTTP ${response.status} — ${
+          parseErrors(errText)[0]?.message || "inconnue"
+        }`
+      );
+    }
+    return response;
+  } catch (error) {
+    throw error;
+  }
+};
+
+export const resetTaxRulesGroups = async () => {
+  try {
+    const groups = await getAll();
+    for (const group of groups) {
+      await deleteTaxRulesGroup(group.id);
+    }
+  } catch (error) {
+    throw error;
+  }
+};

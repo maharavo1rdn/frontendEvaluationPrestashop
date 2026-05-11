@@ -58,8 +58,6 @@ const ensureTaxRulesGroupId = async (taxRate) => {
     if (!createdTax.success) {
       throw new Error(`Impossible de creer la taxe "${taxName}"`);
     }
-    console.log(createdTax + "ici created task");
-
     taxId = createdTax.id;
   }
 
@@ -77,7 +75,6 @@ const ensureTaxRulesGroupId = async (taxRate) => {
     if (!createdGroup.success) {
       throw new Error(`Impossible de creer le groupe de taxe "${taxName}"`);
     }
-    console.log(createdGroup + "ici created group");
     groupId = createdGroup.id;
   }
 
@@ -92,14 +89,13 @@ const ensureTaxRulesGroupId = async (taxRate) => {
     const createdRule = await postTaxRule({
       taxRulesGroupId: groupId,
       taxId,
-      countryId: 0,
-      stateId: 0,
+      countryId: 8,
+      stateId: 1,
       zipcodeFrom: 0,
       zipcodeTo: 0,
       behavior: 0,
       description: taxName,
     });
-    console.log(console.log(createdRule+"ici created rule"))
     if (!createdRule.success) {
       throw new Error(`Impossible de creer la regle de taxe "${taxName}"`);
     }
@@ -157,6 +153,7 @@ export const mapRowToProduct = async (row) => {
     category_name: categoryName ? String(categoryName) : "",
     categoryId,
     manufacturerId,
+    state: 1,
     manufacturer_name: manufacturerName ? String(manufacturerName) : "",
     weight: parseOptionalNumber(row.weight),
     quantity: parseOptionalNumber(row.quantity),
@@ -190,13 +187,12 @@ export const importProductsFromCSV = async (file, onProgress) => {
     let result = null;
     try {
       const product = await mapRowToProduct(row);
-      console.log(product);
-      //   result = await postProduct(product);
-      //   result.success ? successes.push(result) : errors.push(result);
+        result = await postProduct(product);
+        result.success ? successes.push(result) : errors.push(result);
     } catch (error) {
       const fallbackName = row.nom?.trim() || `Ligne ${i + 1}`;
-      // result = { success: false, name: fallbackName, error: error.message };
-      // errors.push(result);
+      result = { success: false, name: fallbackName, error: error.message };
+      errors.push(result);
     }
 
     onProgress?.({ done: i + 1, total, result });
