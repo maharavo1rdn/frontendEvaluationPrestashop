@@ -13,15 +13,10 @@ import { resetCarts } from "../../services/cart.service";
 import { resetOrderDetails } from "../../services/orderDetail.service";
 import { resetOrderPayments } from "../../services/orderPayment.service";
 import { resetProducts } from "../../services/product.service";
+import { resetAllTables } from "../../services/reset.service";
+import { resetStockAvailables } from "../../services/stockAvailable.service";
 
 const RESET_TABLES = [
-  {
-    id: "products",
-    label: "products",
-    table: "ps_product",
-    description: "Catalogue des produits",
-    reset: resetProducts,
-  },
   {
     id: "customers",
     label: "customers",
@@ -37,13 +32,6 @@ const RESET_TABLES = [
     reset: resetOrders,
   },
   {
-    id: "carts",
-    label: "carts",
-    table: "ps_cart",
-    description: "Paniers clients",
-    reset: resetCarts,
-  },
-  {
     id: "order-details",
     label: "orders_details",
     table: "ps_order_detail",
@@ -56,6 +44,27 @@ const RESET_TABLES = [
     table: "ps_order_payment",
     description: "Paiements associes",
     reset: resetOrderPayments,
+  },
+  {
+    id: "stocks",
+    label: "stocks",
+    table: "ps_stock_available",
+    description: "Stock disponibles",
+    reset: resetStockAvailables,
+  },
+  {
+    id: "products",
+    label: "products",
+    table: "ps_product",
+    description: "Catalogue des produits",
+    reset: resetProducts,
+  },
+  {
+    id: "carts",
+    label: "carts",
+    table: "ps_cart",
+    description: "Paniers clients",
+    reset: resetCarts,
   },
 ];
 
@@ -88,7 +97,7 @@ const ResetTable = () => {
 
   const handleToggle = (id) => {
     setSelectedIds((prev) =>
-      prev.includes(id) ? prev.filter((value) => value !== id) : [...prev, id],
+      prev.includes(id) ? prev.filter((value) => value !== id) : [...prev, id]
     );
   };
 
@@ -159,6 +168,45 @@ const ResetTable = () => {
     });
   };
 
+  const handleResetAll = async () => {
+    const confirmMessage = "Reinitialiser toutes les tables ?";
+    if (!window.confirm(confirmMessage)) return;
+
+    setGlobalStatus({
+      type: "info",
+      message: "Reinitialisation de toutes les tables en cours...",
+    });
+
+    const loadingStatus = Object.fromEntries(
+      RESET_TABLES.map((table) => [
+        table.id,
+        { state: "loading", message: "Reinitialisation..." },
+      ]),
+    );
+    setStatusById(loadingStatus);
+
+    try {
+      await resetAllTables();
+      setStatusById(
+        Object.fromEntries(
+          RESET_TABLES.map((table) => [
+            table.id,
+            { state: "success", message: "Reinitialisee" },
+          ]),
+        ),
+      );
+      setGlobalStatus({
+        type: "success",
+        message: "Toutes les tables ont ete reinitialisees.",
+      });
+    } catch (error) {
+      setGlobalStatus({
+        type: "error",
+        message: error?.message || "Erreur pendant la reinitialisation de toutes les tables",
+      });
+    }
+  };
+
   const renderStatus = (tableId) => {
     const status = statusById[tableId] || { state: "idle", message: "Pret" };
     if (status.state === "loading") {
@@ -206,20 +254,23 @@ const ResetTable = () => {
             <h1 className="text-2xl font-bold text-slate-900">
               Reinitialisation des tables
             </h1>
-            <p className="text-sm text-slate-500">
-              Selectionnez les tables a reinitialiser puis lancez l'action.
-              <br />
-              <p className="text-sm text-slate-500"><strong>Note:</strong> Supprimez tous les commandes avant de supprimer les paniers</p>
-            </p>
+            <div className="text-sm text-slate-500">
+              <p className="mb-2">
+                Selectionnez les tables a reinitialiser puis lancez l'action.
+              </p>
+              <p className="text-sm text-slate-500">
+                <strong>Note:</strong> Supprimez tous les commandes avant de
+                supprimer les paniers
+              </p>
+            </div>
           </div>
         </div>
 
         <div className="flex items-center gap-3">
           <button
             type="button"
-            onClick={handleResetSelection}
-            disabled={selectedCount === 0}
-            className="inline-flex items-center gap-2 px-4 py-2 rounded-md bg-slate-900 text-white text-sm font-semibold hover:bg-slate-800 disabled:opacity-50 disabled:cursor-not-allowed"
+            onClick={handleResetAll}
+            className="inline-flex items-center gap-2 px-4 py-2 rounded-md bg-slate-900 text-white text-sm font-semibold hover:bg-slate-800"
           >
             <Trash2 size={16} />
             Tout reinitialiser
@@ -233,8 +284,8 @@ const ResetTable = () => {
             globalStatus.type === "success"
               ? "bg-emerald-50 border-emerald-200 text-emerald-700"
               : globalStatus.type === "error"
-                ? "bg-red-50 border-red-200 text-red-700"
-                : "bg-slate-50 border-slate-200 text-slate-700"
+              ? "bg-red-50 border-red-200 text-red-700"
+              : "bg-slate-50 border-slate-200 text-slate-700"
           }`}
         >
           {globalStatus.type === "success" ? (
