@@ -50,20 +50,47 @@ export const postProduct = async (category) => {
 };
 
 export const deleteProduct = async (id) => {
+  const safeErrorMessage = (errText) => {
+    try {
+      const parsed = parseErrors(errText);
+      if (parsed?.length) {
+        return parsed[0].message || "inconnue";
+      }
+    } catch (e) {
+      // ignore parsing errors and fall back to raw text
+    }
+    return errText?.trim() || "inconnue";
+  };
+
   try {
-    const response = await fetch(`${API_URL()}/products/${id}`, {
+    const response = await fetch(
+      `${API_URL()}/products/${id}?output_format=XML`,
+      {
       method: "DELETE",
       headers: {
         Authorization: `Basic ${btoa(WS_KEY() + ":")}`,
         Accept: "application/xml",
       },
-    });
+    }
+    );
     if (!response.ok) {
       const errText = await response.text();
+      if (response.status === 500) {
+        const verify = await fetch(
+          `${API_URL()}/products/${id}?output_format=XML`,
+          {
+            headers: {
+              Authorization: `Basic ${btoa(WS_KEY() + ":")}`,
+              Accept: "application/xml",
+            },
+          }
+        );
+        if (verify.status === 404) {
+          return response;
+        }
+      }
       throw new Error(
-        `Erreur HTTP ${response.status} — ${
-          parseErrors(errText)[0].message || "inconnue"
-        }`
+        `Erreur HTTP ${response.status} — ${safeErrorMessage(errText)}`
       );
     }
     return response;
