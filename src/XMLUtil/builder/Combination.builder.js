@@ -65,6 +65,8 @@ export const buildCombinationXML = (combination) => {
     ${combination.id ? field("id", combination.id) : "<!-- POST : pas d'id -->"}
 
     ${field("id_product", combination.idProduct ?? 0)}
+    ${field("minimal_quantity", combination.minimalQuantity ?? 1)}
+    ${optionalField("id_shop", combination.idShop)}
     ${optionalField("reference", combination.reference)}
     ${optionalField("supplier_reference", combination.supplierReference)}
     ${optionalField("location", combination.location)}
@@ -78,7 +80,6 @@ export const buildCombinationXML = (combination) => {
     ${optionalField("quantity", combination.quantity)}
     ${optionalField("weight", combination.weight)}
     ${optionalField("unit_price_impact", combination.unitPriceImpact)}
-    ${optionalField("minimal_quantity", combination.minimalQuantity)}
     ${optionalField("default_on", boolValue(combination.defaultOn))}
     ${optionalField("available_date", combination.availableDate)}
 
