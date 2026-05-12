@@ -57,6 +57,14 @@ const getTaxRateByGroupId = async (groupId) => {
   return rate;
 };
 
+const formatDecimal = (value, decimals = 6) => {
+  if (value === undefined || value === null || !Number.isFinite(value)) {
+    return undefined;
+  }
+  const str = value.toFixed(decimals).replace(/\.?(0+)$/, "");
+  return str;
+};
+
 const computePriceImpact = (priceTtc, taxRate, basePriceHt) => {
   if (priceTtc === undefined || priceTtc === null) return undefined;
   const base = Number(basePriceHt);
@@ -64,7 +72,7 @@ const computePriceImpact = (priceTtc, taxRate, basePriceHt) => {
   const rate = Number(taxRate) || 0;
   const priceHt = priceTtc / (1 + rate / 100);
   const impact = priceHt - base;
-  return Number.isFinite(impact) ? impact : undefined;
+  return Number.isFinite(impact) ? formatDecimal(impact, 6) : undefined;
 };
 
 /**
@@ -104,9 +112,12 @@ const ensureProductOption = async (optionName) => {
  * @param {string} valueName - Nom de la valeur (ex: "ngoza", "kely")
  * @returns {Promise<{ id: string, name: string }>}
  */
-const ensureProductOptionValue = async (valueName) => {
+const ensureProductOptionValue = async (valueName, idOption) => {
   if (!valueName) {
     throw new Error("Nom de valeur d'option manquant");
+  }
+  if (!idOption) {
+    throw new Error("Id d'option manquant pour la valeur");
   }
 
   const existing = await findProductOptionValueByKeyValue("name", valueName);
@@ -116,6 +127,7 @@ const ensureProductOptionValue = async (valueName) => {
 
   const created = await postProductOptionValue({
     name: valueName,
+    idAttributeGroup: idOption,
     langId: 1,
   });
 
@@ -161,10 +173,10 @@ const mapRowToProductOptionData = async (row, product, taxRate) => {
 
   if (result.hasOption) {
     const option = await ensureProductOption(specificity);
-    const optionValue = await ensureProductOptionValue(value);
+    const optionValue = await ensureProductOptionValue(value, option.id);
     result.option = option;
     result.optionValue = optionValue;
-    result.attributeIds = [optionValue.idAttribute || optionValue.id];
+    result.attributeIds = [optionValue.id];
   }
 
   return result;
@@ -187,6 +199,7 @@ const findOrCreateCombination = async ({
   productId,
   attributeIds,
   quantity,
+  minimalQuantity,
   priceImpact,
   reference,
   defaultOn,
@@ -199,7 +212,9 @@ const findOrCreateCombination = async ({
 
   const created = await postCombination({
     idProduct: productId,
+    idShop: 1,
     quantity,
+    minimalQuantity,
     price: priceImpact,
     reference,
     defaultOn,
@@ -266,42 +281,43 @@ export const importProductOptionsFromCSV = async (file, onProgress) => {
 
       if (mappedData.stock !== undefined && mappedData.stock !== null) {
         const idProductAttribute = combination?.id ?? 0;
-        const existingStocks = await findStockAvailableByProductAttribute(
+
+        let existingStocks = await findStockAvailableByProductAttribute(
           product.id,
           idProductAttribute
         );
-        if (existingStocks.length > 0) {
-          const updatedStock = await updateStockAvailable({
-            id: existingStocks[0].id,
-            idProduct: product.id,
-            idProductAttribute,
-            quantity: mappedData.stock,
-          });
-          if (!updatedStock.success) {
-            throw new Error(
-              updatedStock.error || "Mise a jour stock impossible"
-            );
-          }
-          stockAvailable = {
-            id: updatedStock.id,
-            idProductAttribute,
-            updated: true,
-          };
-        } else {
-          const createdStock = await postStockAvailable({
-            idProduct: product.id,
-            idProductAttribute,
-            quantity: mappedData.stock,
-          });
-          if (!createdStock.success) {
-            throw new Error(createdStock.error || "Creation stock impossible");
-          }
-          stockAvailable = {
-            id: createdStock.id,
-            idProductAttribute,
-            created: true,
-          };
+
+        if (!existingStocks.length) {
+          await new Promise((r) => setTimeout(r, 300));
+          existingStocks = await findStockAvailableByProductAttribute(
+            product.id,
+            idProductAttribute
+          );
         }
+
+        if (!existingStocks.length) {
+          throw new Error(
+            `stock_available introuvable pour produit ${product.id} / combinaison ${idProductAttribute}`
+          );
+        }
+
+        const updatedStock = await updateStockAvailable({
+          id: existingStocks[0].id,
+          idProduct: product.id,
+          idShop: 1,
+          idProductAttribute,
+          quantity: mappedData.stock,
+        });
+
+        if (!updatedStock.success) {
+          throw new Error(updatedStock.error || "Mise à jour stock impossible");
+        }
+
+        stockAvailable = {
+          id: updatedStock.id,
+          idProductAttribute,
+          updated: true,
+        };
       }
 
       processResult = {

@@ -10,11 +10,11 @@ export const buildStockAvailableXML = (stock) => {
 
     ${field("id_product", stock.idProduct ?? 0)}
     ${optionalField("id_product_attribute", stock.idProductAttribute ?? 0)}
-    ${optionalField("id_shop", stock.idShop)}
+    ${optionalField("id_shop", stock.idShop ?? 0)}
     ${optionalField("id_shop_group", stock.idShopGroup)}
     ${field("quantity", stock.quantity ?? 0)}
-    ${optionalField("depends_on_stock", boolValue(stock.dependsOnStock))}
-    ${optionalField("out_of_stock", stock.outOfStock)}
+    ${field("depends_on_stock", boolValue(stock.dependsOnStock) ?? 0)}
+    ${field("out_of_stock", stock.outOfStock ?? 2)}
     ${optionalField("location", stock.location)}
   </stock_available>`;
 

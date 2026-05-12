@@ -1,6 +1,7 @@
 import { useRef, useState } from "react";
 import { importProductsFromCSV } from "../../services/csv/product.csv.service";
 import { importCategoriesFromCSV } from "../../services/csv/category.csv.service";
+import importProductOptionsFromCSV from "../../services/csv/productOption.csv.service";
 
 const ImportCard = ({ title, onImport, acceptLabel }) => {
   const fileRef = useRef(null);
@@ -107,6 +108,11 @@ const ImportAll = () => {
           title="Import CSV — Produits"
           acceptLabel="Fichier CSV pour les produits"
           onImport={importProductsFromCSV}
+        />
+        <ImportCard
+          title="Import CSV — Produits options"
+          acceptLabel="Fichier CSV pour les options des produits "
+          onImport={importProductOptionsFromCSV}
         />
       </div>
     </div>

@@ -7,7 +7,9 @@ import {
 
 export const mapProductOptionValue = (productOptionValueNode) => ({
   id: getValue(productOptionValueNode.id),
-  idAttribute: getValue(productOptionValueNode.id_attribute),
+  idAttributeGroup: getValue(productOptionValueNode.id_attribute_group),
+  color: getValue(productOptionValueNode.color),
+  position: getValue(productOptionValueNode.position),
   name: getTranslatableValue(productOptionValueNode.name),
   dateAdd: getValue(productOptionValueNode.date_add),
   dateUpd: getValue(productOptionValueNode.date_upd),

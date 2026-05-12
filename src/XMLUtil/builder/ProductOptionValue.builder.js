@@ -13,8 +13,10 @@ export const buildProductOptionValueXML = (productOptionValue) => {
   const inner = `
   <product_option_value>
     ${productOptionValue.id ? field("id", productOptionValue.id) : "<!-- POST : pas d'id -->"}
-
-    ${optionalField("id_attribute", productOptionValue.idAttribute)}
+    
+    ${field("id_attribute_group", productOptionValue.idAttributeGroup)}
+    ${optionalField("color", productOptionValue.color)}
+    ${optionalField("position", productOptionValue.position)}
     ${langField("name", name, langId)}
   </product_option_value>`;
 
