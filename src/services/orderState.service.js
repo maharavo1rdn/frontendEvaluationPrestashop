@@ -13,16 +13,45 @@ export const getAll = async (display = DEFAULT_DISPLAY) => {
           Authorization: `Basic ${btoa(WS_KEY() + ":")}`,
           Accept: "application/xml",
         },
-      },
+      }
     );
     if (!response.ok)
       throw new Error(
-        `Erreur HTTP ${response.status} — ${parseErrors(errText)[0].message || "inconnue" }`,
+        `Erreur HTTP ${response.status} — ${
+          parseErrors(errText)[0].message || "inconnue"
+        }`
       );
     const xmlText = await response.text();
     return parseOrderStates(xmlText);
   } catch (error) {
     throw error;
+  }
+};
+
+export const findOrderStateByKeyValue = async (key, value) => {
+  try {
+    const params = new URLSearchParams({
+      [`filter[${key}]`]: `[${value}]`,
+      output_format: "XML",
+      display: "full",
+    });
+
+    const queryString = params
+      .toString()
+      .replace(/%5B/g, "[")
+      .replace(/%5D/g, "]");
+    const response = await fetch(`${API_URL()}/order_states?${queryString}`, {
+      method: "GET",
+      headers: {
+        Authorization: `Basic ${btoa(WS_KEY() + ":")}`,
+        Accept: "application/xml",
+      },
+    });
+    if (!response.ok) throw new Error(`Erreur: ${await response.text()}`);
+    const xmlText = await response.text();
+    return parseOrderStates(xmlText);
+  } catch (error) {
+    throw new Error(error.message);
   }
 };
 
@@ -38,7 +67,9 @@ export const deleteOrderState = async (id) => {
     if (!response.ok) {
       const errText = await response.text();
       throw new Error(
-				`Erreur HTTP ${response.status} — ${parseErrors(errText)[0].message || "inconnue" }`,
+        `Erreur HTTP ${response.status} — ${
+          parseErrors(errText)[0].message || "inconnue"
+        }`
       );
     }
     return response;

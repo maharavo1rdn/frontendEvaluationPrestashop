@@ -1,6 +1,8 @@
-import parseOrders from "../XMLUtil/parser/Order.parser";
+import parseOrders, { parseOrder } from "../XMLUtil/parser/Order.parser";
 import parseErrors from "../XMLUtil/parser/Error.parser";
-import { API_URL, WS_KEY } from "../config/config.service";
+import { buildOrderXML } from "../XMLUtil/builder/Order.builder";
+import { API_URL, WS_KEY, authHeaders } from "../config/config.service";
+import { findOrderStateByKeyValue } from "./orderState.service";
 
 const DEFAULT_DISPLAY = "full";
 
@@ -19,10 +21,36 @@ export const getAll = async (display = DEFAULT_DISPLAY) => {
       throw new Error(
         `Erreur HTTP ${response.status} — ${parseErrors(errText)[0].message || "inconnue" }`,
       );
-    const xmlText = await response.text();
-    return parseOrders(xmlText);
+      const xmlText = await response.text();
+      return parseOrders(xmlText);
+      // ajouter des codes pour le statut actuel de la commande
+      // findOrderStateByKeyValue("id",order[0].current_state)
   } catch (error) {
     throw error;
+  }
+};
+
+export const postOrder = async (order) => {
+  const xml = buildOrderXML(order);
+  try {
+    const response = await fetch(`${API_URL()}/orders?output_format=XML`, {
+      method: "POST",
+      headers: authHeaders(),
+      body: xml,
+    });
+    const xmlText = await response.text();
+    
+    if (!response.ok) {
+      throw new Error(`HTTP ${response.status} — ${xmlText}`);
+    }
+    const created = parseOrder(xmlText);
+    return {
+      success: true,
+      id: created?.id,
+      reference: created?.reference,
+    };
+  } catch (err) {
+    return { success: false, id: order.id, error: err.message };
   }
 };
 

@@ -14,7 +14,7 @@ const buildCartRows = (rows = []) => {
 				${field("id_product", row.idProduct ?? 0)}
 				${field("id_product_attribute", row.idProductAttribute ?? 0)}
 				${field("id_address_delivery", row.idAddressDelivery ?? 0)}
-				${field("quantity", row.quantity ?? 1)}
+				${field("quantity", row.quantity)}
 				${optionalField("id_customization", row.idCustomization)}
 			</cart_row>`
 				)

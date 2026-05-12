@@ -14,16 +14,7 @@ const buildOrderRows = (rows = []) => {
         ${optionalField("product_id", row.productId)}
         ${optionalField("product_attribute_id", row.productAttributeId)}
         ${optionalField("product_quantity", row.productQuantity)}
-        ${optionalField("product_name", row.productName)}
-        ${optionalField("product_reference", row.productReference)}
-        ${optionalField("product_price", row.productPrice)}
-        ${optionalField("unit_price_tax_incl", row.unitPriceTaxIncl)}
-        ${optionalField("unit_price_tax_excl", row.unitPriceTaxExcl)}
-        ${optionalField("total_price_tax_incl", row.totalPriceTaxIncl)}
-        ${optionalField("total_price_tax_excl", row.totalPriceTaxExcl)}
         ${optionalField("id_customization", row.idCustomization)}
-        ${optionalField("tax_rate", row.taxRate)}
-        ${optionalField("ecotax", row.ecotax)}
       </order_row>`
         )
         .join("\n      ")}
@@ -52,8 +43,8 @@ export const buildOrderXML = (order) => {
     ${field("id_currency", order.idCurrency ?? 0)}
     ${field("id_lang", order.idLang ?? 1)}
     ${field("id_customer", order.idCustomer ?? 0)}
-    ${field("id_carrier", order.idCarrier ?? 0)}
-
+    ${field("id_carrier", order.idCarrier ?? 2)}
+    
     ${optionalField("current_state", order.currentState)}
     ${optionalField("secure_key", order.secureKey)}
     ${optionalField("payment", order.payment)}
