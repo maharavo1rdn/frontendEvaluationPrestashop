@@ -2,17 +2,12 @@ import { useEffect, useState } from "react";
 import { useParams, Link, useNavigate } from "react-router-dom";
 import {
   ArrowLeft,
-  Tag,
-  Info,
-  Calendar,
-  Package,
-  Trash2,
-  Edit3,
   Loader2,
   AlertCircle,
-  CircleDollarSign,
+  Trash2,
 } from "lucide-react";
 import { parseProduct } from "../../XMLUtil/parser/Product.parser";
+import { getStockAvailableById } from "../../services/stockAvailable.service";
 
 const ProduitDetail = () => {
   const { id } = useParams();
@@ -48,40 +43,21 @@ const ProduitDetail = () => {
 
       const xmlText = await response.text();
       const parsed = parseProduct(xmlText);
-      console.log(parsed);
-      setProduct(parsed);
+      const stockId = parsed?.associations?.stockAvailables?.[0]?.id;
+      let stockQuantity = null;
+      if (stockId) {
+        try {
+          const stock = await getStockAvailableById(stockId);
+          stockQuantity = stock?.quantity ?? null;
+        } catch (stockError) {
+          stockQuantity = null;
+        }
+      }
+      setProduct({ ...parsed, stockQuantity });
     } catch (err) {
       setError(err.message);
     } finally {
       setLoading(false);
-    }
-  };
-
-  const handleDelete = async () => {
-    if (!window.confirm("Êtes-vous sûr de vouloir supprimer ce produit ?"))
-      return;
-
-    const API_URL = `${import.meta.env.VITE_API_URL}/products/${id}`;
-    const WS_KEY = import.meta.env.VITE_WS_KEY;
-
-    setDeleteLoading(true);
-    try {
-      const response = await fetch(API_URL, {
-        method: "DELETE",
-        headers: {
-          Authorization: "Basic " + btoa(WS_KEY + ":"),
-        },
-      });
-
-      if (response.ok) {
-        navigate("/products"); // Retour à la liste après suppression
-      } else {
-        alert("Erreur lors de la suppression.");
-      }
-    } catch (error) {
-      alert("Erreur réseau.");
-    } finally {
-      setDeleteLoading(false);
     }
   };
 
@@ -114,149 +90,106 @@ const ProduitDetail = () => {
   }
 
   return (
-    <div className="p-8 max-w-4xl animate-in fade-in duration-500">
-      {/* ── Navigation & Actions ── */}
-      <div className="flex items-center justify-between mb-8">
+    <div className="p-8 max-w-5xl mx-auto">
+      {/* Navigation */}
+      <div className="flex items-center justify-between mb-6">
         <Link
           to="/products"
-          className="group inline-flex items-center gap-2 text-sm font-medium text-slate-500 hover:text-sky-500 transition-colors"
+          className="flex items-center gap-2 text-sm font-medium text-slate-500 hover:text-sky-500"
         >
-          <ArrowLeft
-            size={16}
-            className="group-hover:-translate-x-1 transition-transform"
-          />
-          Retour à la liste
+          <ArrowLeft size={16} />
+          Retour
         </Link>
-
-        <div className="flex items-center gap-3">
-          <button
-            onClick={handleDelete}
-            disabled={deleteLoading}
-            className="inline-flex items-center gap-2 px-3 py-1.5 rounded-md text-red-600 hover:bg-red-50 text-xs font-semibold transition-colors border border-transparent hover:border-red-100"
-          >
-            {deleteLoading ? (
-              <Loader2 size={14} className="animate-spin" />
-            ) : (
-              <Trash2 size={14} />
-            )}
-            Supprimer
-          </button>
-          <Link
-            to={`/products/${id}/edit`}
-            className="inline-flex items-center gap-2 px-4 py-2 rounded-md bg-slate-900 hover:bg-slate-800 text-white text-sm font-semibold transition-colors"
-          >
-            <Edit3 size={15} />
-            Modifier
-          </Link>
-        </div>
       </div>
 
-      {/* ── Fiche Produit ── */}
-      <div className="bg-white border border-slate-200 rounded-2xl shadow-sm overflow-hidden">
-        {/* Header de la fiche */}
-        <div className="p-6 border-b border-slate-100 bg-slate-50/50">
-          <div className="flex items-start justify-between">
+      {loading ? (
+        <div className="py-20 text-center">
+          <Loader2 size={32} className="animate-spin text-sky-500 mx-auto mb-3" />
+          <p className="text-slate-400">Chargement...</p>
+        </div>
+      ) : error ? (
+        <div className="p-4 bg-red-50 border border-red-200 text-red-700 rounded flex items-center gap-2">
+          <AlertCircle size={18} />
+          {error}
+        </div>
+      ) : (
+        <div className="bg-white border border-slate-200 rounded-lg shadow-sm">
+          {/* Header */}
+          <div className="p-6 border-b border-slate-200 bg-slate-50">
+            <div className="flex justify-between items-start">
+              <div>
+                <h1 className="text-3xl font-bold text-slate-900 mb-2">
+                  {product?.name || "N/A"}
+                </h1>
+                <p className="text-sm text-slate-500 font-mono">
+                  Ref: {product?.reference || "—"}
+                </p>
+              </div>
+              <div className="text-right">
+                <p className="text-3xl font-bold text-sky-600">
+                  {product?.price ? `${Number(product.price).toFixed(2)} €` : "— €"}
+                </p>
+                <p className="text-xs text-slate-400">HT</p>
+              </div>
+            </div>
+          </div>
+
+          {/* Détails */}
+          <div className="p-6 grid grid-cols-2 md:grid-cols-4 gap-6">
             <div>
-              <span className="text-[10px] font-bold uppercase tracking-widest text-sky-500 mb-1 block">
-                Fiche Produit #{id}
+              <p className="text-xs font-semibold text-slate-400 uppercase mb-2">Type</p>
+              <p className="text-sm font-bold text-slate-900">{product?.type || "—"}</p>
+            </div>
+
+            <div>
+              <p className="text-xs font-semibold text-slate-400 uppercase mb-2">Condition</p>
+              <p className="text-sm font-bold text-slate-900">{product?.condition || "—"}</p>
+            </div>
+
+            <div>
+              <p className="text-xs font-semibold text-slate-400 uppercase mb-2">Stock</p>
+              <p className="text-sm font-bold text-slate-900">{product?.stockQuantity ?? "—"}</p>
+            </div>
+
+            <div>
+              <p className="text-xs font-semibold text-slate-400 uppercase mb-2">Actif</p>
+              <span className={`inline-block px-2 py-1 text-xs font-bold rounded ${product?.active ? "bg-green-100 text-green-700" : "bg-slate-100 text-slate-600"}`}>
+                {product?.active ? "Oui" : "Non"}
               </span>
-              <h1 className="text-2xl font-bold text-slate-900">
-                {product?.reference || "Sans référence"}
-              </h1>
             </div>
-            <div className="text-right">
-              <p className="text-2xl font-bold text-slate-900">
-                {product?.price ? `${product.price.toFixed(2)} €` : "— €"}
+
+            <div>
+              <p className="text-xs font-semibold text-slate-400 uppercase mb-2">Poids</p>
+              <p className="text-sm font-bold text-slate-900">{product?.weight ? `${product.weight} kg` : "—"}</p>
+            </div>
+
+            <div>
+              <p className="text-xs font-semibold text-slate-400 uppercase mb-2">Fabricant</p>
+              <p className="text-sm font-bold text-slate-900">{product?.idManufacturer || "—"}</p>
+            </div>
+
+            <div>
+              <p className="text-xs font-semibold text-slate-400 uppercase mb-2">Catégorie</p>
+              <p className="text-sm font-bold text-slate-900">{product?.idCategoryDefault || "—"}</p>
+            </div>
+
+            <div>
+              <p className="text-xs font-semibold text-slate-400 uppercase mb-2">Créé le</p>
+              <p className="text-sm font-bold text-slate-900">
+                {product?.dateAdd ? new Date(product.dateAdd).toLocaleDateString("fr-FR") : "—"}
               </p>
-              <p className="text-xs text-slate-400 font-medium">
-                Prix de vente HT
-              </p>
             </div>
           </div>
+
+          {/* Description */}
+          {product?.description && (
+            <div className="p-6 border-t border-slate-200 bg-slate-50">
+              <p className="text-xs font-semibold text-slate-400 uppercase mb-3">Description</p>
+              <p className="text-sm text-slate-700 leading-relaxed">{product.description}</p>
+            </div>
+          )}
         </div>
-
-        {/* Grille de détails */}
-        <div className="p-8 grid grid-cols-1 md:grid-cols-2 gap-8">
-          {/* Section Gauche : Infos de base */}
-          <div className="space-y-6">
-            <div className="flex items-start gap-4">
-              <div className="p-2 bg-sky-50 rounded-lg text-sky-500">
-                <Tag size={20} />
-              </div>
-              <div>
-                <p className="text-xs font-semibold text-slate-400 uppercase tracking-wider mb-1">
-                  Type de produit
-                </p>
-                <span className="inline-flex px-2.5 py-0.5 rounded-full text-xs font-bold bg-slate-100 text-slate-700">
-                  {product?.type || "Standard"}
-                </span>
-              </div>
-            </div>
-
-            <div className="flex items-start gap-4">
-              <div className="p-2 bg-emerald-50 rounded-lg text-emerald-500">
-                <CircleDollarSign size={20} />
-              </div>
-              <div>
-                <p className="text-xs font-semibold text-slate-400 uppercase tracking-wider mb-1">
-                  État du prix
-                </p>
-                <p className="text-sm text-slate-700 font-medium">
-                  Taxes incluses : Non (HT)
-                </p>
-              </div>
-            </div>
-
-            <div className="flex items-start gap-4">
-              <div className="p-2 bg-amber-50 rounded-lg text-amber-500">
-                <Calendar size={20} />
-              </div>
-              <div>
-                <p className="text-xs font-semibold text-slate-400 uppercase tracking-wider mb-1">
-                  Date de création
-                </p>
-                <p className="text-sm text-slate-700 font-medium">
-                  {new Date(product?.date).toLocaleDateString("fr-FR", {
-                    dateStyle: "long",
-                  })}
-                </p>
-              </div>
-            </div>
-          </div>
-
-          {/* Section Droite : Description & Stock */}
-          <div className="space-y-6">
-            <div className="flex items-start gap-4">
-              <div className="p-2 bg-slate-50 rounded-lg text-slate-500">
-                <Info size={20} />
-              </div>
-              <div className="flex-1">
-                <p className="text-xs font-semibold text-slate-400 uppercase tracking-wider mb-1">
-                  Résumé / Description
-                </p>
-                <div className="text-sm text-slate-600 leading-relaxed bg-slate-50 p-3 rounded-lg border border-slate-100">
-                  {product?.description ||
-                    "Aucune description fournie pour ce produit."}
-                </div>
-              </div>
-            </div>
-
-            <div className="flex items-start gap-4">
-              <div className="p-2 bg-purple-50 rounded-lg text-purple-500">
-                <Package size={20} />
-              </div>
-              <div>
-                <p className="text-xs font-semibold text-slate-400 uppercase tracking-wider mb-1">
-                  Quantité en stock
-                </p>
-                <p className="text-sm font-bold text-slate-900">
-                  {product?.quantity ?? "Non défini"} unités
-                </p>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
+      )}
     </div>
   );
 };

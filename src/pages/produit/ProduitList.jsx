@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { ShoppingBag, Plus, Loader2, AlertCircle } from "lucide-react";
 import { getAll, deleteProduct } from "../../services/product.service";
+import { getStockAvailableById } from "../../services/stockAvailable.service";
 
 const ProduitList = () => {
   const [products, setProducts] = useState([]);
@@ -17,30 +18,27 @@ const ProduitList = () => {
     setLoading(true);
     try {
       const parsed = await getAll();
-      setProducts(parsed);
+      const withStock = await Promise.all(
+        parsed.map(async (product) => {
+          const stockId = product?.associations?.stockAvailables?.[0]?.id;
+          if (!stockId) {
+            return { ...product, stockQuantity: null };
+          }
+          try {
+            const stock = await getStockAvailableById(stockId);
+            return { ...product, stockQuantity: stock?.quantity ?? null };
+          } catch (stockError) {
+            return { ...product, stockQuantity: null };
+          }
+        })
+      );
+      setProducts(withStock);
     } catch (err) {
       setError(err.message);
     } finally {
       setLoading(false);
     }
   };
-
-  const handleDeleteProduct = async (id) => {
-    if (!window.confirm("Voulez-vous vraiment supprimer ce produit ?")) return;
-
-    try {
-      const response = await deleteProduct(id);
-      if (response.ok) {
-        setStatus(`✅ Produit #${id} supprimé`);
-        setProducts(products.filter((p) => p.id !== id));
-      } else {
-        setStatus(`❌ Erreur lors de la suppression`);
-      }
-    } catch (error) {
-      setStatus(`❌ Erreur réseau`);
-    }
-  };
-
   const TypeBadge = ({ type }) => {
     const styles = {
       simple: "bg-sky-100 text-sky-700",
@@ -105,19 +103,22 @@ const ProduitList = () => {
                   <th className="px-6 py-4 text-xs font-bold text-slate-500 uppercase w-[15%]">
                     Référence
                   </th>
-                  <th className="px-6 py-4 text-xs font-bold text-slate-500 uppercase w-[20%]">
+                  <th className="px-6 py-4 text-xs font-bold text-slate-500 uppercase w-[25%]">
                     Nom
                   </th>
-                  <th className="px-6 py-4 text-xs font-bold text-slate-500 uppercase w-[10%]">
+                  <th className="px-6 py-4 text-xs font-bold text-slate-500 uppercase w-[12%]">
                     Type
                   </th>
-                  <th className="px-6 py-4 text-xs font-bold text-slate-500 uppercase w-[30%]">
-                    Description
-                  </th>
-                  <th className="px-6 py-4 text-xs font-bold text-slate-500 uppercase w-[10%]">
+                  <th className="px-6 py-4 text-xs font-bold text-slate-500 uppercase w-[12%]">
                     Prix HT
                   </th>
-                  <th className="px-6 py-4 text-xs font-bold text-slate-500 uppercase w-[15%] text-right">
+                  <th className="px-6 py-4 text-xs font-bold text-slate-500 uppercase w-[12%]">
+                    Stock
+                  </th>
+                  <th className="px-6 py-4 text-xs font-bold text-slate-500 uppercase w-[12%] text-center">
+                    Actif
+                  </th>
+                  <th className="px-6 py-4 text-xs font-bold text-slate-500 uppercase w-[12%] text-right">
                     Actions
                   </th>
                 </tr>
@@ -134,18 +135,16 @@ const ProduitList = () => {
                     <td className="px-6 py-4">
                       <TypeBadge type={product.type} />
                     </td>
-                    <td className="px-6 py-4">
-                      <div
-                        className="text-xs text-slate-500 line-clamp-2"
-                        dangerouslySetInnerHTML={{
-                          __html: product.descriptionShort || "—",
-                        }}
-                      />
-                    </td>
                     <td className="px-6 py-4 text-sm font-bold text-slate-900">
-                      {product.price
-                        ? `${Number(product.price).toFixed(2)} €`
-                        : "0.00 €"}
+                      {product.price ? `${Number(product.price).toFixed(2)} €` : "0.00 €"}
+                    </td>
+                    <td className="px-6 py-4 text-sm font-bold text-slate-700">
+                      {product.stockQuantity ?? "—"}
+                    </td>
+                    <td className="px-6 py-4 text-center">
+                      <span className={`inline-block px-2 py-1 text-xs font-bold rounded ${product.active ? "bg-green-100 text-green-700" : "bg-slate-100 text-slate-500"}`}>
+                        {product.active ? "✓" : "✗"}
+                      </span>
                     </td>
                     <td className="px-6 py-4 text-right">
                       <div className="flex justify-end gap-3">
@@ -153,14 +152,8 @@ const ProduitList = () => {
                           to={`/products/${product.id}`}
                           className="text-xs font-bold text-sky-600 hover:underline"
                         >
-                          Détails
+                          Voir
                         </Link>
-                        <button
-                          onClick={() => handleDeleteProduct(product.id)}
-                          className="text-xs font-bold text-red-600 hover:underline"
-                        >
-                          Supprimer
-                        </button>
                       </div>
                     </td>
                   </tr>
