@@ -1,5 +1,8 @@
-import parseOrderPayments from "../XMLUtil/parser/OrderPayment.parser";
+import parseOrderPayments, {
+  parseOrderPayment,
+} from "../XMLUtil/parser/OrderPayment.parser";
 import parseErrors from "../XMLUtil/parser/Error.parser";
+import { buildOrderPaymentXML } from "../XMLUtil/builder/OrderPayment.builder";
 import { API_URL, WS_KEY } from "../config/config.service";
 
 const DEFAULT_DISPLAY = "full";
@@ -23,6 +26,29 @@ export const getAll = async (display = DEFAULT_DISPLAY) => {
     return parseOrderPayments(xmlText);
   } catch (error) {
     throw error;
+  }
+};
+
+export const postOrderPayment = async (payment) => {
+  const xml = buildOrderPaymentXML(payment);
+  try {
+    const response = await fetch(`${API_URL()}/order_payments?output_format=XML`, {
+      method: "POST",
+      headers: {
+        Authorization: `Basic ${btoa(WS_KEY() + ":")}`,
+        Accept: "application/xml",
+        "Content-Type": "application/xml",
+      },
+      body: xml,
+    });
+    const xmlText = await response.text();
+    if (!response.ok) {
+      throw new Error(`HTTP ${response.status} — ${xmlText}`);
+    }
+    const created = parseOrderPayment(xmlText);
+    return { success: true, id: created?.id };
+  } catch (err) {
+    return { success: false, error: err.message };
   }
 };
 

@@ -12,8 +12,10 @@ export const buildOrderDetailXML = (detail) => {
     ${field("product_id", detail.productId ?? 0)}
     ${optionalField("product_attribute_id", detail.productAttributeId)}
     ${field("product_name", detail.productName ?? "")}
+    ${field("id_warehouse", detail.idWarehouse ?? 0)}
     ${field("product_quantity", detail.productQuantity ?? 1)}
-
+    ${field("id_shop", detail.idShop ?? 1)}
+    
     ${optionalField("product_reference", detail.productReference)}
     ${optionalField("product_ean13", detail.productEan13)}
     ${optionalField("product_isbn", detail.productIsbn)}
@@ -24,8 +26,14 @@ export const buildOrderDetailXML = (detail) => {
     ${optionalField("unit_price_tax_excl", detail.unitPriceTaxExcl)}
     ${optionalField("total_price_tax_incl", detail.totalPriceTaxIncl)}
     ${optionalField("total_price_tax_excl", detail.totalPriceTaxExcl)}
-    ${optionalField("total_shipping_price_tax_incl", detail.totalShippingPriceTaxIncl)}
-    ${optionalField("total_shipping_price_tax_excl", detail.totalShippingPriceTaxExcl)}
+    ${optionalField(
+      "total_shipping_price_tax_incl",
+      detail.totalShippingPriceTaxIncl
+    )}
+    ${optionalField(
+      "total_shipping_price_tax_excl",
+      detail.totalShippingPriceTaxExcl
+    )}
     ${optionalField("reduction_percent", detail.reductionPercent)}
     ${optionalField("reduction_amount", detail.reductionAmount)}
     ${optionalField("reduction_amount_tax_incl", detail.reductionAmountTaxIncl)}
@@ -39,9 +47,15 @@ export const buildOrderDetailXML = (detail) => {
     ${optionalField("download_hash", detail.downloadHash)}
     ${optionalField("download_deadline", detail.downloadDeadline)}
     ${optionalField("product_quantity_in_stock", detail.productQuantityInStock)}
-    ${optionalField("product_quantity_refunded", detail.productQuantityRefunded)}
+    ${optionalField(
+      "product_quantity_refunded",
+      detail.productQuantityRefunded
+    )}
     ${optionalField("product_quantity_return", detail.productQuantityReturn)}
-    ${optionalField("product_quantity_reinjected", detail.productQuantityReinjected)}
+    ${optionalField(
+      "product_quantity_reinjected",
+      detail.productQuantityReinjected
+    )}
     ${optionalField("total_refunded_tax_excl", detail.totalRefundedTaxExcl)}
     ${optionalField("total_refunded_tax_incl", detail.totalRefundedTaxIncl)}
     ${optionalField("total_return_tax_excl", detail.totalReturnTaxExcl)}

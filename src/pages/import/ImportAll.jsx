@@ -2,6 +2,7 @@ import { useRef, useState } from "react";
 import { importProductsFromCSV } from "../../services/csv/product.csv.service";
 import { importCategoriesFromCSV } from "../../services/csv/category.csv.service";
 import importProductOptionsFromCSV from "../../services/csv/productOption.csv.service";
+import importOrdersFromCSV from "../../services/csv/customerOrder.service";
 
 const ImportCard = ({ title, onImport, acceptLabel }) => {
   const fileRef = useRef(null);
@@ -100,11 +101,6 @@ const ImportAll = () => {
 
       <div className="grid gap-6 lg:grid-cols-2">
         <ImportCard
-          title="Import CSV — Categories"
-          acceptLabel="Fichier CSV pour les categories"
-          onImport={importCategoriesFromCSV}
-        />
-        <ImportCard
           title="Import CSV — Produits"
           acceptLabel="Fichier CSV pour les produits"
           onImport={importProductsFromCSV}
@@ -113,6 +109,11 @@ const ImportAll = () => {
           title="Import CSV — Produits options"
           acceptLabel="Fichier CSV pour les options des produits "
           onImport={importProductOptionsFromCSV}
+        />
+        <ImportCard
+          title="Import CSV — Clients et achats"
+          acceptLabel="Fichier CSV pour les clients et achats"
+          onImport={importOrdersFromCSV}
         />
       </div>
     </div>

@@ -1,6 +1,7 @@
-import parseOrderHistories from "../XMLUtil/parser/OrderHistory.parser";
+import parseOrderHistories, { parseOrderHistory } from "../XMLUtil/parser/OrderHistory.parser";
 import parseErrors from "../XMLUtil/parser/Error.parser";
-import { API_URL, WS_KEY } from "../config/config.service";
+import { buildOrderHistoryXML } from "../XMLUtil/builder/OrderHistory.builder";
+import { API_URL, WS_KEY, authHeaders } from "../config/config.service";
 
 const DEFAULT_DISPLAY = "full";
 
@@ -23,6 +24,31 @@ export const getAll = async (display = DEFAULT_DISPLAY) => {
     return parseOrderHistories(xmlText);
   } catch (error) {
     throw error;
+  }
+};
+
+export const postOrderHistory = async (history) => {
+  const xml = buildOrderHistoryXML(history);
+  try {
+    const response = await fetch(
+      `${API_URL()}/order_histories?output_format=XML`,
+      {
+        method: "POST",
+        headers: authHeaders(),
+        body: xml,
+      },
+    );
+    const xmlText = await response.text();
+    if (!response.ok) {
+      throw new Error(`HTTP ${response.status} — ${xmlText}`);
+    }
+    const created = parseOrderHistory(xmlText);
+    return {
+      success: true,
+      id: created?.id,
+    };
+  } catch (err) {
+    return { success: false, id: history.id, error: err.message };
   }
 };
 
