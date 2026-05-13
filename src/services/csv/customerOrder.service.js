@@ -295,12 +295,11 @@ const createOrder = async ({
     conversionRate:    DEFAULTS.conversionRate,
     secureKey:         secureKey || generateSecureKey(),
     payment:           paymentInfo.payment,
-    module:            paymentInfo.module,
+    module:            "ps_wirepayment",
     dateAdd,
-
+    totalPaidReal: 0,
     // État final directement (comme importCustomers.js)
-    currentState:      idOrderState,
-    
+    currentState:      10,
     associations:      { orderRows },
   };
 
@@ -395,16 +394,9 @@ export const importOrdersFromCSV = async (file, onProgress) => {
       const fullOrder = await getOrderById(order.id);
       console.log(fullOrder);
       
-      // 5. Paiement manuel (comme importCustomers.js)
-      await createOrderPayment({
-        orderReference: fullOrder.reference,
-        amount: totals.totalPaid,
-        paymentMethod: paymentInfo.payment,
-        dateAdd,
-      });
-
-      // 6. Historique manuel (comme importCustomers.js)
-      const orderHistory = await createOrderHistory(order.id, idOrderStateFinal, dateAdd);
+      // 5. Paiement manuel DÉSACTIVÉ : 
+      // Le webservice génère tout seul le paiement lors du changement d'historique.
+      // await createOrderPayment({ ... });
 
       processResult = {
         success:        true,

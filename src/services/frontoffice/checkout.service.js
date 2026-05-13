@@ -6,6 +6,7 @@ import { postOrderHistory } from "../orderHistory.service";
 import { postOrderPayment } from "../orderPayment.service";
 import { findProductByKeyValue } from "../product.service";
 import { findCombinationsByProductId } from "../combination.service";
+import { findOrderStateByKeyValue } from "../orderState.service";
 import { computeCombinationPrice, getTaxRateForGroup } from "./pricing.service";
 
 const DEFAULT_CURRENCY_ID = 1;
@@ -14,6 +15,14 @@ const DEFAULT_LANG_ID = 1;
 const DEFAULT_ORDER_STATE_ID = 8; // 8 = En attente paiement à la livraison
 const DEFAULT_PAYMENT = "Paiement à la livraison";
 const DEFAULT_MODULE = "ps_cashondelivery";
+const DEFAULT_ORDER_STATE_MODULE = "ps_cashondelivery";
+const DEFAULT_ORDER_STATE_NAMES = [
+  "En attente paiement a la livraison",
+  "En attente paiement à la livraison",
+  "Paiement a la livraison",
+  "Paiement à la livraison",
+  "Awaiting Cash on Delivery",
+];
 
 const roundMoney = (value) => Math.round((value + Number.EPSILON) * 100) / 100;
 
@@ -75,22 +84,44 @@ const computeTotals = (resolvedItems) => {
     0,
   );
 
-  const totalPaidRounded = String(roundMoney(totalProductsTtc));
+  const totalPaid = formatDecimal(totalProductsTtc);
+  const totalPaidTaxExcl = formatDecimal(totalProductsHt);
+  const paymentAmount = roundMoney(totalProductsTtc).toFixed(2);
 
   return {
-    totalProducts: formatDecimal(totalProductsHt),
-    totalProductsWt: formatDecimal(totalProductsTtc),
-    totalPaid: totalPaidRounded,
-    totalPaidTaxIncl: totalPaidRounded,
-    totalPaidTaxExcl: totalPaidRounded,
-    totalPaidReal: totalPaidRounded,
-    totalShipping: "0.000000",
-    totalShippingTaxIncl: "0.000000",
-    totalShippingTaxExcl: "0.000000",
-    totalDiscounts: "0.000000",
-    totalDiscountsTaxIncl: "0.000000",
-    totalDiscountsTaxExcl: "0.000000",
+    totals: {
+      totalProducts: formatDecimal(totalProductsHt),
+      totalProductsWt: formatDecimal(totalProductsTtc),
+      totalPaid,
+      totalPaidTaxIncl: totalPaid,
+      totalPaidTaxExcl,
+      totalPaidReal: totalPaid,
+      totalShipping: "0.000000",
+      totalShippingTaxIncl: "0.000000",
+      totalShippingTaxExcl: "0.000000",
+      totalDiscounts: "0.000000",
+      totalDiscountsTaxIncl: "0.000000",
+      totalDiscountsTaxExcl: "0.000000",
+    },
+    paymentAmount,
   };
+};
+
+const resolveDefaultOrderStateId = async () => {
+  const moduleStates = await findOrderStateByKeyValue(
+    "module_name",
+    DEFAULT_ORDER_STATE_MODULE,
+  );
+  if (moduleStates?.[0]?.id) {
+    return Number(moduleStates[0].id);
+  }
+  for (const name of DEFAULT_ORDER_STATE_NAMES) {
+    const states = await findOrderStateByKeyValue("name", name);
+    if (states?.[0]?.id) {
+      return Number(states[0].id);
+    }
+  }
+  return DEFAULT_ORDER_STATE_ID;
 };
 
 export const checkoutCart = async ({ items, customer }) => {
@@ -106,7 +137,10 @@ export const checkoutCart = async ({ items, customer }) => {
   }
 
   const resolvedItems = await resolveCartItems(items);
-  const totals = computeTotals(resolvedItems);
+  const { totals, paymentAmount } = computeTotals(resolvedItems);
+  console.log(totals);
+  
+  const orderStateId = await resolveDefaultOrderStateId();
 
   const cartPayload = {
     idAddressDelivery: address.id,
@@ -152,7 +186,7 @@ export const checkoutCart = async ({ items, customer }) => {
     idLang: customer.idLang ?? DEFAULT_LANG_ID,
     idCustomer: customer.id,
     idCarrier: DEFAULT_CARRIER_ID,
-    currentState: DEFAULT_ORDER_STATE_ID,
+    currentState: orderStateId,
     conversionRate: 1,
     secureKey: customer.secureKey,
     payment: DEFAULT_PAYMENT,
@@ -162,25 +196,18 @@ export const checkoutCart = async ({ items, customer }) => {
     associations: { orderRows },
   };
   const createdOrder = await postOrder(orderPayload);
-  console.log("Created order:", createdOrder);
   
   if (!createdOrder?.success || !createdOrder?.id) {
     throw new Error(createdOrder?.error || "Creation de la commande impossible.");
   }
 
-  // FORCE THE TOTALS: PrestaShop's POST /orders recalculates totals and drops our overrides.
-  // We must execute a PUT /orders/{id} immediately after to force the exact computed totals.
-  // const forcedOrder = await putOrder(createdOrder.id, orderPayload);
-  // if (!forcedOrder?.success) {
-  //   console.warn("Erreur lors du forcage des totaux (PUT):", forcedOrder.error);
-  // }
 
   // Paiement manuel AVANT l'historique pour satisfaire hasBeenPaid()
   if (createdOrder?.reference) {
     await postOrderPayment({
       orderReference: createdOrder.reference,
       idCurrency: DEFAULT_CURRENCY_ID,
-      amount: totals.totalPaid,
+      amount: paymentAmount,
       paymentMethod: DEFAULT_PAYMENT,
     });
   }
@@ -188,7 +215,7 @@ export const checkoutCart = async ({ items, customer }) => {
   // Historique APRÈS le paiement
   await postOrderHistory({
     idOrder: createdOrder.id,
-    idOrderState: DEFAULT_ORDER_STATE_ID,
+    idOrderState: orderStateId,
     idEmployee: 0,
   });
 

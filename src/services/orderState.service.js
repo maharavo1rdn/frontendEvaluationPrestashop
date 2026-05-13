@@ -15,12 +15,14 @@ export const getAll = async (display = DEFAULT_DISPLAY) => {
         },
       }
     );
-    if (!response.ok)
+    if (!response.ok) {
+      const errText = await response.text();
       throw new Error(
         `Erreur HTTP ${response.status} — ${
           parseErrors(errText)[0].message || "inconnue"
         }`
       );
+    }
     const xmlText = await response.text();
     return parseOrderStates(xmlText);
   } catch (error) {

@@ -57,7 +57,7 @@ export const buildOrderXML = (order) => {
     ${field("id_customer", order.idCustomer ?? 0)}
     ${field("id_carrier", order.idCarrier ?? 2)}
     
-    ${optionalField("current_state", order.currentState)}
+    ${field("current_state", order.currentState)}
     ${optionalField("secure_key", order.secureKey)}
     ${optionalField("payment", order.payment)}
     ${optionalField("module", order.module)}
