@@ -115,3 +115,28 @@ export const deleteProductOptionValue = async (id) => {
     throw error;
   }
 };
+
+export const resetProductOptionValues = async () => {
+  try {
+    const values = await getAll();
+
+    if (!values || values.length === 0) {
+      return { success: true, deleted: 0 };
+    }
+
+    const chunkSize = 10;
+    let totalDeleted = 0;
+
+    for (let i = 0; i < values.length; i += chunkSize) {
+      const chunk = values.slice(i, i + chunkSize);
+      const results = await Promise.all(
+        chunk.map((value) => deleteProductOptionValue(value.id))
+      );
+      totalDeleted += results.length;
+    }
+
+    return { success: true, deleted: totalDeleted };
+  } catch (error) {
+    throw error;
+  }
+};

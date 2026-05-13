@@ -20,21 +20,18 @@ import { resetCombinations } from "../../services/combination.service";
 import { resetTaxRules } from "../../services/taxRule.service";
 import { resetTaxRulesGroups } from "../../services/taxRulesGroup.service";
 import { resetTaxes } from "../../services/tax.service";
+import { resetProductOptions } from "../../services/productOption.service";
+import { resetProductOptionValues } from "../../services/productOptionValue.service";
+import { resetStockAvailables } from "../../services/stockAvailable.service";
+import { resetAddresses } from "../../services/address.service";
 
 const RESET_TABLES = [
   {
-    id: "customers",
-    label: "customers",
-    table: "ps_customer",
-    description: "Comptes clients",
-    reset: resetCustomers,
-  },
-  {
-    id: "orders",
-    label: "orders",
-    table: "ps_orders",
-    description: "Commandes principales",
-    reset: resetOrders,
+    id: "order-payments",
+    label: "order_payments",
+    table: "ps_order_payment",
+    description: "Paiements associes",
+    reset: resetOrderPayments,
   },
   {
     id: "order-details",
@@ -44,11 +41,53 @@ const RESET_TABLES = [
     reset: resetOrderDetails,
   },
   {
-    id: "order-payments",
-    label: "order_payement",
-    table: "ps_order_payment",
-    description: "Paiements associes",
-    reset: resetOrderPayments,
+    id: "orders",
+    label: "orders",
+    table: "ps_orders",
+    description: "Commandes principales",
+    reset: resetOrders,
+  },
+  {
+    id: "carts",
+    label: "carts",
+    table: "ps_cart",
+    description: "Paniers clients",
+    reset: resetCarts,
+  },
+  {
+    id: "addresses",
+    label: "addresses",
+    table: "ps_address",
+    description: "Addresses",
+    reset: resetAddresses,
+  },
+  {
+    id: "customers",
+    label: "customers",
+    table: "ps_customer",
+    description: "Comptes clients",
+    reset: resetCustomers,
+  },
+  {
+    id: "combinations",
+    label: "combinaisons",
+    table: "ps_product_attribute",
+    description: "Declinaisons produits",
+    reset: resetCombinations,
+  },
+  {
+    id: "product-option-values",
+    label: "product_option_values",
+    table: "ps_product_option_value",
+    description: "Valeurs des attributs",
+    reset: resetProductOptionValues,
+  },
+  {
+    id: "product-options",
+    label: "product_options",
+    table: "ps_product_option",
+    description: "Groupes d'attributs",
+    reset: resetProductOptions,
   },
   {
     id: "feature-values",
@@ -58,11 +97,25 @@ const RESET_TABLES = [
     reset: resetProductFeatureValues,
   },
   {
-    id: "combinations",
-    label: "combinaisons",
-    table: "ps_product_attribute",
-    description: "Declinaisons produits",
-    reset: resetCombinations,
+    id: "stock-availables",
+    label: "stock_availables",
+    table: "ps_stock_available",
+    description: "Stocks disponibles",
+    reset: resetStockAvailables,
+  },
+  {
+    id: "products",
+    label: "products",
+    table: "ps_product",
+    description: "Catalogue des produits",
+    reset: resetProducts,
+  },
+  {
+    id: "categories",
+    label: "categories",
+    table: "ps_category",
+    description: "Catalogue des catégories",
+    reset: resetCategories,
   },
   {
     id: "tax-rules",
@@ -85,31 +138,10 @@ const RESET_TABLES = [
     description: "Taux de taxe",
     reset: resetTaxes,
   },
-  {
-    id: "carts",
-    label: "carts",
-    table: "ps_cart",
-    description: "Paniers clients",
-    reset: resetCarts,
-  },
-  {
-    id: "products",
-    label: "products",
-    table: "ps_product",
-    description: "Catalogue des produits",
-    reset: resetProducts,
-  },
-  {
-    id: "categories",
-    label: "categories",
-    table: "ps_category",
-    description: "Catalogue des catégories",
-    reset: resetCategories,
-  },
 ];
 
 const ResetTable = () => {
-  const [selectedIds, setSelectedIds] = useState([]);
+  const [selectedIds, setSelectedIds] = useState(RESET_TABLES.map((t) => t.id));
   const [statusById, setStatusById] = useState({});
   const [globalStatus, setGlobalStatus] = useState(null);
 

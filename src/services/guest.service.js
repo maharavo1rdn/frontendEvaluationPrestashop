@@ -49,9 +49,23 @@ export const deleteGuest = async (id) => {
 export const resetGuests = async () => {
   try {
     const guests = await getAll();
-    for (const guest of guests) {
-      await deleteGuest(guest.id);
+    
+    if (!guests || guests.length === 0) {
+      return { success: true, deleted: 0 };
     }
+
+    const chunkSize = 10;
+    let totalDeleted = 0;
+
+    for (let i = 0; i < guests.length; i += chunkSize) {
+      const chunk = guests.slice(i, i + chunkSize);
+      const results = await Promise.all(
+        chunk.map((guest) => deleteGuest(guest.id))
+      );
+      totalDeleted += results.length;
+    }
+
+    return { success: true, deleted: totalDeleted };
   } catch (error) {
     throw error;
   }

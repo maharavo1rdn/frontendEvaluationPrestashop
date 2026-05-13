@@ -106,6 +106,7 @@ export const deleteCategory = async (id) => {
 export const resetCategories = async () => {
   try {
     const categories = await getAll();
+
     const toDelete = categories
       .filter((category) => Number(category.id) >= 3)
       .sort((a, b) => {
@@ -115,9 +116,20 @@ export const resetCategories = async () => {
         return Number(b.id) - Number(a.id);
       });
 
+    let totalDeleted = 0;
+
     for (const category of toDelete) {
-      await deleteCategory(category.id);
+      try {
+        await deleteCategory(category.id);
+        totalDeleted++;
+      } catch (error) {
+        if (error.response && error.response.status !== 404) {
+          throw error;
+        }
+      }
     }
+
+    return { success: true, deleted: totalDeleted };
   } catch (error) {
     throw error;
   }

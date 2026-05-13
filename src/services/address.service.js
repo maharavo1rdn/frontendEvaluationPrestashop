@@ -102,15 +102,28 @@ export const deleteAddress = async (id) => {
 };
 
 export const resetAddresses = async () => {
-  const results = { deleted: [], failed: [] };
-  const addresses = await getAll();
   try {
-    for (const address of addresses) {
-      await deleteAddress(address.id);
-      results.deleted.push(address.id);
+    const addresses = await getAll();
+
+    if (!addresses || addresses.length === 0) {
+      return { success: true, deleted: 0 };
     }
+
+    const chunkSize = 10;
+    let totalDeleted = 0;
+
+    for (let i = 0; i < addresses.length; i += chunkSize) {
+      const chunk = addresses.slice(i, i + chunkSize);
+
+      const results = await Promise.all(
+        chunk.map((address) => deleteAddress(address.id))
+      );
+
+      totalDeleted += results.length;
+    }
+
+    return { success: true, deleted: totalDeleted };
   } catch (error) {
-    results.failed.push({ id: address.id, reason: error.message });
+    throw error;
   }
-  return addresses;
 };

@@ -83,9 +83,23 @@ export const deleteOrderState = async (id) => {
 export const resetOrderStates = async () => {
   try {
     const states = await getAll();
-    for (const state of states) {
-      await deleteOrderState(state.id);
+
+    if (!states || states.length === 0) {
+      return { success: true, deleted: 0 };
     }
+
+    const chunkSize = 10;
+    let totalDeleted = 0;
+
+    for (let i = 0; i < states.length; i += chunkSize) {
+      const chunk = states.slice(i, i + chunkSize);
+      const results = await Promise.all(
+        chunk.map((state) => deleteOrderState(state.id))
+      );
+      totalDeleted += results.length;
+    }
+
+    return { success: true, deleted: totalDeleted };
   } catch (error) {
     throw error;
   }

@@ -16,7 +16,7 @@ export const getAll = async (display = DEFAULT_DISPLAY) => {
           Authorization: `Basic ${btoa(WS_KEY() + ":")}`,
           Accept: "application/xml",
         },
-      },
+      }
     );
     if (!response.ok) {
       const errText = await response.text();
@@ -107,7 +107,7 @@ export const deleteStockAvailable = async (id) => {
       throw new Error(
         `Erreur HTTP ${response.status} — ${
           parseErrors(errText)[0].message || "inconnue"
-        }`,
+        }`
       );
     }
     return response;
@@ -166,9 +166,23 @@ export const updateStockAvailable = async (stock) => {
 export const resetStockAvailables = async () => {
   try {
     const stocks = await getAll();
-    for (const stock of stocks) {
-      await deleteStockAvailable(stock.id);
+
+    if (!stocks || stocks.length === 0) {
+      return { success: true, deleted: 0 };
     }
+
+    const chunkSize = 10;
+    let totalDeleted = 0;
+
+    for (let i = 0; i < stocks.length; i += chunkSize) {
+      const chunk = stocks.slice(i, i + chunkSize);
+      const results = await Promise.all(
+        chunk.map((stock) => deleteStockAvailable(stock.id))
+      );
+      totalDeleted += results.length;
+    }
+
+    return { success: true, deleted: totalDeleted };
   } catch (error) {
     throw error;
   }

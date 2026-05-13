@@ -16,12 +16,16 @@ export const getAll = async (display = DEFAULT_DISPLAY) => {
           Authorization: `Basic ${btoa(WS_KEY() + ":")}`,
           Accept: "application/xml",
         },
-      },
+      }
     );
-    if (!response.ok)
+    if (!response.ok) {
+      const errText = await response.text();
       throw new Error(
-        `Erreur HTTP ${response.status} — ${parseErrors(errText)[0].message || "inconnue" }`,
+        `Erreur HTTP ${response.status} — ${
+          parseErrors(errText)[0]?.message || "inconnue"
+        }`
       );
+    }
     const xmlText = await response.text();
     return parseOrderPayments(xmlText);
   } catch (error) {
@@ -32,15 +36,18 @@ export const getAll = async (display = DEFAULT_DISPLAY) => {
 export const postOrderPayment = async (payment) => {
   const xml = buildOrderPaymentXML(payment);
   try {
-    const response = await fetch(`${API_URL()}/order_payments?output_format=XML`, {
-      method: "POST",
-      headers: {
-        Authorization: `Basic ${btoa(WS_KEY() + ":")}`,
-        Accept: "application/xml",
-        "Content-Type": "application/xml",
-      },
-      body: xml,
-    });
+    const response = await fetch(
+      `${API_URL()}/order_payments?output_format=XML`,
+      {
+        method: "POST",
+        headers: {
+          Authorization: `Basic ${btoa(WS_KEY() + ":")}`,
+          Accept: "application/xml",
+          "Content-Type": "application/xml",
+        },
+        body: xml,
+      }
+    );
     const xmlText = await response.text();
     if (!response.ok) {
       throw new Error(`HTTP ${response.status} — ${xmlText}`);
@@ -64,7 +71,9 @@ export const deleteOrderPayment = async (id) => {
     if (!response.ok) {
       const errText = await response.text();
       throw new Error(
-				`Erreur HTTP ${response.status} — ${parseErrors(errText)[0].message || "inconnue" }`,
+        `Erreur HTTP ${response.status} — ${
+          parseErrors(errText)[0].message || "inconnue"
+        }`
       );
     }
     return response;
@@ -76,9 +85,23 @@ export const deleteOrderPayment = async (id) => {
 export const resetOrderPayments = async () => {
   try {
     const payments = await getAll();
-    for (const payment of payments) {
-      await deleteOrderPayment(payment.id);
+
+    if (!payments || payments.length === 0) {
+      return { success: true, deleted: 0 };
     }
+
+    const chunkSize = 10;
+    let totalDeleted = 0;
+
+    for (let i = 0; i < payments.length; i += chunkSize) {
+      const chunk = payments.slice(i, i + chunkSize);
+      const results = await Promise.all(
+        chunk.map((payment) => deleteOrderPayment(payment.id))
+      );
+      totalDeleted += results.length;
+    }
+
+    return { success: true, deleted: totalDeleted };
   } catch (error) {
     throw error;
   }

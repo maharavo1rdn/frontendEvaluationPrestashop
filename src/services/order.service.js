@@ -178,9 +178,23 @@ export const deleteOrder = async (id) => {
 export const resetOrders = async () => {
   try {
     const orders = await getAll();
-    for (const order of orders) {
-      await deleteOrder(order.id);
+
+    if (!orders || orders.length === 0) {
+      return { success: true, deleted: 0 };
     }
+
+    const chunkSize = 10;
+    let totalDeleted = 0;
+
+    for (let i = 0; i < orders.length; i += chunkSize) {
+      const chunk = orders.slice(i, i + chunkSize);
+      const results = await Promise.all(
+        chunk.map((order) => deleteOrder(order.id))
+      );
+      totalDeleted += results.length;
+    }
+
+    return { success: true, deleted: totalDeleted };
   } catch (error) {
     throw error;
   }
