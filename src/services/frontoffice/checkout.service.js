@@ -201,17 +201,6 @@ export const checkoutCart = async ({ items, customer }) => {
     throw new Error(createdOrder?.error || "Creation de la commande impossible.");
   }
 
-
-  // Paiement manuel AVANT l'historique pour satisfaire hasBeenPaid()
-  if (createdOrder?.reference) {
-    await postOrderPayment({
-      orderReference: createdOrder.reference,
-      idCurrency: DEFAULT_CURRENCY_ID,
-      amount: paymentAmount,
-      paymentMethod: DEFAULT_PAYMENT,
-    });
-  }
-
   // Historique APRÈS le paiement
   await postOrderHistory({
     idOrder: createdOrder.id,
