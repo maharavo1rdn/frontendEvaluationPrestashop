@@ -3,6 +3,7 @@ import { importProductsFromCSV } from "../../services/csv/product.csv.service";
 import { importCategoriesFromCSV } from "../../services/csv/category.csv.service";
 import importProductOptionsFromCSV from "../../services/csv/productOption.csv.service";
 import importOrdersFromCSV from "../../services/csv/customerOrder.service";
+import importProductImagesFromZip from "../../services/zip/productImage.zip.service"
 
 const ImportCard = ({ title, onImport, acceptLabel }) => {
   const fileRef = useRef(null);
@@ -116,6 +117,13 @@ const ImportAll = () => {
           onImport={importOrdersFromCSV}
         />
       </div>
+      <ImportCard
+        title="Import ZIP — Images produits"
+        acceptLabel="Fichier .zip contenant les images (nom = référence produit)"
+        acceptFile=".zip"
+        alertLabel="Selectionnez un fichier .zip."
+        onImport={importProductImagesFromZip}
+      />
     </div>
   );
 };
