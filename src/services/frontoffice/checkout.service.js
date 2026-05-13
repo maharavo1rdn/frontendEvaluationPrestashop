@@ -152,7 +152,6 @@ export const checkoutCart = async ({ items, customer }) => {
     idCustomer: customer.id,
     idAddressDelivery: address.id,
     idAddressInvoice: address.id,
-    idCart: createdCart.id,
     idCurrency: DEFAULT_CURRENCY_ID,
     idLang: customer.idLang ?? DEFAULT_LANG_ID,
     idCustomer: customer.id,
@@ -165,7 +164,8 @@ export const checkoutCart = async ({ items, customer }) => {
     valid: false,
     associations: { orderRows },
   };
-  // const createdOrder = await postOrder(orderPayload);
+  
+  const createdOrder = await postOrder(orderPayload);
 
   if (!createdOrder?.success || !createdOrder?.id) {
     throw new Error(
@@ -181,7 +181,7 @@ export const checkoutCart = async ({ items, customer }) => {
   // });
 
   return {
-    cartId: createdCart.id,
+    cartId: cart.psCartId,
     orderId: createdOrder.id,
     orderReference: createdOrder.reference,
     totalAmount: Number(totals.totalPaid),
