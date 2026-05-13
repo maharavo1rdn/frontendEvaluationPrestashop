@@ -71,8 +71,6 @@ const ProduitList = () => {
     if (!product.dateAvailable) return null;
     const availableDate = new Date(product.dateAvailable);
     availableDate.setHours(0, 0, 0, 0);
-    console.log(product.id);
-    console.log(product.dateAvailable)
 
     const diffTime = today.getTime() - availableDate.getTime();
     const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24));
