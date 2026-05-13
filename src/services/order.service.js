@@ -15,12 +15,14 @@ export const getAll = async (display = DEFAULT_DISPLAY) => {
           Authorization: `Basic ${btoa(WS_KEY() + ":")}`,
           Accept: "application/xml",
         },
-      },
+      }
     );
     if (!response.ok) {
       const errText = await response.text();
       throw new Error(
-        `Erreur HTTP ${response.status} — ${parseErrors(errText)?.[0]?.message || "inconnue" }`,
+        `Erreur HTTP ${response.status} — ${
+          parseErrors(errText)?.[0]?.message || "inconnue"
+        }`
       );
     }
     const xmlText = await response.text();
@@ -31,7 +33,10 @@ export const getAll = async (display = DEFAULT_DISPLAY) => {
       orders.map(async (order) => {
         try {
           if (order.currentState) {
-            const stateData = await findOrderStateByKeyValue("id", order.currentState);
+            const stateData = await findOrderStateByKeyValue(
+              "id",
+              order.currentState
+            );
             order.current_state_label = stateData?.[0]?.name || "Inconnu";
           } else {
             order.current_state_label = "Inconnu";
@@ -55,13 +60,42 @@ export const getOrderById = async (id) => {
       `${API_URL()}/orders/${id}?output_format=XML`,
       {
         headers: authHeaders(),
-      },
+      }
     );
     const xmlText = await response.text();
     if (!response.ok) {
       throw new Error(`HTTP ${response.status} — ${xmlText}`);
     }
     return parseOrder(xmlText);
+  } catch (error) {
+    throw error;
+  }
+};
+
+export const findOrderByKeyValue = async (key, value) => {
+  try {
+    const params = new URLSearchParams({
+      [`filter[${key}]`]: `[${value}]`,
+      output_format: "XML",
+      display: "full",
+    });
+    const queryString = params
+      .toString()
+      .replace(/%5B/g, "[")
+      .replace(/%5D/g, "]");
+
+    const response = await fetch(`${API_URL()}/orders?${queryString}`, {
+      method: "GET",
+      headers: {
+        Authorization: `Basic ${btoa(WS_KEY() + ":")}`,
+        Accept: "application/xml",
+      },
+    });
+    const xmlText = await response.text();
+    if (!response.ok) {
+      throw new Error(`HTTP ${response.status} — ${xmlText}`);
+    }
+    return parseOrders(xmlText);
   } catch (error) {
     throw error;
   }
@@ -76,7 +110,7 @@ export const postOrder = async (order) => {
       body: xml,
     });
     const xmlText = await response.text();
-    
+
     if (!response.ok) {
       throw new Error(`HTTP ${response.status} — ${xmlText}`);
     }
@@ -94,13 +128,16 @@ export const postOrder = async (order) => {
 export const putOrder = async (orderId, orderPayload) => {
   const xml = buildOrderXML({ ...orderPayload, id: orderId });
   try {
-    const response = await fetch(`${API_URL()}/orders/${orderId}?output_format=XML`, {
-      method: "PUT",
-      headers: authHeaders(),
-      body: xml,
-    });
+    const response = await fetch(
+      `${API_URL()}/orders/${orderId}?output_format=XML`,
+      {
+        method: "PUT",
+        headers: authHeaders(),
+        body: xml,
+      }
+    );
     const xmlText = await response.text();
-    
+
     if (!response.ok) {
       throw new Error(`HTTP ${response.status} — ${xmlText}`);
     }
@@ -127,7 +164,9 @@ export const deleteOrder = async (id) => {
     if (!response.ok) {
       const errText = await response.text();
       throw new Error(
-				`Erreur HTTP ${response.status} — ${parseErrors(errText)[0].message || "inconnue" }`,
+        `Erreur HTTP ${response.status} — ${
+          parseErrors(errText)[0].message || "inconnue"
+        }`
       );
     }
     return response;

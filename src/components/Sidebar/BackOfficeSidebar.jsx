@@ -6,19 +6,19 @@ const BACKOFFICE_ITEMS = [
     id: "reset",
     label: "Reset table",
     icon: ListRestartIcon,
-    path: "/reset",
+    path: "/bakcOffice/reset",
   },
   {
     id: "import",
     label: "Import",
     icon: Upload,
-    path: "/import",
+    path: "/bakcOffice/import",
   },
   {
     id: "orders",
     label: "Orders",
     icon: ShoppingCart,
-    children: [{ id: "orders-list", label: "Liste", path: "/commandes" }],
+    children: [{ id: "orders-list", label: "Liste", path: "/backOffice/commandes" }],
   },
 ];
 

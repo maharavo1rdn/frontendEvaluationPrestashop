@@ -152,7 +152,7 @@ const ProduitDetail = () => {
           <p className="text-sm font-medium">{error}</p>
         </div>
         <Link
-          to="/products"
+          to="/frontOffice/products"
           className="mt-4 inline-flex items-center gap-2 text-sky-500 font-medium"
         >
           <ArrowLeft size={16} /> Retour à la liste
@@ -166,14 +166,14 @@ const ProduitDetail = () => {
       {/* Navigation */}
       <div className="flex items-center justify-between mb-6">
         <Link
-          to="/products"
+          to="/frontOffice/products"
           className="flex items-center gap-2 text-sm font-medium text-slate-500 hover:text-sky-500"
         >
           <ArrowLeft size={16} />
           Retour
         </Link>
         <Link
-          to="/cart"
+          to="/frontOffice/cart"
           className="text-sm font-semibold text-sky-600 hover:text-sky-700"
         >
           Voir le panier →
