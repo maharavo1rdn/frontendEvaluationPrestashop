@@ -17,14 +17,51 @@ export const getAll = async (display = DEFAULT_DISPLAY) => {
         },
       },
     );
-    if (!response.ok)
+    if (!response.ok) {
+      const errText = await response.text();
       throw new Error(
-        `Erreur HTTP ${response.status} — ${parseErrors(errText)[0].message || "inconnue" }`,
+        `Erreur HTTP ${response.status} — ${parseErrors(errText)?.[0]?.message || "inconnue" }`,
       );
-      const xmlText = await response.text();
-      return parseOrders(xmlText);
-      // ajouter des codes pour le statut actuel de la commande
-      // findOrderStateByKeyValue("id",order[0].current_state)
+    }
+    const xmlText = await response.text();
+    const orders = parseOrders(xmlText);
+
+    // ajouter des codes pour le statut actuel de la commande
+    const ordersWithStates = await Promise.all(
+      orders.map(async (order) => {
+        try {
+          if (order.currentState) {
+            const stateData = await findOrderStateByKeyValue("id", order.currentState);
+            order.current_state_label = stateData?.[0]?.name || "Inconnu";
+          } else {
+            order.current_state_label = "Inconnu";
+          }
+        } catch (e) {
+          order.current_state_label = "Inconnu";
+        }
+        return order;
+      })
+    );
+
+    return ordersWithStates;
+  } catch (error) {
+    throw error;
+  }
+};
+
+export const getOrderById = async (id) => {
+  try {
+    const response = await fetch(
+      `${API_URL()}/orders/${id}?output_format=XML`,
+      {
+        headers: authHeaders(),
+      },
+    );
+    const xmlText = await response.text();
+    if (!response.ok) {
+      throw new Error(`HTTP ${response.status} — ${xmlText}`);
+    }
+    return parseOrder(xmlText);
   } catch (error) {
     throw error;
   }
@@ -51,6 +88,30 @@ export const postOrder = async (order) => {
     };
   } catch (err) {
     return { success: false, id: order.id, error: err.message };
+  }
+};
+
+export const putOrder = async (orderId, orderPayload) => {
+  const xml = buildOrderXML({ ...orderPayload, id: orderId });
+  try {
+    const response = await fetch(`${API_URL()}/orders/${orderId}?output_format=XML`, {
+      method: "PUT",
+      headers: authHeaders(),
+      body: xml,
+    });
+    const xmlText = await response.text();
+    
+    if (!response.ok) {
+      throw new Error(`HTTP ${response.status} — ${xmlText}`);
+    }
+    const updated = parseOrder(xmlText);
+    return {
+      success: true,
+      id: updated?.id,
+      reference: updated?.reference,
+    };
+  } catch (err) {
+    return { success: false, id: orderId, error: err.message };
   }
 };
 

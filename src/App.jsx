@@ -9,7 +9,9 @@ export default function App() {
   const [collapsed, setCollapsed] = useState(false);
   const location = useLocation();
   const isLoginRoute = ["/", "/backoffice"].includes(location.pathname);
-  const isFrontOfficeRoute = location.pathname.startsWith("/products");
+  const isFrontOfficeRoute =
+    location.pathname.startsWith("/products") ||
+    location.pathname.startsWith("/cart");
   const showSidebar = !isLoginRoute;
 
   const sidebar = isFrontOfficeRoute ? (

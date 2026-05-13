@@ -47,6 +47,7 @@ export const mapProduct = (productNode) => ({
   metaKeywords: getTranslatableValue(productNode.meta_keywords),
   availableNow: getTranslatableValue(productNode.available_now),
   availableLater: getTranslatableValue(productNode.available_later),
+  dateAvailable: getValue(productNode.available_date),
   dateAdd: getValue(productNode.date_add),
   dateUpd: getValue(productNode.date_upd),
   associations: {

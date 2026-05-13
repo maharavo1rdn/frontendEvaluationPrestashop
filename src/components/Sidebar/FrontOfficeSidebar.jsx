@@ -1,4 +1,4 @@
-import { Box } from "lucide-react";
+import { Box, ShoppingCart } from "lucide-react";
 import Sidebar from "./Sidebar";
 
 const FRONTOFFICE_ITEMS = [
@@ -7,6 +7,12 @@ const FRONTOFFICE_ITEMS = [
     label: "Products",
     icon: Box,
     children: [{ id: "products-list", label: "Liste", path: "/products" }],
+  },
+  {
+    id: "cart",
+    label: "Panier",
+    icon: ShoppingCart,
+    children: [{ id: "cart-view", label: "Voir", path: "/cart" }],
   },
 ];
 

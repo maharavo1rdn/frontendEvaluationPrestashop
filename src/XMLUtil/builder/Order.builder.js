@@ -1,7 +1,11 @@
 import { field, optionalField, wrapPrestashop } from "./xml.builder";
 
-const boolValue = (value) =>
-  value === undefined || value === null ? undefined : value ? 1 : 0;
+const boolValue = (value) => {
+  if (value === undefined || value === null) return undefined;
+  if (value === "0" || value === 0 || value === false) return 0; // Force 0 pour ces cas
+  return 1;
+};
+
 
 const buildOrderRows = (rows = []) => {
   if (!rows.length) return "";
@@ -14,6 +18,14 @@ const buildOrderRows = (rows = []) => {
         ${optionalField("product_id", row.productId)}
         ${optionalField("product_attribute_id", row.productAttributeId)}
         ${optionalField("product_quantity", row.productQuantity)}
+        ${optionalField("product_name", row.productName)}
+        ${optionalField("product_reference", row.productReference)}
+        ${optionalField("product_price", row.productPrice ?? row.unitPriceTaxExcl)}
+        ${optionalField("unit_price_tax_incl", row.unitPriceTaxIncl)}
+        ${optionalField("unit_price_tax_excl", row.unitPriceTaxExcl)}
+        ${optionalField("total_price_tax_incl", row.totalPriceTaxIncl)}
+        ${optionalField("total_price_tax_excl", row.totalPriceTaxExcl)}
+        ${optionalField("tax_rate", row.taxRate)}
         ${optionalField("id_customization", row.idCustomization)}
       </order_row>`
         )
@@ -45,8 +57,9 @@ export const buildOrderXML = (order) => {
     ${field("id_customer", order.idCustomer ?? 0)}
     ${field("id_carrier", order.idCarrier ?? 2)}
     
-    ${optionalField("current_state", order.currentState)}
+    ${field("current_state", order.currentState)}
     ${optionalField("secure_key", order.secureKey)}
+    ${optionalField("date_add", order.dateAdd)}
     ${optionalField("payment", order.payment)}
     ${optionalField("module", order.module)}
     ${optionalField("conversion_rate", order.conversionRate)}
@@ -75,8 +88,8 @@ export const buildOrderXML = (order) => {
     ${optionalField("round_type", order.roundType)}
     ${optionalField("invoice_number", order.invoiceNumber)}
     ${optionalField("delivery_number", order.deliveryNumber)}
-    ${optionalField("invoice_date", order.invoiceDate)}
-    ${optionalField("delivery_date", order.deliveryDate)}
+    ${optionalField("invoice_date", order.dateAdd)}
+    ${optionalField("delivery_date", order.dateAdd)}
     ${optionalField("valid", boolValue(order.valid))}
     ${optionalField("note", order.note)}
 

@@ -36,12 +36,23 @@ export const LoginFrontOffice = async (email, passwd) => {
     customers == null ||
     customers == undefined ||
     (await customers).length == 0
-  )
-    throw new Error("Employée introuvable");
-  const hash = customers[0].passwd;
+  ) {
+    throw new Error("Client introuvable");
+  }
+  const customer = customers[0];
+  const hash = customer.passwd;
 
   const isMatch = bcrypt.compareSync(passwd, hash);
   if (!isMatch) {
     throw new Error("Mot de passe incorrect");
   }
+
+  return {
+    id: customer.id,
+    email: customer.email,
+    firstname: customer.firstname,
+    lastname: customer.lastname,
+    idLang: customer.idLang,
+    secureKey: customer.secureKey,
+  };
 };

@@ -31,6 +31,50 @@ export const getAll = async (display = DEFAULT_DISPLAY) => {
   }
 };
 
+export const searchProducts = async ({
+  name,
+  categoryId,
+  minPrice,
+  maxPrice,
+}) => {
+  const params = new URLSearchParams();
+  params.append("output_format", "XML");
+  params.append("display", "full");
+
+  if (name) {
+    params.append("filter[name]", `[${name}]`);
+  }
+  if (categoryId) {
+    params.append("filter[id_category_default]", `[${categoryId}]`);
+  }
+  if (
+    minPrice !== undefined &&
+    minPrice !== "" &&
+    maxPrice !== undefined &&
+    maxPrice !== ""
+  ) {
+    params.append("filter[price]", `[${minPrice},${maxPrice}]`);
+  } else if (minPrice !== undefined && minPrice !== "") {
+    params.append("filter[price]", `[${minPrice},]`);
+  } else if (maxPrice !== undefined && maxPrice !== "") {
+    params.append("filter[price]", `[,${maxPrice}]`);
+  }
+
+  const queryString = params
+    .toString()
+    .replace(/%5B/g, "[")
+    .replace(/%5D/g, "]");
+  const response = await fetch(`${API_URL()}/products?${queryString}`, {
+    headers: {
+      Authorization: `Basic ${btoa(WS_KEY() + ":")}`,
+      Accept: "application/xml",
+    },
+  });
+  if (!response.ok) throw new Error(`Erreur: ${await response.text()}`);
+  const xmlText = await response.text();
+  return parseProducts(xmlText);
+};
+
 export const findProductByKeyValue = async (key, value) => {
   try {
     const params = new URLSearchParams({
@@ -98,12 +142,12 @@ export const deleteProduct = async (id) => {
     const response = await fetch(
       `${API_URL()}/products/${id}?output_format=XML`,
       {
-      method: "DELETE",
-      headers: {
-        Authorization: `Basic ${btoa(WS_KEY() + ":")}`,
-        Accept: "application/xml",
-      },
-    }
+        method: "DELETE",
+        headers: {
+          Authorization: `Basic ${btoa(WS_KEY() + ":")}`,
+          Accept: "application/xml",
+        },
+      }
     );
     if (!response.ok) {
       const errText = await response.text();
