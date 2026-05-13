@@ -8,7 +8,7 @@ import "./App.css";
 export default function App() {
   const [collapsed, setCollapsed] = useState(false);
   const location = useLocation();
-  const isLoginRoute = ["/", "/backoffice"].includes(location.pathname);
+  const isLoginRoute = ["/", "/backoffice","/frontOffice/userSelector"].includes(location.pathname);
   const isFrontOfficeRoute = location.pathname.startsWith("/frontOffice");
   const showSidebar = !isLoginRoute;
 

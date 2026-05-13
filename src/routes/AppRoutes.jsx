@@ -7,6 +7,7 @@ import ImportRoutes from "./import/ImportRoutes";
 import FrontOfficeLogin from "../pages/auth/FrontOfficeLogin";
 import BackOfficeLogin from "../pages/auth/BackOfficeLogin";
 import CommandesRoutes from "./commande/CommandesRoutes";
+import UserSelector from "../pages/auth/UserSelector";
 
 export default function AppRoutes() {
   return (
@@ -15,6 +16,7 @@ export default function AppRoutes() {
         <Route path="/" element={<FrontOfficeLogin />} />
         <Route path="/backoffice" element={<BackOfficeLogin />} />
         <Route path="/backOffice/reset" element={<ResetTable />} />
+        <Route path="/frontOffice/userSelector" element={<UserSelector />} />
       </Routes>
       <ClientsRoutes />
       <ProduitsRoutes />
