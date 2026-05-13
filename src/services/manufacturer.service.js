@@ -13,11 +13,13 @@ export const getAll = async (display = DEFAULT_DISPLAY) => {
           Authorization: `Basic ${btoa(WS_KEY() + ":")}`,
           Accept: "application/xml",
         },
-      },
+      }
     );
     if (!response.ok)
       throw new Error(
-        `Erreur HTTP ${response.status} — ${parseErrors(errText)[0].message || "inconnue" }`,
+        `Erreur HTTP ${response.status} — ${
+          parseErrors(errText)[0].message || "inconnue"
+        }`
       );
     const xmlText = await response.text();
     return parseManufacturers(xmlText);
@@ -65,7 +67,9 @@ export const deleteManufacturer = async (id) => {
     if (!response.ok) {
       const errText = await response.text();
       throw new Error(
-				`Erreur HTTP ${response.status} — ${parseErrors(errText)[0].message || "inconnue" }`,
+        `Erreur HTTP ${response.status} — ${
+          parseErrors(errText)[0].message || "inconnue"
+        }`
       );
     }
     return response;
@@ -77,9 +81,23 @@ export const deleteManufacturer = async (id) => {
 export const resetManufacturers = async () => {
   try {
     const manufacturers = await getAll();
-    for (const manufacturer of manufacturers) {
-      await deleteManufacturer(manufacturer.id);
+
+    if (!manufacturers || manufacturers.length === 0) {
+      return { success: true, deleted: 0 };
     }
+
+    const chunkSize = 10;
+    let totalDeleted = 0;
+
+    for (let i = 0; i < manufacturers.length; i += chunkSize) {
+      const chunk = manufacturers.slice(i, i + chunkSize);
+      const results = await Promise.all(
+        chunk.map((manufacturer) => deleteManufacturer(manufacturer.id))
+      );
+      totalDeleted += results.length;
+    }
+
+    return { success: true, deleted: totalDeleted };
   } catch (error) {
     throw error;
   }

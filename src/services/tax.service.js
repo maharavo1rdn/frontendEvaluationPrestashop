@@ -103,9 +103,21 @@ export const deleteTax = async (id) => {
 export const resetTaxes = async () => {
   try {
     const taxes = await getAll();
-    for (const tax of taxes) {
-      await deleteTax(tax.id);
+
+    if (!taxes || taxes.length === 0) {
+      return { success: true, deleted: 0 };
     }
+
+    const chunkSize = 10;
+    let totalDeleted = 0;
+
+    for (let i = 0; i < taxes.length; i += chunkSize) {
+      const chunk = taxes.slice(i, i + chunkSize);
+      const results = await Promise.all(chunk.map((tax) => deleteTax(tax.id)));
+      totalDeleted += results.length;
+    }
+
+    return { success: true, deleted: totalDeleted };
   } catch (error) {
     throw error;
   }

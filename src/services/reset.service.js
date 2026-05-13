@@ -13,11 +13,13 @@ import { resetTaxes } from "./tax.service";
 import { resetProductOptions } from "./productOption.service";
 import { resetProductOptionValues } from "./productOptionValue.service";
 import { resetStockAvailables } from "./stockAvailable.service";
+import { resetAddresses } from "./address.service";
 const TABLE_RESETTERS = [
   { id: "order-payments", reset: resetOrderPayments },
   { id: "order-details", reset: resetOrderDetails },
   { id: "orders", reset: resetOrders },
   { id: "carts", reset: resetCarts },
+  { id: "addresses", reset: resetAddresses },
   { id: "customers", reset: resetCustomers },
   { id: "combinations", reset: resetCombinations },
   { id: "product-option-values", reset: resetProductOptionValues },

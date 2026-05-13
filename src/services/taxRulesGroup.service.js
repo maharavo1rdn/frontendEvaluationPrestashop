@@ -45,13 +45,16 @@ export const findTaxRulesGroupByKeyValue = async (key, value) => {
       .toString()
       .replace(/%5B/g, "[")
       .replace(/%5D/g, "]");
-    const response = await fetch(`${API_URL()}/tax_rule_groups?${queryString}`, {
-      method: "GET",
-      headers: {
-        Authorization: `Basic ${btoa(WS_KEY() + ":")}`,
-        Accept: "application/xml",
-      },
-    });
+    const response = await fetch(
+      `${API_URL()}/tax_rule_groups?${queryString}`,
+      {
+        method: "GET",
+        headers: {
+          Authorization: `Basic ${btoa(WS_KEY() + ":")}`,
+          Accept: "application/xml",
+        },
+      }
+    );
     if (!response.ok) throw new Error(`Erreur: ${await response.text()}`);
     const xmlText = await response.text();
     return parseTaxRulesGroups(xmlText);
@@ -108,9 +111,23 @@ export const deleteTaxRulesGroup = async (id) => {
 export const resetTaxRulesGroups = async () => {
   try {
     const groups = await getAll();
-    for (const group of groups) {
-      await deleteTaxRulesGroup(group.id);
+
+    if (!groups || groups.length === 0) {
+      return { success: true, deleted: 0 };
     }
+
+    const chunkSize = 10;
+    let totalDeleted = 0;
+
+    for (let i = 0; i < groups.length; i += chunkSize) {
+      const chunk = groups.slice(i, i + chunkSize);
+      const results = await Promise.all(
+        chunk.map((group) => deleteTaxRulesGroup(group.id))
+      );
+      totalDeleted += results.length;
+    }
+
+    return { success: true, deleted: totalDeleted };
   } catch (error) {
     throw error;
   }

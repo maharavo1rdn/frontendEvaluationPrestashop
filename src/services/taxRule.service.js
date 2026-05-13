@@ -104,9 +104,23 @@ export const deleteTaxRule = async (id) => {
 export const resetTaxRules = async () => {
   try {
     const taxRules = await getAll();
-    for (const taxRule of taxRules) {
-      await deleteTaxRule(taxRule.id);
+
+    if (!taxRules || taxRules.length === 0) {
+      return { success: true, deleted: 0 };
     }
+
+    const chunkSize = 10;
+    let totalDeleted = 0;
+
+    for (let i = 0; i < taxRules.length; i += chunkSize) {
+      const chunk = taxRules.slice(i, i + chunkSize);
+      const results = await Promise.all(
+        chunk.map((taxRule) => deleteTaxRule(taxRule.id))
+      );
+      totalDeleted += results.length;
+    }
+
+    return { success: true, deleted: totalDeleted };
   } catch (error) {
     throw error;
   }

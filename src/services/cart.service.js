@@ -128,14 +128,26 @@ export const deleteCart = async (id) => {
 };
 
 export const resetCarts = async () => {
-  const results = { deleted: [], failed: [] };
-  const carts = await getAll();
   try {
-    for (const cart of carts) {
-      await deleteCart(cart.id);
+    const carts = await getAll();
+
+    if (!carts || carts.length === 0) {
+      return { success: true, deleted: 0 };
     }
+
+    const chunkSize = 10;
+    let totalDeleted = 0;
+
+    for (let i = 0; i < carts.length; i += chunkSize) {
+      const chunk = carts.slice(i, i + chunkSize);
+      const results = await Promise.all(
+        chunk.map((cart) => deleteCart(cart.id))
+      );
+      totalDeleted += results.length;
+    }
+
+    return { success: true, deleted: totalDeleted };
   } catch (error) {
-    results.failed.push({ id: cart.id, reason: error.message });
+    throw error;
   }
-  return results;
 };

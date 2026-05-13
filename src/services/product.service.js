@@ -176,16 +176,26 @@ export const deleteProduct = async (id) => {
 };
 
 export const resetProducts = async () => {
-  const products = await getAll();
-  const results = { deleted: [], failed: [] };
+  try {
+    const products = await getAll();
 
-  for (const product of products) {
-    try {
-      await deleteProduct(product.id);
-      results.deleted.push(product.id);
-    } catch (error) {
-      results.failed.push({ id: product.id, reason: error.message });
+    if (!products || products.length === 0) {
+      return { success: true, deleted: 0 };
     }
+
+    const chunkSize = 10;
+    let totalDeleted = 0;
+
+    for (let i = 0; i < products.length; i += chunkSize) {
+      const chunk = products.slice(i, i + chunkSize);
+      const results = await Promise.all(
+        chunk.map((product) => deleteProduct(product.id))
+      );
+      totalDeleted += results.length;
+    }
+
+    return { success: true, deleted: totalDeleted };
+  } catch (error) {
+    throw error;
   }
-  return results;
 };

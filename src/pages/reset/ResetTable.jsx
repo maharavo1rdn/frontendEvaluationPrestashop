@@ -23,15 +23,9 @@ import { resetTaxes } from "../../services/tax.service";
 import { resetProductOptions } from "../../services/productOption.service";
 import { resetProductOptionValues } from "../../services/productOptionValue.service";
 import { resetStockAvailables } from "../../services/stockAvailable.service";
+import { resetAddresses } from "../../services/address.service";
 
 const RESET_TABLES = [
-  {
-    id: "customers",
-    label: "customers",
-    table: "ps_customer",
-    description: "Comptes clients",
-    reset: resetCustomers,
-  },
   {
     id: "order-payments",
     label: "order_payments",
@@ -59,6 +53,20 @@ const RESET_TABLES = [
     table: "ps_cart",
     description: "Paniers clients",
     reset: resetCarts,
+  },
+  {
+    id: "addresses",
+    label: "addresses",
+    table: "ps_address",
+    description: "Addresses",
+    reset: resetAddresses,
+  },
+  {
+    id: "customers",
+    label: "customers",
+    table: "ps_customer",
+    description: "Comptes clients",
+    reset: resetCustomers,
   },
   {
     id: "combinations",

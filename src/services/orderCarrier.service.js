@@ -13,11 +13,13 @@ export const getAll = async (display = DEFAULT_DISPLAY) => {
           Authorization: `Basic ${btoa(WS_KEY() + ":")}`,
           Accept: "application/xml",
         },
-      },
+      }
     );
     if (!response.ok)
       throw new Error(
-        `Erreur HTTP ${response.status} — ${parseErrors(errText)[0].message || "inconnue" }`,
+        `Erreur HTTP ${response.status} — ${
+          parseErrors(errText)[0].message || "inconnue"
+        }`
       );
     const xmlText = await response.text();
     return parseOrderCarriers(xmlText);
@@ -38,7 +40,9 @@ export const deleteOrderCarrier = async (id) => {
     if (!response.ok) {
       const errText = await response.text();
       throw new Error(
-				`Erreur HTTP ${response.status} — ${parseErrors(errText)[0].message || "inconnue" }`,
+        `Erreur HTTP ${response.status} — ${
+          parseErrors(errText)[0].message || "inconnue"
+        }`
       );
     }
     return response;
@@ -50,9 +54,23 @@ export const deleteOrderCarrier = async (id) => {
 export const resetOrderCarriers = async () => {
   try {
     const carriers = await getAll();
-    for (const carrier of carriers) {
-      await deleteOrderCarrier(carrier.id);
+
+    if (!carriers || carriers.length === 0) {
+      return { success: true, deleted: 0 };
     }
+
+    const chunkSize = 10;
+    let totalDeleted = 0;
+
+    for (let i = 0; i < carriers.length; i += chunkSize) {
+      const chunk = carriers.slice(i, i + chunkSize);
+      const results = await Promise.all(
+        chunk.map((carrier) => deleteOrderCarrier(carrier.id))
+      );
+      totalDeleted += results.length;
+    }
+
+    return { success: true, deleted: totalDeleted };
   } catch (error) {
     throw error;
   }

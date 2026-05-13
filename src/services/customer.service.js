@@ -1,4 +1,6 @@
-import parseCustomers, { parseCustomer } from "../XMLUtil/parser/Customer.parser";
+import parseCustomers, {
+  parseCustomer,
+} from "../XMLUtil/parser/Customer.parser";
 import parseErrors from "../XMLUtil/parser/Error.parser";
 import { buildCustomerXML } from "../XMLUtil/builder/Customer.builder";
 import { API_URL, WS_KEY, authHeaders } from "../config/config.service";
@@ -107,9 +109,23 @@ export const deleteCustomer = async (id) => {
 export const resetCustomers = async () => {
   try {
     const customers = await getAll();
-    for (const customer of customers) {
-      await deleteCustomer(customer.id);
+
+    if (!customers || customers.length === 0) {
+      return { success: true, deleted: 0 };
     }
+
+    const chunkSize = 10;
+    let totalDeleted = 0;
+
+    for (let i = 0; i < customers.length; i += chunkSize) {
+      const chunk = customers.slice(i, i + chunkSize);
+      const results = await Promise.all(
+        chunk.map((customer) => deleteCustomer(customer.id))
+      );
+      totalDeleted += results.length;
+    }
+
+    return { success: true, deleted: totalDeleted };
   } catch (error) {
     throw error;
   }

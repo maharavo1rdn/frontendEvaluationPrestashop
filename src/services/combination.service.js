@@ -16,11 +16,13 @@ export const getAll = async (display = DEFAULT_DISPLAY) => {
           Authorization: `Basic ${btoa(WS_KEY() + ":")}`,
           Accept: "application/xml",
         },
-      },
+      }
     );
     if (!response.ok)
       throw new Error(
-        `Erreur HTTP ${response.status} — ${parseErrors(errText)[0].message || "inconnue" }`,
+        `Erreur HTTP ${response.status} — ${
+          parseErrors(errText)[0].message || "inconnue"
+        }`
       );
     const xmlText = await response.text();
     return parseCombinations(xmlText);
@@ -59,11 +61,14 @@ export const findCombinationsByProductId = async (productId) => {
 export const postCombination = async (combination) => {
   const xml = buildCombinationXML(combination);
   try {
-    const response = await fetch(`${API_URL()}/combinations?output_format=XML`, {
-      method: "POST",
-      headers: authHeaders(),
-      body: xml,
-    });
+    const response = await fetch(
+      `${API_URL()}/combinations?output_format=XML`,
+      {
+        method: "POST",
+        headers: authHeaders(),
+        body: xml,
+      }
+    );
     const xmlText = await response.text();
     if (!response.ok) {
       throw new Error(`HTTP ${response.status} — ${xmlText}`);
@@ -90,7 +95,9 @@ export const deleteCombination = async (id) => {
     if (!response.ok) {
       const errText = await response.text();
       throw new Error(
-				`Erreur HTTP ${response.status} — ${parseErrors(errText)[0].message || "inconnue" }`,
+        `Erreur HTTP ${response.status} — ${
+          parseErrors(errText)[0].message || "inconnue"
+        }`
       );
     }
     return response;
@@ -102,10 +109,28 @@ export const deleteCombination = async (id) => {
 export const resetCombinations = async () => {
   try {
     const combinations = await getAll();
-    for (const combination of combinations) {
-      await deleteCombination(combination.id);
+
+    if (!combinations || combinations.length === 0) {
+      return { success: true, deleted: 0 };
     }
+
+    const chunkSize = 10;
+    const results = [];
+
+    for (let i = 0; i < combinations.length; i += chunkSize) {
+      const chunk = combinations.slice(i, i + chunkSize);
+
+      const deletePromises = chunk.map((combination) =>
+        deleteCombination(combination.id)
+      );
+
+      const chunkResults = await Promise.all(deletePromises);
+      results.push(...chunkResults);
+    }
+
+    return { success: true, deleted: results.length };
   } catch (error) {
+    console.error("Erreur lors du reset des déclinaisons:", error);
     throw error;
   }
 };
