@@ -29,6 +29,24 @@ export const getAll = async (display = DEFAULT_DISPLAY) => {
   }
 };
 
+export const getCartById = async (cartId) => {
+  const response = await fetch(
+    `${API_URL()}/carts/${cartId}?output_format=XML`,
+    {
+      headers: {
+        Authorization: `Basic ${btoa(WS_KEY() + ":")}`,
+        Accept: "application/xml",
+      },
+    }
+  );
+  if (!response.ok) {
+    const errText = await response.text();
+    throw new Error(`Erreur HTTP ${response.status} — ${errText}`);
+  }
+  const xmlText = await response.text();
+  return parseCart(xmlText);
+};
+
 export const postCart = async (cart) => {
   const xml = buildCartXML(cart);
   try {
@@ -48,6 +66,41 @@ export const postCart = async (cart) => {
     };
   } catch (err) {
     return { success: false, id: cart.id, error: err.message };
+  }
+};
+
+export const putCart = async (id, cart) => {
+  const xml = buildCartXML({ id, ...cart });
+
+  try {
+    const response = await fetch(`${API_URL()}/carts/${id}?output_format=XML`, {
+      method: "PUT",
+      headers: authHeaders(),
+      body: xml,
+    });
+
+    const xmlText = await response.text();
+
+    if (!response.ok) {
+      let errorMessage = xmlText;
+      try {
+        const errors = parseErrors(xmlText);
+        if (errors && errors.length > 0) errorMessage = errors[0].message;
+      } catch (e) {}
+      throw new Error(`HTTP ${response.status} — ${errorMessage}`);
+    }
+
+    const updated = parseCart(xmlText);
+    return {
+      success: true,
+      id: updated?.id || id,
+    };
+  } catch (err) {
+    return {
+      success: false,
+      id: id,
+      error: err.message,
+    };
   }
 };
 
