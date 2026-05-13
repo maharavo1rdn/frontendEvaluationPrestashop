@@ -141,7 +141,7 @@ const RESET_TABLES = [
 ];
 
 const ResetTable = () => {
-  const [selectedIds, setSelectedIds] = useState([]);
+  const [selectedIds, setSelectedIds] = useState(RESET_TABLES.map((t) => t.id));
   const [statusById, setStatusById] = useState({});
   const [globalStatus, setGlobalStatus] = useState(null);
 
