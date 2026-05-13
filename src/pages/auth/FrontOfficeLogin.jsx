@@ -1,41 +1,57 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Link, useNavigate } from "react-router-dom";
-import { AlertCircle, Loader2 } from "lucide-react";
-import { LoginFrontOffice } from "../../services/auth/frontoffice.service";
+import { AlertCircle, Loader2, User } from "lucide-react";
 import { saveCustomerSession } from "../../services/frontoffice/session.service";
+import { getAll } from "../../services/customer.service";
 
 const FrontOfficeLogin = () => {
   const navigate = useNavigate();
-  const [email, setEmail] = useState("rakoto@yopmail.com");
-  const [password, setPassword] = useState("XvzsX5O0!GBD0uXQ");
-  const [loading, setLoading] = useState(false);
+  const [customers, setCustomers] = useState([]);
+  const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
-  const handleLogin = async (e) => {
-    e.preventDefault();
-    setError(null);
-    setLoading(true);
+  useEffect(() => {
+    const fetchCustomers = async () => {
+      try {
+        setLoading(true);
+        setError(null);
+        const data = await getAll(); // display = "full" par défaut
+        setCustomers(data || []);
+      } catch (err) {
+        setError("Impossible de charger la liste des utilisateurs.");
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchCustomers();
+  }, []);
 
-    try {
-      const customer = await LoginFrontOffice(email, password);
-      saveCustomerSession(customer);
-      navigate("/products");
-    } catch (err) {
-      setError(err.message);
-    } finally {
-      setLoading(false);
-    }
+  const handleSelectUser = (customer) => {
+    saveCustomerSession({
+      id: customer.id,
+      email: customer.email,
+      firstname: customer.firstname,
+      lastname: customer.lastname,
+      idLang: customer.idLang,
+      secureKey: customer.secureKey,
+    });
+    navigate("/products");
   };
 
   return (
-    <div className="flex items-center justify-center min-h-screen bg-slate-50">
-      <div className="w-full max-w-md">
+    <div className="flex items-center justify-center min-h-screen bg-slate-50 p-4">
+      <div className="w-full max-w-2xl">
         <div className="rounded-2xl border border-slate-200 bg-white p-8 shadow-sm">
           <div className="mb-8">
             <p className="text-sm font-semibold text-sky-600 mb-2">
               Front office
             </p>
-            <h1 className="text-3xl font-bold text-slate-900">Connexion</h1>
+            <h1 className="text-3xl font-bold text-slate-900">
+              Choisir un utilisateur
+            </h1>
+            <p className="mt-2 text-sm text-slate-500">
+              Cliquez sur un compte pour vous connecter.
+            </p>
           </div>
 
           {error && (
@@ -45,40 +61,40 @@ const FrontOfficeLogin = () => {
             </div>
           )}
 
-          <form onSubmit={handleLogin} className="space-y-4">
-            <label className="grid gap-2 text-sm font-semibold text-slate-700">
-              Email
-              <input
-                type="email"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                placeholder="nom@exemple.com"
-                className="h-11 rounded-lg border border-slate-200 px-4 text-sm text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-sky-500/20 focus:border-sky-500 transition-all"
-                disabled={loading}
-              />
-            </label>
-
-            <label className="grid gap-2 text-sm font-semibold text-slate-700">
-              Mot de passe
-              <input
-                type="password"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                placeholder="••••••••"
-                className="h-11 rounded-lg border border-slate-200 px-4 text-sm text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-sky-500/20 focus:border-sky-500 transition-all"
-                disabled={loading}
-              />
-            </label>
-
-            <button
-              type="submit"
-              disabled={loading}
-              className="mt-6 w-full rounded-lg bg-sky-500 hover:bg-sky-600 text-white font-semibold py-2.5 transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
-            >
-              {loading && <Loader2 size={16} className="animate-spin" />}
-              {loading ? "Connexion en cours..." : "Se connecter"}
-            </button>
-          </form>
+          {loading ? (
+            <div className="flex justify-center py-12">
+              <Loader2 className="animate-spin text-sky-500" size={32} />
+            </div>
+          ) : customers.length === 0 ? (
+            <div className="text-center py-12 text-slate-500">
+              <User size={48} className="mx-auto mb-4 text-slate-300" />
+              Aucun utilisateur trouvé.
+            </div>
+          ) : (
+            <ul className="space-y-3">
+              {customers.map((customer) => (
+                <li key={customer.id}>
+                  <button
+                    onClick={() => handleSelectUser(customer)}
+                    className="w-full text-left flex items-center gap-4 p-4 rounded-lg border border-slate-200 hover:border-sky-300 hover:bg-sky-50 transition-all focus:outline-none focus:ring-2 focus:ring-sky-500/20 focus:border-sky-500"
+                  >
+                    <div className="h-10 w-10 rounded-full bg-sky-100 flex items-center justify-center text-sky-700 font-semibold text-sm">
+                      {customer.firstname?.charAt(0)}
+                      {customer.lastname?.charAt(0)}
+                    </div>
+                    <div>
+                      <p className="text-sm font-semibold text-slate-900">
+                        {customer.firstname} {customer.lastname}
+                      </p>
+                      <p className="text-sm text-slate-500">
+                        {customer.email}
+                      </p>
+                    </div>
+                  </button>
+                </li>
+              ))}
+            </ul>
+          )}
 
           <div className="mt-6 flex items-center justify-center">
             <Link

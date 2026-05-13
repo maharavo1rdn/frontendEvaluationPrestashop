@@ -59,6 +59,7 @@ export const buildOrderXML = (order) => {
     
     ${field("current_state", order.currentState)}
     ${optionalField("secure_key", order.secureKey)}
+    ${optionalField("date_add", order.dateAdd)}
     ${optionalField("payment", order.payment)}
     ${optionalField("module", order.module)}
     ${optionalField("conversion_rate", order.conversionRate)}
@@ -87,8 +88,8 @@ export const buildOrderXML = (order) => {
     ${optionalField("round_type", order.roundType)}
     ${optionalField("invoice_number", order.invoiceNumber)}
     ${optionalField("delivery_number", order.deliveryNumber)}
-    ${optionalField("invoice_date", order.invoiceDate)}
-    ${optionalField("delivery_date", order.deliveryDate)}
+    ${optionalField("invoice_date", order.dateAdd)}
+    ${optionalField("delivery_date", order.dateAdd)}
     ${optionalField("valid", boolValue(order.valid))}
     ${optionalField("note", order.note)}
 

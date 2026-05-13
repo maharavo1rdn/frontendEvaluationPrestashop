@@ -1,6 +1,6 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useMemo } from "react";
 import { Link } from "react-router-dom";
-import { ShoppingBag, Plus, Loader2, AlertCircle } from "lucide-react";
+import { ShoppingBag, Plus, Loader2, AlertCircle, Flame, Sparkles } from "lucide-react";
 import { getAll } from "../../services/product.service";
 import { getStockAvailableById } from "../../services/stockAvailable.service";
 import {
@@ -19,6 +19,12 @@ const ProduitList = () => {
   const [error, setError] = useState(null);
   const [status, setStatus] = useState("");
   const [cartCount, setCartCount] = useState(0);
+
+  const today = useMemo(() => {
+    const now = new Date();
+    now.setHours(0, 0, 0, 0);
+    return now;
+  }, []);
 
   useEffect(() => {
     fetchProducts();
@@ -60,6 +66,37 @@ const ProduitList = () => {
       setLoading(false);
     }
   };
+
+  const getFreshnessBadge = (product) => {
+    if (!product.dateAvailable) return null;
+    const availableDate = new Date(product.dateAvailable);
+    availableDate.setHours(0, 0, 0, 0);
+    console.log(product.id);
+    console.log(product.dateAvailable)
+
+    const diffTime = today.getTime() - availableDate.getTime();
+    const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24));
+
+    if (diffDays <= 1) {
+      return (
+        <span className="inline-flex items-center gap-1 px-2 py-1 rounded-full text-[10px] font-bold uppercase bg-orange-100 text-orange-700 border border-orange-200">
+          <Flame size={12} /> HOT
+        </span>
+      );
+    }
+
+    // NEW : dans les 7 derniers jours (0 à 7 jours)
+    if (diffDays > 1 && diffDays <= 7) {
+      return (
+        <span className="inline-flex items-center gap-1 px-2 py-1 rounded-full text-[10px] font-bold uppercase bg-emerald-100 text-emerald-700 border border-emerald-200">
+          <Sparkles size={12} /> NEW
+        </span>
+      );
+    }
+
+    return null;
+  };
+
   const TypeBadge = ({ type }) => {
     const styles = {
       simple: "bg-sky-100 text-sky-700",
@@ -93,7 +130,7 @@ const ProduitList = () => {
         idTaxRulesGroup: product.idTaxRulesGroup,
         taxRate,
       });
-      setStatus(`Produit ajoute au panier : ${product.name || "Produit"}.`);
+      setStatus(`Produit ajouté au panier : ${product.name || "Produit"}.`);
     } catch (err) {
       setStatus("Impossible d'ajouter ce produit au panier.");
     }
@@ -156,22 +193,25 @@ const ProduitList = () => {
                   <th className="px-6 py-4 text-xs font-bold text-slate-500 uppercase w-[15%]">
                     Référence
                   </th>
-                  <th className="px-6 py-4 text-xs font-bold text-slate-500 uppercase w-[25%]">
+                  <th className="px-6 py-4 text-xs font-bold text-slate-500 uppercase w-[22%]">
                     Nom
                   </th>
-                  <th className="px-6 py-4 text-xs font-bold text-slate-500 uppercase w-[12%]">
+                  <th className="px-6 py-4 text-xs font-bold text-slate-500 uppercase w-[10%]">
                     Type
                   </th>
-                  <th className="px-6 py-4 text-xs font-bold text-slate-500 uppercase w-[12%]">
+                  <th className="px-6 py-4 text-xs font-bold text-slate-500 uppercase w-[10%]">
+                    Marque
+                  </th>
+                  <th className="px-6 py-4 text-xs font-bold text-slate-500 uppercase w-[10%]">
                     Prix HT
                   </th>
-                  <th className="px-6 py-4 text-xs font-bold text-slate-500 uppercase w-[12%]">
+                  <th className="px-6 py-4 text-xs font-bold text-slate-500 uppercase w-[10%]">
                     Stock
                   </th>
-                  <th className="px-6 py-4 text-xs font-bold text-slate-500 uppercase w-[12%] text-center">
+                  <th className="px-6 py-4 text-xs font-bold text-slate-500 uppercase w-[10%] text-center">
                     Actif
                   </th>
-                  <th className="px-6 py-4 text-xs font-bold text-slate-500 uppercase w-[12%] text-right">
+                  <th className="px-6 py-4 text-xs font-bold text-slate-500 uppercase w-[13%] text-right">
                     Actions
                   </th>
                 </tr>
@@ -188,14 +228,25 @@ const ProduitList = () => {
                     <td className="px-6 py-4">
                       <TypeBadge type={product.type} />
                     </td>
+                    <td className="px-6 py-4">
+                      {getFreshnessBadge(product)}
+                    </td>
                     <td className="px-6 py-4 text-sm font-bold text-slate-900">
-                      {product.price ? `${Number(product.price).toFixed(2)} €` : "0.00 €"}
+                      {product.price
+                        ? `${Number(product.price).toFixed(2)} €`
+                        : "0.00 €"}
                     </td>
                     <td className="px-6 py-4 text-sm font-bold text-slate-700">
                       {product.stockQuantity ?? "—"}
                     </td>
                     <td className="px-6 py-4 text-center">
-                      <span className={`inline-block px-2 py-1 text-xs font-bold rounded ${product.active ? "bg-green-100 text-green-700" : "bg-slate-100 text-slate-500"}`}>
+                      <span
+                        className={`inline-block px-2 py-1 text-xs font-bold rounded ${
+                          product.active
+                            ? "bg-green-100 text-green-700"
+                            : "bg-slate-100 text-slate-500"
+                        }`}
+                      >
                         {product.active ? "✓" : "✗"}
                       </span>
                     </td>
