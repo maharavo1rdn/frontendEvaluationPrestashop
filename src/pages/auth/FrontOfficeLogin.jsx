@@ -35,7 +35,7 @@ const FrontOfficeLogin = () => {
       idLang: customer.idLang,
       secureKey: customer.secureKey,
     });
-    navigate("/products");
+    navigate("/frontOffice/products");
   };
 
   return (

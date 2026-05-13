@@ -14,7 +14,7 @@ export default function AppRoutes() {
       <Routes>
         <Route path="/" element={<FrontOfficeLogin />} />
         <Route path="/backoffice" element={<BackOfficeLogin />} />
-        <Route path="/reset" element={<ResetTable />} />
+        <Route path="/backOffice/reset" element={<ResetTable />} />
       </Routes>
       <ClientsRoutes />
       <ProduitsRoutes />

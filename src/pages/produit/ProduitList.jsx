@@ -208,18 +208,11 @@ const ProduitList = () => {
         </div>
         <div className="flex items-center gap-3">
           <Link
-            to="/cart"
+            to="/frontOffice/cart"
             className="flex items-center gap-2 px-4 py-2.5 border border-slate-200 text-slate-600 text-sm font-semibold rounded-lg"
           >
             <ShoppingBag size={16} />
             Panier ({cartCount})
-          </Link>
-          <Link
-            to="/products/create"
-            className="flex items-center gap-2 px-5 py-2.5 bg-sky-600 text-white text-sm font-bold rounded-lg"
-          >
-            <Plus size={16} />
-            Ajouter un produit
           </Link>
         </div>
       </div>
@@ -399,7 +392,7 @@ const ProduitList = () => {
                     <td className="px-6 py-4 text-right">
                       <div className="flex justify-end gap-3">
                         <Link
-                          to={`/products/${product.id}`}
+                          to={`/frontOffice/products/${product.id}`}
                           className="text-xs font-bold text-sky-600 hover:underline"
                         >
                           Voir

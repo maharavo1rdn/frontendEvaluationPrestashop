@@ -6,9 +6,9 @@ const ProduitsRoutes = () => {
   return (
     <>
       <Routes>
-        <Route path="/products" element={<ProduitList />} />
-        <Route path="/products/create" element={<ProduitCreate />} />
-        <Route path="/products/:id" element={<ProduitDetail />} />
+        <Route path="/frontOffice/products" element={<ProduitList />} />
+        <Route path="/frontOffice/products/create" element={<ProduitCreate />} />
+        <Route path="/frontOffice/products/:id" element={<ProduitDetail />} />
       </Routes>
     </>
   );

@@ -70,7 +70,7 @@ const CartPage = () => {
           </p>
         </div>
         <Link
-          to="/products"
+          to="/frontOffice/products"
           className="text-sm font-semibold text-sky-600 hover:text-sky-700"
         >
           Continuer vos achats →

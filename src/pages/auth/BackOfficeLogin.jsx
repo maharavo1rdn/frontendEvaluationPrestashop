@@ -17,7 +17,7 @@ const BackOfficeLogin = () => {
 
     try {
       await LoginBackOffice(email, password);
-      navigate("/reset");
+      navigate("/backOffice/reset");
     } catch (err) {
       setError(err.message);
     } finally {

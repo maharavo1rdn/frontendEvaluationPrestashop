@@ -4,7 +4,7 @@ import CartPage from "../../pages/cart/CartPage";
 const CartRoutes = () => {
   return (
     <Routes>
-      <Route path="/cart" element={<CartPage />} />
+      <Route path="/frontOffice/cart" element={<CartPage />} />
     </Routes>
   );
 };

@@ -4,7 +4,7 @@ const ImportRoutes = () => {
   return (
     <>
       <Routes>
-        <Route path="/import" element={<ImportAll />} />
+        <Route path="/bakcOffice/import" element={<ImportAll />} />
       </Routes>
     </>
   );
