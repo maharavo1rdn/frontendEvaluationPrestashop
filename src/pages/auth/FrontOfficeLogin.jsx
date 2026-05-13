@@ -2,11 +2,12 @@ import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { AlertCircle, Loader2 } from "lucide-react";
 import { LoginFrontOffice } from "../../services/auth/frontoffice.service";
+import { saveCustomerSession } from "../../services/frontoffice/session.service";
 
 const FrontOfficeLogin = () => {
   const navigate = useNavigate();
   const [email, setEmail] = useState("rakoto@yopmail.com");
-  const [password, setPassword] = useState("");
+  const [password, setPassword] = useState("XvzsX5O0!GBD0uXQ");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
 
@@ -16,7 +17,8 @@ const FrontOfficeLogin = () => {
     setLoading(true);
 
     try {
-      await LoginFrontOffice(email, password);
+      const customer = await LoginFrontOffice(email, password);
+      saveCustomerSession(customer);
       navigate("/products");
     } catch (err) {
       setError(err.message);

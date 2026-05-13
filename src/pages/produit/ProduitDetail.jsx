@@ -1,21 +1,26 @@
 import { useEffect, useState } from "react";
-import { useParams, Link, useNavigate } from "react-router-dom";
-import {
-  ArrowLeft,
-  Loader2,
-  AlertCircle,
-  Trash2,
-} from "lucide-react";
+import { useParams, Link } from "react-router-dom";
+import { ArrowLeft, Loader2, AlertCircle } from "lucide-react";
 import { parseProduct } from "../../XMLUtil/parser/Product.parser";
 import { getStockAvailableById } from "../../services/stockAvailable.service";
+import { addCartItem } from "../../services/frontoffice/cartStore.service";
+import { findCombinationsByProductId } from "../../services/combination.service";
+import { findProductOptionValueByKeyValue } from "../../services/productOptionValue.service";
+import {
+  computeCombinationPrice,
+  getTaxRateForGroup,
+} from "../../services/frontoffice/pricing.service";
 
 const ProduitDetail = () => {
   const { id } = useParams();
-  const navigate = useNavigate();
   const [product, setProduct] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
-  const [deleteLoading, setDeleteLoading] = useState(false);
+  const [status, setStatus] = useState("");
+  const [combinations, setCombinations] = useState([]);
+  const [selectedCombinationId, setSelectedCombinationId] = useState("");
+  const [combinationLabels, setCombinationLabels] = useState({});
+  const [taxRate, setTaxRate] = useState(0);
 
   useEffect(() => {
     fetchProductDetails();
@@ -53,6 +58,34 @@ const ProduitDetail = () => {
           stockQuantity = null;
         }
       }
+      const rate = await getTaxRateForGroup(parsed?.idTaxRulesGroup);
+      setTaxRate(rate);
+
+      const combos = await findCombinationsByProductId(parsed.id);
+      setCombinations(combos || []);
+      if (combos?.length) {
+        const defaultCombo = combos.find((combo) => combo.defaultOn);
+        setSelectedCombinationId(defaultCombo?.id || combos[0].id || "");
+        const labels = {};
+        for (const combo of combos) {
+          if (!combo?.associations?.productOptionValues?.length) {
+            labels[combo.id] = "";
+            continue;
+          }
+          const values = await Promise.all(
+            combo.associations.productOptionValues.map(async (valueId) => {
+              const result = await findProductOptionValueByKeyValue(
+                "id",
+                valueId,
+              );
+              return result?.[0]?.name ?? "";
+            }),
+          );
+          labels[combo.id] = values.filter(Boolean).join(" / ");
+        }
+        setCombinationLabels(labels);
+      }
+
       setProduct({ ...parsed, stockQuantity });
     } catch (err) {
       setError(err.message);
@@ -60,6 +93,45 @@ const ProduitDetail = () => {
       setLoading(false);
     }
   };
+
+  const handleAddToCart = () => {
+    if (!product) return;
+    if (product.stockQuantity !== null && product.stockQuantity <= 0) {
+      setStatus("Stock insuffisant pour ajouter ce produit.");
+      return;
+    }
+    const selectedCombination = combinations.find(
+      (combo) => combo.id === selectedCombinationId,
+    );
+    const combinationPrice = selectedCombination?.price ?? 0;
+    const { priceExcl, priceIncl } = computeCombinationPrice({
+      basePrice: product.price,
+      combinationPriceImpact: combinationPrice,
+      taxRate,
+    });
+    addCartItem({
+      id: product.id,
+      name: product.name,
+      price: priceExcl,
+      priceTaxIncl: priceIncl,
+      reference: product.reference,
+      stockQuantity: product.stockQuantity,
+      idTaxRulesGroup: product.idTaxRulesGroup,
+      idProductAttribute: selectedCombination?.id ?? "0",
+      combinationLabel: combinationLabels[selectedCombination?.id] ?? "",
+      taxRate,
+    });
+    setStatus("Produit ajoute au panier.");
+  };
+
+  const activeCombination = combinations.find(
+    (combo) => combo.id === selectedCombinationId,
+  );
+  const activePrice = computeCombinationPrice({
+    basePrice: product?.price ?? 0,
+    combinationPriceImpact: activeCombination?.price ?? 0,
+    taxRate,
+  });
 
   if (loading) {
     return (
@@ -100,7 +172,19 @@ const ProduitDetail = () => {
           <ArrowLeft size={16} />
           Retour
         </Link>
+        <Link
+          to="/cart"
+          className="text-sm font-semibold text-sky-600 hover:text-sky-700"
+        >
+          Voir le panier →
+        </Link>
       </div>
+
+      {status && (
+        <div className="mb-6 p-4 bg-emerald-50 border border-emerald-200 text-emerald-700 rounded flex items-center gap-2 text-sm font-medium">
+          {status}
+        </div>
+      )}
 
       {loading ? (
         <div className="py-20 text-center">
@@ -127,12 +211,42 @@ const ProduitDetail = () => {
               </div>
               <div className="text-right">
                 <p className="text-3xl font-bold text-sky-600">
-                  {product?.price ? `${Number(product.price).toFixed(2)} €` : "— €"}
+                  {product?.price
+                    ? `${Number(activePrice.priceIncl).toFixed(2)} €`
+                    : "— €"}
                 </p>
-                <p className="text-xs text-slate-400">HT</p>
+                <p className="text-xs text-slate-400">
+                  {taxRate ? `TTC (TVA ${Number(taxRate).toFixed(2)}%)` : "TTC"}
+                </p>
+                <button
+                  type="button"
+                  onClick={handleAddToCart}
+                  className="mt-4 px-4 py-2 rounded-lg bg-emerald-500 hover:bg-emerald-600 text-white text-sm font-semibold"
+                >
+                  Ajouter au panier
+                </button>
               </div>
             </div>
           </div>
+
+          {combinations.length > 0 && (
+            <div className="p-6 border-b border-slate-200">
+              <p className="text-xs font-semibold text-slate-400 uppercase mb-2">
+                Declinaison
+              </p>
+              <select
+                value={selectedCombinationId}
+                onChange={(event) => setSelectedCombinationId(event.target.value)}
+                className="h-11 rounded-lg border border-slate-200 px-4 text-sm text-slate-900"
+              >
+                {combinations.map((combo) => (
+                  <option key={combo.id} value={combo.id}>
+                    {combinationLabels[combo.id] || `Combinaison #${combo.id}`}
+                  </option>
+                ))}
+              </select>
+            </div>
+          )}
 
           {/* Détails */}
           <div className="p-6 grid grid-cols-2 md:grid-cols-4 gap-6">

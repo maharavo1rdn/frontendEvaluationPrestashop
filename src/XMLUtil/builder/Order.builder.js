@@ -1,7 +1,11 @@
 import { field, optionalField, wrapPrestashop } from "./xml.builder";
 
-const boolValue = (value) =>
-  value === undefined || value === null ? undefined : value ? 1 : 0;
+const boolValue = (value) => {
+  if (value === undefined || value === null) return undefined;
+  if (value === "0" || value === 0 || value === false) return 0; // Force 0 pour ces cas
+  return 1;
+};
+
 
 const buildOrderRows = (rows = []) => {
   if (!rows.length) return "";
@@ -14,6 +18,14 @@ const buildOrderRows = (rows = []) => {
         ${optionalField("product_id", row.productId)}
         ${optionalField("product_attribute_id", row.productAttributeId)}
         ${optionalField("product_quantity", row.productQuantity)}
+        ${optionalField("product_name", row.productName)}
+        ${optionalField("product_reference", row.productReference)}
+        ${optionalField("product_price", row.productPrice ?? row.unitPriceTaxExcl)}
+        ${optionalField("unit_price_tax_incl", row.unitPriceTaxIncl)}
+        ${optionalField("unit_price_tax_excl", row.unitPriceTaxExcl)}
+        ${optionalField("total_price_tax_incl", row.totalPriceTaxIncl)}
+        ${optionalField("total_price_tax_excl", row.totalPriceTaxExcl)}
+        ${optionalField("tax_rate", row.taxRate)}
         ${optionalField("id_customization", row.idCustomization)}
       </order_row>`
         )

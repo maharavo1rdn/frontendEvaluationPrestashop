@@ -1,17 +1,38 @@
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { ShoppingBag, Plus, Loader2, AlertCircle } from "lucide-react";
-import { getAll, deleteProduct } from "../../services/product.service";
+import { getAll } from "../../services/product.service";
 import { getStockAvailableById } from "../../services/stockAvailable.service";
+import {
+  addCartItem,
+  getCart,
+  getCartTotals,
+} from "../../services/frontoffice/cartStore.service";
+import {
+  computePriceWithTax,
+  getTaxRateForGroup,
+} from "../../services/frontoffice/pricing.service";
 
 const ProduitList = () => {
   const [products, setProducts] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [status, setStatus] = useState("");
+  const [cartCount, setCartCount] = useState(0);
 
   useEffect(() => {
     fetchProducts();
+  }, []);
+
+  useEffect(() => {
+    const cart = getCart();
+    setCartCount(getCartTotals(cart).totalQuantity);
+    const handleUpdate = (event) => {
+      const nextCart = event.detail ?? getCart();
+      setCartCount(getCartTotals(nextCart).totalQuantity);
+    };
+    window.addEventListener("cart:updated", handleUpdate);
+    return () => window.removeEventListener("cart:updated", handleUpdate);
   }, []);
 
   const fetchProducts = async () => {
@@ -54,6 +75,30 @@ const ProduitList = () => {
     );
   };
 
+  const handleAddToCart = async (product) => {
+    if (product.stockQuantity !== null && product.stockQuantity <= 0) {
+      setStatus("Stock insuffisant pour ajouter ce produit.");
+      return;
+    }
+    try {
+      const taxRate = await getTaxRateForGroup(product.idTaxRulesGroup);
+      const priceTaxIncl = computePriceWithTax(product.price, taxRate);
+      addCartItem({
+        id: product.id,
+        name: product.name,
+        price: product.price,
+        priceTaxIncl,
+        reference: product.reference,
+        stockQuantity: product.stockQuantity,
+        idTaxRulesGroup: product.idTaxRulesGroup,
+        taxRate,
+      });
+      setStatus(`Produit ajoute au panier : ${product.name || "Produit"}.`);
+    } catch (err) {
+      setStatus("Impossible d'ajouter ce produit au panier.");
+    }
+  };
+
   return (
     <div className="p-8 max-w-7xl mx-auto">
       <div className="flex items-center justify-between mb-8 border-b border-slate-200 pb-6">
@@ -65,14 +110,22 @@ const ProduitList = () => {
             Catalogue PrestaShop — {products.length} articles
           </p>
         </div>
-
-        <Link
-          to="/products/create"
-          className="flex items-center gap-2 px-5 py-2.5 bg-sky-600 text-white text-sm font-bold rounded-lg"
-        >
-          <Plus size={16} />
-          Ajouter un produit
-        </Link>
+        <div className="flex items-center gap-3">
+          <Link
+            to="/cart"
+            className="flex items-center gap-2 px-4 py-2.5 border border-slate-200 text-slate-600 text-sm font-semibold rounded-lg"
+          >
+            <ShoppingBag size={16} />
+            Panier ({cartCount})
+          </Link>
+          <Link
+            to="/products/create"
+            className="flex items-center gap-2 px-5 py-2.5 bg-sky-600 text-white text-sm font-bold rounded-lg"
+          >
+            <Plus size={16} />
+            Ajouter un produit
+          </Link>
+        </div>
       </div>
 
       {status && (
@@ -154,6 +207,13 @@ const ProduitList = () => {
                         >
                           Voir
                         </Link>
+                        <button
+                          type="button"
+                          onClick={() => handleAddToCart(product)}
+                          className="text-xs font-bold text-emerald-600 hover:underline"
+                        >
+                          Ajouter
+                        </button>
                       </div>
                     </td>
                   </tr>
