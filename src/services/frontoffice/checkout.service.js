@@ -1,3 +1,4 @@
+import { getCart, clearCart } from "./cartStore.service";
 import { findAddressByKeyValue } from "../address.service";
 import { postCart } from "../cart.service";
 import { postOrder, putOrder } from "../order.service";
@@ -47,7 +48,7 @@ const resolveCartItems = async (items) => {
     if (item.idProductAttribute && String(item.idProductAttribute) !== "0") {
       const combos = await findCombinationsByProductId(product.id);
       combination = combos.find(
-        (combo) => String(combo.id) === String(item.idProductAttribute),
+        (combo) => String(combo.id) === String(item.idProductAttribute)
       );
     }
 
@@ -77,11 +78,11 @@ const resolveCartItems = async (items) => {
 const computeTotals = (resolvedItems) => {
   const totalProductsHt = resolvedItems.reduce(
     (sum, item) => sum + item.unitPriceHt * item.quantity,
-    0,
+    0
   );
   const totalProductsTtc = resolvedItems.reduce(
     (sum, item) => sum + item.unitPriceTtc * item.quantity,
-    0,
+    0
   );
 
   const totalPaid = formatDecimal(totalProductsTtc);
@@ -115,6 +116,10 @@ export const checkoutCart = async ({ items, customer }) => {
   if (!customer?.id) {
     throw new Error("Vous devez etre connecte pour passer commande.");
   }
+  const cart = getCart();
+  if (!cart.psCartId) {
+    throw new Error("Le panier n'est pas encore prêt sur le serveur. Réessayez dans un instant.");
+  }
 
   const addresses = await findAddressByKeyValue("id_customer", customer.id);
   const address = addresses?.[0];
@@ -125,32 +130,8 @@ export const checkoutCart = async ({ items, customer }) => {
 
   const resolvedItems = await resolveCartItems(items);
   const { totals, paymentAmount } = computeTotals(resolvedItems);
-  console.log(totals);
-  
+
   const orderStateId = await resolveDefaultOrderStateId();
-
-  const cartPayload = {
-    idAddressDelivery: address.id,
-    idAddressInvoice: address.id,
-    idCurrency: DEFAULT_CURRENCY_ID,
-    idCarrier: DEFAULT_CARRIER_ID,
-    idCustomer: customer.id,
-    idLang: customer.idLang ?? DEFAULT_LANG_ID,
-    secureKey: customer.secureKey,
-    associations: {
-      cartRows: resolvedItems.map((item) => ({
-        idProduct: item.product.id,
-        idProductAttribute: item.combination?.id ?? 0,
-        idAddressDelivery: address.id,
-        quantity: item.quantity,
-      })),
-    },
-  };
-
-  const createdCart = await postCart(cartPayload);
-  if (!createdCart?.success || !createdCart?.id) {
-    throw new Error(createdCart?.error || "Creation du panier impossible.");
-  }
 
   const orderRows = resolvedItems.map((item) => ({
     productId: item.product.id,
@@ -167,6 +148,8 @@ export const checkoutCart = async ({ items, customer }) => {
 
   const orderPayload = {
     ...totals,
+    idCart: cart.psCartId,
+    idCustomer: customer.id,
     idAddressDelivery: address.id,
     idAddressInvoice: address.id,
     idCart: createdCart.id,
@@ -182,10 +165,12 @@ export const checkoutCart = async ({ items, customer }) => {
     valid: false,
     associations: { orderRows },
   };
-  const createdOrder = await postOrder(orderPayload);
-  
+  // const createdOrder = await postOrder(orderPayload);
+
   if (!createdOrder?.success || !createdOrder?.id) {
-    throw new Error(createdOrder?.error || "Creation de la commande impossible.");
+    throw new Error(
+      createdOrder?.error || "Creation de la commande impossible."
+    );
   }
 
   // Historique APRÈS le paiement
