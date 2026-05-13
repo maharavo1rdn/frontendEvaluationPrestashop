@@ -115,3 +115,14 @@ export const deleteProductOption = async (id) => {
     throw error;
   }
 };
+
+export const resetProductOptions = async () => {
+  try {
+    const options = await getAll();
+    for (const option of options) {
+      await deleteProductOption(option.id);
+    }
+  } catch (error) {
+    throw error;
+  }
+};

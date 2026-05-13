@@ -115,3 +115,14 @@ export const deleteProductOptionValue = async (id) => {
     throw error;
   }
 };
+
+export const resetProductOptionValues = async () => {
+  try {
+    const values = await getAll();
+    for (const value of values) {
+      await deleteProductOptionValue(value.id);
+    }
+  } catch (error) {
+    throw error;
+  }
+};

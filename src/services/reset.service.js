@@ -10,15 +10,21 @@ import { resetCombinations } from "./combination.service";
 import { resetTaxRules } from "./taxRule.service";
 import { resetTaxRulesGroups } from "./taxRulesGroup.service";
 import { resetTaxes } from "./tax.service";
+import { resetProductOptions } from "./productOption.service";
+import { resetProductOptionValues } from "./productOptionValue.service";
+import { resetStockAvailables } from "./stockAvailable.service";
 const TABLE_RESETTERS = [
-  { id: "customers", reset: resetCustomers },
-  { id: "orders", reset: resetOrders },
-  { id: "order-details", reset: resetOrderDetails },
   { id: "order-payments", reset: resetOrderPayments },
-  { id: "feature-values", reset: resetProductFeatureValues },
+  { id: "order-details", reset: resetOrderDetails },
+  { id: "orders", reset: resetOrders },
   { id: "carts", reset: resetCarts },
+  { id: "customers", reset: resetCustomers },
   { id: "combinations", reset: resetCombinations },
+  { id: "product-option-values", reset: resetProductOptionValues },
+  { id: "product-options", reset: resetProductOptions },
+  { id: "feature-values", reset: resetProductFeatureValues },
   { id: "products", reset: resetProducts },
+  { id: "stock-availables", reset: resetStockAvailables },
   { id: "categories", reset: resetCategories },
   { id: "tax-rules", reset: resetTaxRules },
   { id: "tax-rule-groups", reset: resetTaxRulesGroups },
