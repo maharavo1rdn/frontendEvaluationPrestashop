@@ -12,10 +12,10 @@ import { computeCombinationPrice, getTaxRateForGroup } from "./pricing.service";
 const DEFAULT_CURRENCY_ID = 1;
 const DEFAULT_CARRIER_ID = 2;
 const DEFAULT_LANG_ID = 1;
-const DEFAULT_ORDER_STATE_ID = 8; // 8 = En attente paiement à la livraison
+const DEFAULT_ORDER_STATE_ID = 11; // 11 = En attente paiement à la livraison
 const DEFAULT_PAYMENT = "Paiement à la livraison";
-const DEFAULT_MODULE = "ps_cashondelivery";
-const DEFAULT_ORDER_STATE_MODULE = "ps_cashondelivery";
+const DEFAULT_MODULE = "ps_checkpayment";
+const DEFAULT_ORDER_STATE_MODULE = "ps_checkpayment";
 const DEFAULT_ORDER_STATE_NAMES = [
   "En attente paiement a la livraison",
   "En attente paiement à la livraison",
@@ -95,7 +95,7 @@ const computeTotals = (resolvedItems) => {
       totalPaid,
       totalPaidTaxIncl: totalPaid,
       totalPaidTaxExcl,
-      totalPaidReal: totalPaid,
+      totalPaidReal: "0.000000",
       totalShipping: "0.000000",
       totalShippingTaxIncl: "0.000000",
       totalShippingTaxExcl: "0.000000",
@@ -108,19 +108,6 @@ const computeTotals = (resolvedItems) => {
 };
 
 const resolveDefaultOrderStateId = async () => {
-  const moduleStates = await findOrderStateByKeyValue(
-    "module_name",
-    DEFAULT_ORDER_STATE_MODULE,
-  );
-  if (moduleStates?.[0]?.id) {
-    return Number(moduleStates[0].id);
-  }
-  for (const name of DEFAULT_ORDER_STATE_NAMES) {
-    const states = await findOrderStateByKeyValue("name", name);
-    if (states?.[0]?.id) {
-      return Number(states[0].id);
-    }
-  }
   return DEFAULT_ORDER_STATE_ID;
 };
 
@@ -179,6 +166,7 @@ export const checkoutCart = async ({ items, customer }) => {
   }));
 
   const orderPayload = {
+    ...totals,
     idAddressDelivery: address.id,
     idAddressInvoice: address.id,
     idCart: createdCart.id,
@@ -192,7 +180,6 @@ export const checkoutCart = async ({ items, customer }) => {
     payment: DEFAULT_PAYMENT,
     module: DEFAULT_MODULE,
     valid: false,
-    ...totals,
     associations: { orderRows },
   };
   const createdOrder = await postOrder(orderPayload);
@@ -202,11 +189,11 @@ export const checkoutCart = async ({ items, customer }) => {
   }
 
   // Historique APRÈS le paiement
-  await postOrderHistory({
-    idOrder: createdOrder.id,
-    idOrderState: orderStateId,
-    idEmployee: 0,
-  });
+  // await postOrderHistory({
+  //   idOrder: createdOrder.id,
+  //   idOrderState: orderStateId,
+  //   idEmployee: 0,
+  // });
 
   return {
     cartId: createdCart.id,
