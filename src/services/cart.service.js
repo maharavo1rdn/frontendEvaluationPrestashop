@@ -60,9 +60,15 @@ export const postCart = async (cart) => {
       throw new Error(`HTTP ${response.status} — ${xmlText}`);
     }
     const created = parseCart(xmlText);
+    const createdId = created?.id;
+
+    if (cart.dateAdd && createdId) {
+      await putCart(createdId, { ...cart, id: createdId });
+    }
+
     return {
       success: true,
-      id: created?.id,
+      id: createdId,
     };
   } catch (err) {
     return { success: false, id: cart.id, error: err.message };
