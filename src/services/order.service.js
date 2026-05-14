@@ -103,8 +103,10 @@ export const postOrder = async (order) => {
       body: xml,
     });
     const xmlText = await response.text();
-    if (!response.ok) throw new Error(`HTTP ${response.status} — ${xmlText}`);
-
+    if (!response.ok) {
+      console.error("XML erreur commande :", xmlText);
+      throw new Error(`HTTP ${response.status} — ${xmlText}`);
+    }
     const created = parseOrder(xmlText);
     const createdId = created?.id;
 
@@ -118,6 +120,8 @@ export const postOrder = async (order) => {
       reference: created?.reference,
     };
   } catch (err) {
+    console.error(err);
+
     return { success: false, id: order.id, error: err.message };
   }
 };

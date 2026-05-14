@@ -1,22 +1,58 @@
-const STORAGE_KEY = "frontoffice_customer";
+const CUSTOMER_KEY = "frontoffice_customer_session";
 
 export const saveCustomerSession = (customer) => {
-  if (typeof window === "undefined") return;
-  window.localStorage.setItem(STORAGE_KEY, JSON.stringify(customer));
+  localStorage.setItem(CUSTOMER_KEY, JSON.stringify(customer));
 };
 
 export const getCustomerSession = () => {
-  if (typeof window === "undefined") return null;
   try {
-    const stored = window.localStorage.getItem(STORAGE_KEY);
-    if (!stored) return null;
-    return JSON.parse(stored);
-  } catch (error) {
+    const raw = localStorage.getItem(CUSTOMER_KEY);
+    return raw ? JSON.parse(raw) : null;
+  } catch {
     return null;
   }
 };
 
 export const clearCustomerSession = () => {
-  if (typeof window === "undefined") return;
-  window.localStorage.removeItem(STORAGE_KEY);
+  localStorage.removeItem(CUSTOMER_KEY);
+};
+
+const GUEST_KEY = "frontoffice_guest_session";
+
+export const saveGuestSession = (guest) => {
+  sessionStorage.setItem(
+    GUEST_KEY,
+    JSON.stringify({ id: guest.id, isGuest: true })
+  );
+};
+
+export const getGuestSession = () => {
+  try {
+    const raw = sessionStorage.getItem(GUEST_KEY);
+    return raw ? JSON.parse(raw) : null;
+  } catch {
+    return null;
+  }
+};
+
+export const clearGuestSession = () => {
+  sessionStorage.removeItem(GUEST_KEY);
+};
+
+export const isGuestSession = () => {
+  const guest = getGuestSession();
+  return !!(guest?.isGuest && guest?.id);
+};
+
+export const getActiveSession = () => {
+  const customer = getCustomerSession();
+  if (customer?.id) return { ...customer, isGuest: false };
+  const guest = getGuestSession();
+  if (guest?.id) return { ...guest, isGuest: true };
+  return null;
+};
+
+export const clearAllSessions = () => {
+  clearCustomerSession();
+  clearGuestSession();
 };

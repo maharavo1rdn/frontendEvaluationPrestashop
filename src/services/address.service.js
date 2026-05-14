@@ -89,10 +89,10 @@ export const deleteAddress = async (id) => {
     });
     if (!response.ok) {
       const errText = await response.text();
+      const errorMessage =
+        parseErrors(errText)?.[0]?.message || errText || "inconnue";
       throw new Error(
-        `Erreur HTTP ${response.status} — ${
-          parseErrors(errText)[0].message || "inconnue"
-        }`
+        `Erreur HTTP ${response.status} — ${errorMessage}`
       );
     }
     return response;
