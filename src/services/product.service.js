@@ -2,6 +2,7 @@ import { buildProductXML } from "../XMLUtil/builder/Product.builder";
 import parseProducts, { parseProduct } from "../XMLUtil/parser/Product.parser";
 import parseErrors from "../XMLUtil/parser/Error.parser";
 import { API_URL, WS_KEY, authHeaders } from "../config/config.service";
+import { getStockAvailableById } from "./stockAvailable.service";
 
 const DEFAULT_DISPLAY = "full";
 
@@ -29,6 +30,48 @@ export const getAll = async (display = DEFAULT_DISPLAY) => {
   } catch (error) {
     throw error;
   }
+};
+
+const extractImagesFromProduct = (product) => {
+  const raw = product?.associations?.images;
+  if (!raw) return [];
+  // Selon le parser, c'est soit un tableau soit un objet unique
+  const arr = Array.isArray(raw) ? raw : [raw];
+  return arr.filter((img) => img?.id).map((img) => ({ id: String(img.id) }));
+};
+
+/**
+ * Enrichit un produit avec son stock et ses images.
+ * Les images viennent des associations déjà présentes dans le produit parsé.
+ */
+const enrichProduct = async (product) => {
+  const stockId = product?.associations?.stockAvailables?.[0]?.id;
+
+  const stock = stockId
+    ? await getStockAvailableById(stockId).catch(() => null)
+    : null;
+
+  return {
+    ...product,
+    stockQuantity: stock?.quantity ?? null,
+    images: extractImagesFromProduct(product),
+  };
+};
+
+/**
+ * Retourne tous les produits enrichis avec stock et images.
+ */
+export const getAllEnriched = async () => {
+  const products = await getAll();
+  return Promise.all(products.map(enrichProduct));
+};
+
+/**
+ * Recherche des produits et les enrichit avec stock et images.
+ */
+export const searchProductsEnriched = async (filters) => {
+  const products = await searchProducts(filters);
+  return Promise.all(products.map(enrichProduct));
 };
 
 export const searchProducts = async ({
@@ -129,12 +172,8 @@ export const deleteProduct = async (id) => {
   const safeErrorMessage = (errText) => {
     try {
       const parsed = parseErrors(errText);
-      if (parsed?.length) {
-        return parsed[0].message || "inconnue";
-      }
-    } catch (e) {
-      // ignore parsing errors and fall back to raw text
-    }
+      if (parsed?.length) return parsed[0].message || "inconnue";
+    } catch (e) {}
     return errText?.trim() || "inconnue";
   };
 
@@ -161,9 +200,7 @@ export const deleteProduct = async (id) => {
             },
           }
         );
-        if (verify.status === 404) {
-          return response;
-        }
+        if (verify.status === 404) return response;
       }
       throw new Error(
         `Erreur HTTP ${response.status} — ${safeErrorMessage(errText)}`
@@ -178,19 +215,15 @@ export const deleteProduct = async (id) => {
 export const resetProducts = async () => {
   try {
     const products = await getAll();
-
-    if (!products || products.length === 0) {
+    if (!products || products.length === 0)
       return { success: true, deleted: 0 };
-    }
 
     const chunkSize = 10;
     let totalDeleted = 0;
 
     for (let i = 0; i < products.length; i += chunkSize) {
       const chunk = products.slice(i, i + chunkSize);
-      const results = await Promise.all(
-        chunk.map((product) => deleteProduct(product.id))
-      );
+      const results = await Promise.all(chunk.map((p) => deleteProduct(p.id)));
       totalDeleted += results.length;
     }
 

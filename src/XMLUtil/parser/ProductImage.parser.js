@@ -9,12 +9,15 @@ import {
 /**
  * Mappe un nœud XML image PrestaShop en objet JS.
  */
-export const mapProductImage = (imageNode) => ({
-  id: getValue(imageNode.id),
-  idProduct: getValue(imageNode.id_product),
-  position: getInteger(imageNode.position),
-  cover: getBoolean(imageNode.cover),
-});
+export const mapProductImage = (imageNode) => {
+  console.log("imageNode brut");
+  return {
+    id: getValue(imageNode.id),
+    idProduct: getValue(imageNode.id_product),
+    position: getInteger(imageNode.position),
+    cover: getBoolean(imageNode.cover),
+  };
+};
 
 /**
  * Parse la réponse XML d'un upload ou d'un GET image unique.

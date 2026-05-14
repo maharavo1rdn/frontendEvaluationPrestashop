@@ -414,7 +414,7 @@ export const importOrdersFromCSV = async (file, onProgress) => {
       processResult = {
         success: false,
         email,
-        error: eparseCSVFilerror.message,
+        error: error.message,
       };
       errors.push(processResult);
     }
