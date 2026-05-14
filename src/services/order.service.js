@@ -28,7 +28,6 @@ export const getAll = async (display = DEFAULT_DISPLAY) => {
     const xmlText = await response.text();
     const orders = parseOrders(xmlText);
 
-    // ajouter des codes pour le statut actuel de la commande
     const ordersWithStates = await Promise.all(
       orders.map(async (order) => {
         try {
@@ -58,14 +57,10 @@ export const getOrderById = async (id) => {
   try {
     const response = await fetch(
       `${API_URL()}/orders/${id}?output_format=XML`,
-      {
-        headers: authHeaders(),
-      }
+      { headers: authHeaders() }
     );
     const xmlText = await response.text();
-    if (!response.ok) {
-      throw new Error(`HTTP ${response.status} — ${xmlText}`);
-    }
+    if (!response.ok) throw new Error(`HTTP ${response.status} — ${xmlText}`);
     return parseOrder(xmlText);
   } catch (error) {
     throw error;
@@ -92,9 +87,7 @@ export const findOrderByKeyValue = async (key, value) => {
       },
     });
     const xmlText = await response.text();
-    if (!response.ok) {
-      throw new Error(`HTTP ${response.status} — ${xmlText}`);
-    }
+    if (!response.ok) throw new Error(`HTTP ${response.status} — ${xmlText}`);
     return parseOrders(xmlText);
   } catch (error) {
     throw error;
@@ -110,14 +103,18 @@ export const postOrder = async (order) => {
       body: xml,
     });
     const xmlText = await response.text();
+    if (!response.ok) throw new Error(`HTTP ${response.status} — ${xmlText}`);
 
-    if (!response.ok) {
-      throw new Error(`HTTP ${response.status} — ${xmlText}`);
-    }
     const created = parseOrder(xmlText);
+    const createdId = created?.id;
+
+    if (order.dateAdd && createdId) {
+      await putOrder(createdId, { ...order, id: createdId });
+    }
+
     return {
       success: true,
-      id: created?.id,
+      id: createdId,
       reference: created?.reference,
     };
   } catch (err) {
@@ -137,10 +134,8 @@ export const putOrder = async (orderId, orderPayload) => {
       }
     );
     const xmlText = await response.text();
+    if (!response.ok) throw new Error(`HTTP ${response.status} — ${xmlText}`);
 
-    if (!response.ok) {
-      throw new Error(`HTTP ${response.status} — ${xmlText}`);
-    }
     const updated = parseOrder(xmlText);
     return {
       success: true,
@@ -178,10 +173,7 @@ export const deleteOrder = async (id) => {
 export const resetOrders = async () => {
   try {
     const orders = await getAll();
-
-    if (!orders || orders.length === 0) {
-      return { success: true, deleted: 0 };
-    }
+    if (!orders || orders.length === 0) return { success: true, deleted: 0 };
 
     const chunkSize = 10;
     let totalDeleted = 0;

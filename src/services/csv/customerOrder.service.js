@@ -240,7 +240,7 @@ const ensureAddress = async (customerId, row) => {
   return { id: created.id };
 };
 
-const createCart = async (customerId, addressId, resolvedItems) => {
+const createCart = async (customerId, addressId, resolvedItems, dateAdd) => {
   const cartRows = resolvedItems.map((item) => ({
     idProduct:          item.product.id,
     idProductAttribute: item.combination?.id ?? 0,
@@ -253,7 +253,8 @@ const createCart = async (customerId, addressId, resolvedItems) => {
     idAddressInvoice:  addressId,
     idCurrency:        DEFAULTS.idCurrency,
     idCarrier:         DEFAULTS.idCarrier,
-    associations:      { cartRows },
+    dateAdd:            dateAdd,
+    associations:      { cartRows }
   });
   if (!created.success)
     throw new Error(`Impossible de créer le panier: ${created.error}`);
@@ -377,7 +378,7 @@ export const importOrdersFromCSV = async (file, onProgress) => {
       const address  = await ensureAddress(customer.id, row);
 
       // 3. Panier
-      const cart = await createCart(customer.id, address.id, resolvedItems);
+      const cart = await createCart(customer.id, address.id, resolvedItems, dateAdd);
       
       const etatRaw = (row.etat || "").toLowerCase().trim();
       console.log(cart);
