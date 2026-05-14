@@ -378,7 +378,25 @@ export const importOrdersFromCSV = async (file, onProgress) => {
 
       // 3. Panier
       const cart = await createCart(customer.id, address.id, resolvedItems);
-
+      
+      const etatRaw = (row.etat || "").toLowerCase().trim();
+      console.log(cart);
+      
+      if (!etatRaw || etatRaw === "dans le panier panier") {
+        processResult = {
+          success: true,
+          email,
+          cartId: cart.id,
+          status: "Panier créé (pas de commande)",
+          totals,
+        };
+        successes.push(processResult);
+        
+        // TRÈS IMPORTANT : On s'arrête ici pour cette ligne
+        onProgress?.({ done: processedCount + 1, total, result: processResult });
+        continue;
+      }
+      
       // 4. Commande
       const order = await createOrder({
         cartId: cart.id,
@@ -393,7 +411,7 @@ export const importOrdersFromCSV = async (file, onProgress) => {
       });
 
       const fullOrder = await getOrderById(order.id);
-      console.log(fullOrder);
+      // console.log(fullOrder);
       
       // 5. Paiement manuel DÉSACTIVÉ : 
       // Le webservice génère tout seul le paiement lors du changement d'historique.
