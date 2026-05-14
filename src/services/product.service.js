@@ -84,9 +84,6 @@ export const searchProducts = async ({
   params.append("output_format", "XML");
   params.append("display", "full");
 
-  if (name) {
-    params.append("filter[name]", `[${name}]`);
-  }
   if (categoryId) {
     params.append("filter[id_category_default]", `[${categoryId}]`);
   }
@@ -115,7 +112,12 @@ export const searchProducts = async ({
   });
   if (!response.ok) throw new Error(`Erreur: ${await response.text()}`);
   const xmlText = await response.text();
-  return parseProducts(xmlText);
+  let products = parseProducts(xmlText);
+  if (name) {
+    const searchName = name.toLowerCase();
+    products = products.filter((p) => p.name?.toLowerCase().includes(searchName));
+  }
+  return products;
 };
 
 export const findProductByKeyValue = async (key, value) => {
