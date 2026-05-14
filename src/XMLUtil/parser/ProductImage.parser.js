@@ -10,7 +10,6 @@ import {
  * Mappe un nœud XML image PrestaShop en objet JS.
  */
 export const mapProductImage = (imageNode) => {
-  console.log("imageNode brut");
   return {
     id: getValue(imageNode.id),
     idProduct: getValue(imageNode.id_product),

@@ -36,7 +36,6 @@ export const importCategoriesFromCSV = async (file, onProgress) => {
   for (let i = 0; i < rows.length; i++) {
     const row = rows[i];
     const category = mapRowToCategory(row);
-    console.log(category);
     
     const result = await postCategory(category);
 
