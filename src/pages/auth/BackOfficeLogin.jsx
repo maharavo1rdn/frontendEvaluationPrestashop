@@ -2,13 +2,14 @@ import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { AlertCircle, Loader2 } from "lucide-react";
 import { LoginBackOffice } from "../../services/auth/backoffice.service";
-
+import { useAuth } from "../auth/AuthContext";
 const BackOfficeLogin = () => {
   const navigate = useNavigate();
   const [email, setEmail] = useState("maharavordn@gmail.com");
   const [password, setPassword] = useState("p@ssw0rd00319317");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
+  const { loginAdmin } = useAuth();
 
   const handleLogin = async (e) => {
     e.preventDefault();
@@ -16,7 +17,8 @@ const BackOfficeLogin = () => {
     setLoading(true);
 
     try {
-      await LoginBackOffice(email, password);
+      const employee = await LoginBackOffice(email, password);
+      loginAdmin(employee);
       navigate("/backOffice/dashboard");
     } catch (err) {
       setError(err.message);

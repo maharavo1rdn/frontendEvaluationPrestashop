@@ -3,6 +3,7 @@ import { Link, useNavigate } from "react-router-dom";
 import { AlertCircle, Loader2 } from "lucide-react";
 import { LoginFrontOffice } from "../../services/auth/frontoffice.service";
 import { saveCustomerSession } from "../../services/frontoffice/session.service";
+import { useAuth } from "./AuthContext";
 
 const FrontOfficeLogin = () => {
   const navigate = useNavigate();
@@ -10,6 +11,7 @@ const FrontOfficeLogin = () => {
   const [password, setPassword] = useState("XvzsX5O0!GBD0uXQ");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
+  const { loginCustomer } = useAuth();
 
   const handleLogin = async (e) => {
     e.preventDefault();
@@ -17,8 +19,12 @@ const FrontOfficeLogin = () => {
     setLoading(true);
 
     try {
-      const customer = await LoginFrontOffice(email, password);
+      const { customer, customerData } = await LoginFrontOffice(
+        email,
+        password
+      );
       saveCustomerSession(customer);
+      loginCustomer(customerData);
       navigate("/frontOffice/userSelector");
     } catch (err) {
       setError(err.message);
@@ -32,7 +38,9 @@ const FrontOfficeLogin = () => {
       <div className="w-full max-w-md">
         <div className="rounded-2xl border border-slate-200 bg-white p-8 shadow-sm">
           <div className="mb-8">
-            <p className="text-sm font-semibold text-sky-600 mb-2">Front office</p>
+            <p className="text-sm font-semibold text-sky-600 mb-2">
+              Front office
+            </p>
             <h1 className="text-3xl font-bold text-slate-900">Connexion</h1>
           </div>
 

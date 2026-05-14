@@ -33,16 +33,19 @@ export const findEmployeeByKeyValue = async (key, value) => {
 
 export const LoginBackOffice = async (email, passwd) => {
   const employees = await findEmployeeByKeyValue("email", email);
-  if (
-    employees == null ||
-    employees == undefined ||
-    (await employees).length == 0
-  )
+
+  if (!employees || employees.length === 0) {
     throw new Error("Employé introuvable");
-  const hash = employees[0].passwd;
+  }
+
+  const employee = employees[0];
+  const hash = employee.passwd;
 
   const isMatch = bcrypt.compareSync(passwd, hash);
   if (!isMatch) {
     throw new Error("Mot de passe incorrect");
   }
+
+  const { passwd: _, ...employeeData } = employee;
+  return employeeData;
 };
