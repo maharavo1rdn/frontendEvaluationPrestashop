@@ -1,7 +1,13 @@
-import { ListRestartIcon, ShoppingCart, Upload } from "lucide-react";
+import { LayoutDashboard, ListRestartIcon, ShoppingCart, Upload } from "lucide-react";
 import Sidebar from "./Sidebar";
 
 const BACKOFFICE_ITEMS = [
+  {
+    id: "dashboard",
+    label: "Tableau de bord",
+    icon: LayoutDashboard,
+    path: "/bakcOffice/dashboard",
+  },
   {
     id: "reset",
     label: "Reset table",

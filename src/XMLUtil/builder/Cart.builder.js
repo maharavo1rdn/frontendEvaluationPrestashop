@@ -44,6 +44,7 @@ export const buildCartXML = (cart) => {
 		${field("id_address_delivery", cart.idAddressDelivery ?? 0)}
 		${field("id_address_invoice", cart.idAddressInvoice ?? 0)}
 		${field("id_currency", cart.idCurrency ?? 0)}
+		${field("id_shop", cart.idShop ?? 1)}
 		${field("id_customer", cart.idCustomer ?? 0)}
 		${optionalField("id_guest", cart.idGuest)}
 		${field("id_lang", cart.idLang ?? 1)}

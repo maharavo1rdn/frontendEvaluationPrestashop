@@ -41,6 +41,7 @@ const DEFAULTS = {
   idCountry:      8,
   idEmployee:     0,
   conversionRate: 1,
+  idShop:         1,
 };
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
@@ -253,6 +254,7 @@ const createCart = async (customerId, addressId, resolvedItems, dateAdd) => {
     idAddressInvoice:  addressId,
     idCurrency:        DEFAULTS.idCurrency,
     idCarrier:         DEFAULTS.idCarrier,
+    idShop:            DEFAULTS.idShop,
     dateAdd:            dateAdd,
     associations:      { cartRows }
   });
@@ -293,6 +295,7 @@ const createOrder = async ({
     idAddressInvoice:  addressId,
     idCurrency:        DEFAULTS.idCurrency,
     idCarrier:         DEFAULTS.idCarrier,
+    idShop:            DEFAULTS.idShop,
     conversionRate:    DEFAULTS.conversionRate,
     secureKey:         secureKey || generateSecureKey(),
     payment:      paymentInfo.payment,
