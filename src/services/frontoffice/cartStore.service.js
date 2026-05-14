@@ -29,6 +29,7 @@ const syncCartWithServer = async (cart) => {
       idAddressInvoice: address.id || 0,
       idCarrier: 2,
       idCurrency: 1,
+      idShop: 1,
       idLang: customer.idLang || 1,
       secureKey: customer.secureKey,
       associations: {

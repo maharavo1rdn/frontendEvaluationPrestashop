@@ -13,6 +13,7 @@ import { computeCombinationPrice, getTaxRateForGroup } from "./pricing.service";
 const DEFAULT_CURRENCY_ID = 1;
 const DEFAULT_CARRIER_ID = 2;
 const DEFAULT_LANG_ID = 1;
+const DEFAULT_SHOP_ID = 1;
 const DEFAULT_ORDER_STATE_ID = 11; // 11 = En attente paiement à la livraison
 const DEFAULT_PAYMENT = "Paiement à la livraison";
 const DEFAULT_MODULE = "ps_checkpayment";
@@ -154,6 +155,7 @@ export const checkoutCart = async ({ items, customer }) => {
     idAddressInvoice: address.id,
     idCurrency: DEFAULT_CURRENCY_ID,
     idLang: customer.idLang ?? DEFAULT_LANG_ID,
+    idShop: DEFAULT_SHOP_ID,
     idCustomer: customer.id,
     idCarrier: DEFAULT_CARRIER_ID,
     currentState: orderStateId,
