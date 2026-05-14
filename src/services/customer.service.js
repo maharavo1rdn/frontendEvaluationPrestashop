@@ -79,6 +79,8 @@ export const postCustomer = async (customer) => {
       secureKey: created?.secureKey,
     };
   } catch (err) {
+    console.error(err.message);
+  
     return { success: false, id: customer.id, error: err.message };
   }
 };

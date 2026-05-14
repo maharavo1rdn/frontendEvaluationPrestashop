@@ -1,30 +1,28 @@
 import { getCart, clearCart } from "./cartStore.service";
-import { findAddressByKeyValue } from "../address.service";
-import { postCart } from "../cart.service";
-import { postOrder, putOrder } from "../order.service";
-import { postOrderDetail } from "../orderDetail.service";
-import { postOrderHistory } from "../orderHistory.service";
-import { postOrderPayment } from "../orderPayment.service";
+import { deleteAddress, findAddressByKeyValue } from "../address.service";
+import { postOrder } from "../order.service";
 import { findProductByKeyValue } from "../product.service";
 import { findCombinationsByProductId } from "../combination.service";
-import { findOrderStateByKeyValue } from "../orderState.service";
 import { computeCombinationPrice, getTaxRateForGroup } from "./pricing.service";
+import { deleteCustomer, postCustomer } from "../customer.service";
+import { postAddress } from "../address.service";
+import {
+  getGuestSession,
+  saveCustomerSession,
+  clearGuestSession,
+} from "./session.service";
+import { putCart, getCartById } from "../cart.service";
+import { postOrderHistory } from "../orderHistory.service";
 
 const DEFAULT_CURRENCY_ID = 1;
 const DEFAULT_CARRIER_ID = 2;
 const DEFAULT_LANG_ID = 1;
 const DEFAULT_SHOP_ID = 1;
-const DEFAULT_ORDER_STATE_ID = 11; // 11 = En attente paiement à la livraison
+const DEFAULT_COUNTRY_ID = 8;
+const ACTIVE_COUNTRY_IDS = new Set(["8", "21"]);
+const DEFAULT_ORDER_STATE_ID = 11;
 const DEFAULT_PAYMENT = "Paiement à la livraison";
 const DEFAULT_MODULE = "ps_checkpayment";
-const DEFAULT_ORDER_STATE_MODULE = "ps_checkpayment";
-const DEFAULT_ORDER_STATE_NAMES = [
-  "En attente paiement a la livraison",
-  "En attente paiement à la livraison",
-  "Paiement a la livraison",
-  "Paiement à la livraison",
-  "Awaiting Cash on Delivery",
-];
 
 const roundMoney = (value) => Math.round((value + Number.EPSILON) * 100) / 100;
 
@@ -35,9 +33,15 @@ const formatDecimal = (value, decimals = 6) => {
   return value.toFixed(decimals);
 };
 
+const resolveActiveCountryId = (idCountry) => {
+  const normalized = String(idCountry ?? DEFAULT_COUNTRY_ID);
+  return ACTIVE_COUNTRY_IDS.has(normalized)
+    ? Number(normalized)
+    : DEFAULT_COUNTRY_ID;
+};
+
 const resolveCartItems = async (items) => {
   const resolved = [];
-
   for (const item of items) {
     const products = await findProductByKeyValue("id", item.idProduct);
     if (!products.length) {
@@ -57,6 +61,7 @@ const resolveCartItems = async (items) => {
       item.taxRate === null || item.taxRate === undefined
         ? await getTaxRateForGroup(product.idTaxRulesGroup)
         : Number(item.taxRate || 0);
+
     const { priceExcl, priceIncl } = computeCombinationPrice({
       basePrice: product.price,
       combinationPriceImpact: combination?.price ?? 0,
@@ -72,7 +77,6 @@ const resolveCartItems = async (items) => {
       taxRate,
     });
   }
-
   return resolved;
 };
 
@@ -85,7 +89,6 @@ const computeTotals = (resolvedItems) => {
     (sum, item) => sum + item.unitPriceTtc * item.quantity,
     0
   );
-
   const totalPaid = formatDecimal(totalProductsTtc);
   const totalPaidTaxExcl = formatDecimal(totalProductsHt);
   const paymentAmount = roundMoney(totalProductsTtc).toFixed(2);
@@ -109,30 +112,24 @@ const computeTotals = (resolvedItems) => {
   };
 };
 
-const resolveDefaultOrderStateId = async () => {
-  return DEFAULT_ORDER_STATE_ID;
-};
+// ─── Checkout Customer (logique inchangée) ────────────────────────────────
 
-export const checkoutCart = async ({ items, customer }) => {
-  if (!customer?.id) {
-    throw new Error("Vous devez etre connecte pour passer commande.");
-  }
+const checkoutAsCustomer = async ({ items, customer }) => {
   const cart = getCart();
   if (!cart.psCartId) {
-    throw new Error("Le panier n'est pas encore prêt sur le serveur. Réessayez dans un instant.");
+    throw new Error(
+      "Le panier n'est pas encore prêt sur le serveur. Réessayez dans un instant."
+    );
   }
 
   const addresses = await findAddressByKeyValue("id_customer", customer.id);
   const address = addresses?.[0];
-
   if (!address?.id) {
-    throw new Error("Aucune adresse n'est liee a ce compte.");
+    throw new Error("Aucune adresse n'est liée à ce compte.");
   }
 
   const resolvedItems = await resolveCartItems(items);
   const { totals, paymentAmount } = computeTotals(resolvedItems);
-
-  const orderStateId = await resolveDefaultOrderStateId();
 
   const orderRows = resolvedItems.map((item) => ({
     productId: item.product.id,
@@ -156,9 +153,8 @@ export const checkoutCart = async ({ items, customer }) => {
     idCurrency: DEFAULT_CURRENCY_ID,
     idLang: customer.idLang ?? DEFAULT_LANG_ID,
     idShop: DEFAULT_SHOP_ID,
-    idCustomer: customer.id,
     idCarrier: DEFAULT_CARRIER_ID,
-    currentState: orderStateId,
+    currentState: DEFAULT_ORDER_STATE_ID,
     conversionRate: 1,
     secureKey: customer.secureKey,
     payment: DEFAULT_PAYMENT,
@@ -166,21 +162,17 @@ export const checkoutCart = async ({ items, customer }) => {
     valid: false,
     associations: { orderRows },
   };
-  
-  const createdOrder = await postOrder(orderPayload);
 
+  const createdOrder = await postOrder(orderPayload);
   if (!createdOrder?.success || !createdOrder?.id) {
     throw new Error(
-      createdOrder?.error || "Creation de la commande impossible."
+      createdOrder?.error || "Création de la commande impossible."
     );
   }
-
-  // Historique APRÈS le paiement
-  // await postOrderHistory({
-  //   idOrder: createdOrder.id,
-  //   idOrderState: orderStateId,
-  //   idEmployee: 0,
-  // });
+  await postOrderHistory({
+    idOrder: createdOrder.id,
+    idOrderState: DEFAULT_ORDER_STATE_ID,
+  });
 
   return {
     cartId: cart.psCartId,
@@ -188,4 +180,135 @@ export const checkoutCart = async ({ items, customer }) => {
     orderReference: createdOrder.reference,
     totalAmount: Number(totals.totalPaid),
   };
+};
+
+export const checkoutGuest = async ({ items, customerForm }) => {
+  const cart = getCart();
+  if (!cart.psCartId) {
+    throw new Error(
+      "Le panier n'est pas encore prêt sur le serveur. Réessayez dans un instant."
+    );
+  }
+
+  let createdCustomerId = null;
+  let createdAddressId = null;
+  let cartLinkedToCustomer = false;
+
+  try {
+    // 1. Créer le client
+    const createdCustomer = await postCustomer({
+      firstname: customerForm.firstName,
+      lastname: customerForm.lastName,
+      email: customerForm.email,
+      passwd: customerForm.password,
+      idLang: DEFAULT_LANG_ID,
+      idShopGroup: 1,
+      idShop: DEFAULT_SHOP_ID,
+      newsletter: false,
+      optin: false,
+      active: true,
+      deleted: false,
+      isGuest: false,
+    });
+
+    if (!createdCustomer?.success || !createdCustomer?.id) {
+      throw new Error("Impossible de créer le compte client.");
+    }
+    createdCustomerId = createdCustomer.id;
+    const secureKey = createdCustomer.secureKey;
+
+    const createdAddress = await postAddress({
+      idCustomer: createdCustomerId,
+      alias: "Adresse principale",
+      firstname: customerForm.firstName,
+      lastname: customerForm.lastName,
+      address1: customerForm.address1,
+      city: customerForm.city,
+      postcode: customerForm.postcode,
+      idCountry: resolveActiveCountryId(customerForm.idCountry),
+      phone: customerForm.phone ?? "0000000000",
+    });
+
+    if (!createdAddress?.success || !createdAddress?.id) {
+      throw new Error("Impossible de créer l'adresse.");
+    }
+    createdAddressId = createdAddress.id;
+
+    const serverCart = await getCartById(cart.psCartId);
+    if (!serverCart || !serverCart.id) {
+      throw new Error("Panier serveur introuvable.");
+    }
+
+    const updatedCart = {
+      ...serverCart,
+      idCustomer: createdCustomerId,
+      idGuest: 0,
+      secureKey: secureKey,
+      idAddressDelivery: createdAddressId,
+      idAddressInvoice: createdAddressId,
+      idCarrier: serverCart.idCarrier || 2,
+      associations: {
+        ...serverCart.associations,
+        cartRows: (serverCart.associations?.cartRows ?? []).map((row) => ({
+          ...row,
+          idAddressDelivery: createdAddressId,
+        })),
+      },
+    };
+
+    const cartUpdateResult = await putCart(cart.psCartId, updatedCart);
+    if (!cartUpdateResult?.success) {
+      throw new Error("Échec de la mise à jour du panier.");
+    }
+    cartLinkedToCustomer = true;
+
+    saveCustomerSession({
+      id: createdCustomerId,
+      secureKey,
+      email: customerForm.email,
+      firstname: customerForm.firstName,
+      lastname: customerForm.lastName,
+      idLang: DEFAULT_LANG_ID,
+    });
+
+    clearGuestSession();
+
+    // 7. Passer la commande
+    const result = await checkoutAsCustomer({
+      items,
+      customer: {
+        id: createdCustomerId,
+        secureKey,
+        idLang: DEFAULT_LANG_ID,
+      },
+    });
+
+    return result;
+  } catch (error) {
+    if (!cartLinkedToCustomer && createdAddressId) {
+      try {
+        await deleteAddress(createdAddressId);
+      } catch (deleteErr) {}
+    }
+    if (!cartLinkedToCustomer && createdCustomerId) {
+      try {
+        await deleteCustomer(createdCustomerId);
+      } catch (deleteErr) {}
+    }
+    throw error;
+  }
+};
+
+export const checkoutCart = async ({ items, customer, customerForm }) => {
+  if (customer?.id) {
+    return checkoutAsCustomer({ items, customer });
+  }
+
+  if (customerForm) {
+    return checkoutGuest({ items, customerForm });
+  }
+
+  throw new Error(
+    "Vous devez être connecté ou remplir le formulaire pour passer commande."
+  );
 };

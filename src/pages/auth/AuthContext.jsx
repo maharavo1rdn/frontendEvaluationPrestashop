@@ -1,4 +1,9 @@
 import { createContext, useContext, useState } from "react";
+import {
+  clearGuestSession,
+  getGuestSession,
+  saveGuestSession,
+} from "../../services/frontoffice/session.service";
 
 const AuthContext = createContext();
 
@@ -13,6 +18,8 @@ export const AuthProvider = ({ children }) => {
     return saved ? JSON.parse(saved) : null;
   });
 
+  const [guest, setGuest] = useState(() => getGuestSession());
+
   const loginAdmin = (data) => {
     setAdmin(data);
     localStorage.setItem("admin_session", JSON.stringify(data));
@@ -21,12 +28,21 @@ export const AuthProvider = ({ children }) => {
   const loginCustomer = (data) => {
     setCustomer(data);
     localStorage.setItem("customer_session", JSON.stringify(data));
+    clearGuestSession();
+    setGuest(null);
+  };
+
+  const loginGuest = (data) => {
+    saveGuestSession(data);
+    setGuest(data);
   };
 
   const logoutAll = () => {
     setAdmin(null);
     setCustomer(null);
+    setGuest(null);
     localStorage.clear();
+    sessionStorage.clear();
   };
 
   return (
@@ -36,9 +52,12 @@ export const AuthProvider = ({ children }) => {
         loginAdmin,
         customer,
         loginCustomer,
+        guest,
+        loginGuest,
         logoutAll,
         isAdminAuthenticated: !!admin,
         isCustomerAuthenticated: !!customer,
+        isGuestAuthenticated: !!(guest?.isGuest && guest?.id),
       }}
     >
       {children}

@@ -1,42 +1,57 @@
 import { postCart, putCart, getCartById, deleteCart } from "../cart.service";
-import { getCustomerSession } from "./session.service";
+import {
+  getCustomerSession,
+  getGuestSession,
+  isGuestSession,
+} from "./session.service";
 import { findAddressByKeyValue } from "../address.service";
+
 const STORAGE_KEY = "frontoffice_cart";
 let syncInFlight = false;
 let pendingCart = null;
 
 const syncCartWithServer = async (cart) => {
-  const customer = getCustomerSession();
+  const isGuest = isGuestSession();
+  const customer = isGuest ? null : getCustomerSession();
+  const guest = isGuest ? getGuestSession() : null;
 
-  if (!customer?.id) return;
+  if (!customer?.id && !guest?.id) return;
+
   window.dispatchEvent(new CustomEvent("cart:syncing"));
 
-  const addresses = await findAddressByKeyValue("id_customer", customer.id);
-  const address = addresses?.[0];
+  let address = null;
+  if (customer?.id) {
+    const addresses = await findAddressByKeyValue("id_customer", customer.id);
+    address = addresses?.[0] ?? null;
+  }
 
   try {
     const stored = readCart();
     const psCartId = stored.psCartId ?? cart.psCartId ?? null;
+
     if (cart.items.length === 0 && psCartId) {
       await deleteCart(psCartId);
       const updatedCart = { items: [], _version: cart._version };
       window.localStorage.setItem(STORAGE_KEY, JSON.stringify(updatedCart));
       return;
     }
+
     const cartPayload = {
-      idCustomer: customer.id,
-      idAddressDelivery: address.id || 0,
-      idAddressInvoice: address.id || 0,
+      idCustomer: customer?.id ?? 0,
+      idGuest: guest?.id ?? 0,
+      idAddressDelivery: address?.id ?? 0,
+      idAddressInvoice: address?.id ?? 0,
       idCarrier: 2,
       idCurrency: 1,
       idShop: 1,
-      idLang: customer.idLang || 1,
-      secureKey: customer.secureKey,
+      idLang: customer?.idLang ?? 1,
+      secureKey: customer?.secureKey ?? "",
       associations: {
         cartRows: cart.items.map((item) => {
           const row = {
             idProduct: item.idProduct,
             idProductAttribute: item.idProductAttribute || 0,
+            idAddressDelivery: address?.id ?? 0,
             quantity: item.quantity,
           };
           if (item.cartRowId) row.id = item.cartRowId;
@@ -46,20 +61,17 @@ const syncCartWithServer = async (cart) => {
     };
 
     let response;
-
     if (psCartId) {
-      response = await putCart(psCartId, {
-        id: psCartId,
-        ...cartPayload,
-      });
+      response = await putCart(psCartId, { id: psCartId, ...cartPayload });
     } else {
       response = await postCart(cartPayload);
     }
+
     if (response?.success && response?.id) {
       const serverCart = await getCartById(response.id);
 
       const updatedItems = cart.items.map((localItem) => {
-        const serverRow = serverCart.associations.cartRows?.find(
+        const serverRow = serverCart.associations?.cartRows?.find(
           (row) =>
             row.idProduct === localItem.idProduct &&
             row.idProductAttribute === localItem.idProductAttribute
@@ -95,9 +107,7 @@ const syncCartWithServer = async (cart) => {
 
 const enqueueSync = (cart) => {
   pendingCart = cart;
-  if (!syncInFlight) {
-    processSyncQueue();
-  }
+  if (!syncInFlight) processSyncQueue();
 };
 
 const processSyncQueue = async () => {
@@ -107,9 +117,7 @@ const processSyncQueue = async () => {
   syncInFlight = true;
   await syncCartWithServer(cart);
   syncInFlight = false;
-  if (pendingCart) {
-    processSyncQueue();
-  }
+  if (pendingCart) processSyncQueue();
 };
 
 const normalizeCart = (raw) => {
@@ -135,7 +143,7 @@ const readCart = () => {
     const stored = window.localStorage.getItem(STORAGE_KEY);
     if (!stored) return { items: [], _version: 0 };
     return normalizeCart(JSON.parse(stored));
-  } catch (error) {
+  } catch {
     return { items: [], _version: 0 };
   }
 };
@@ -144,12 +152,12 @@ const writeCart = (cart) => {
   if (typeof window === "undefined") return cart;
   const nextCart = { ...cart, _version: (cart._version ?? 0) + 1 };
   window.localStorage.setItem(STORAGE_KEY, JSON.stringify(nextCart));
-  if (typeof window !== "undefined") {
-    window.dispatchEvent(new CustomEvent("cart:updated", { detail: nextCart }));
-  }
+  window.dispatchEvent(new CustomEvent("cart:updated", { detail: nextCart }));
   enqueueSync(nextCart);
   return nextCart;
 };
+
+// ─── Helpers item ─────────────────────────────────────────────────────────
 
 const buildItem = (product, quantity) => {
   const idProduct = String(product.id ?? product.idProduct ?? "");
@@ -179,6 +187,8 @@ const buildItem = (product, quantity) => {
   };
 };
 
+// ─── API publique (inchangée) ─────────────────────────────────────────────
+
 export const getCart = () => readCart();
 
 export const getCartTotals = (cart = readCart()) => {
@@ -199,16 +209,13 @@ export const getCartTotals = (cart = readCart()) => {
 export const addCartItem = (product, quantity = 1) => {
   const cart = readCart();
   const item = buildItem(product, quantity);
-
   if (!item.idProduct) return cart;
-
   const existing = cart.items.find((entry) => entry.cartKey === item.cartKey);
   if (existing) {
     existing.quantity += item.quantity;
   } else {
     cart.items.push(item);
   }
-
   return writeCart(cart);
 };
 
@@ -222,7 +229,6 @@ export const updateCartItem = (cartKey, quantity) => {
         : item
     )
     .filter((item) => item.quantity > 0);
-
   return writeCart(cart);
 };
 
@@ -232,4 +238,16 @@ export const removeCartItem = (cartKey) => {
   return writeCart(cart);
 };
 
-export const clearCart = () => writeCart({ items: [] });
+export const clearCart = async () => {
+  const current = readCart();
+
+  window.localStorage.removeItem(STORAGE_KEY);
+
+  window.dispatchEvent(
+    new CustomEvent("cart:updated", {
+      detail: { items: [], _version: 0 },
+    })
+  );
+
+  return { items: [], _version: 0 };
+};

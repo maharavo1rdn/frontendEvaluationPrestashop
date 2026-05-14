@@ -348,8 +348,6 @@ const createOrderHistory = async (orderId, idOrderState, dateAdd) => {
   return { id: created.id };
 };
 
-// ─── Export principal ─────────────────────────────────────────────────────────
-
 export const importOrdersFromCSV = async (file, onProgress) => {
   const rows          = await parseCSVFile(file);
   const total         = rows.length;
