@@ -46,13 +46,17 @@ export const LoginFrontOffice = async (email, passwd) => {
   if (!isMatch) {
     throw new Error("Mot de passe incorrect");
   }
+  const { passwd: _, ...customerData } = customer;
 
   return {
-    id: customer.id,
-    email: customer.email,
-    firstname: customer.firstname,
-    lastname: customer.lastname,
-    idLang: customer.idLang,
-    secureKey: customer.secureKey,
+    customer: {
+      id: customer.id,
+      email: customer.email,
+      firstname: customer.firstname,
+      lastname: customer.lastname,
+      idLang: customer.idLang,
+      secureKey: customer.secureKey,
+    },
+    customerData,
   };
 };
