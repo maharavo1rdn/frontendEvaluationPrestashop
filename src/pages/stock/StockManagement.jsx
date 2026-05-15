@@ -7,12 +7,13 @@ import {
   ImageOff,
   X,
   Check,
+  History as HistoryIcon,
+  PlusCircle, // Import de l'icône demandée
 } from "lucide-react";
 import { getAllEnriched } from "../../services/product.service";
 import {
   findStockAvailableByProductAttribute,
-  updateStockAvailable,
-  postStockAvailable,
+  updateStockItemWithMovement, // Utilisation de la fonction de mouvement (delta)
 } from "../../services/stockAvailable.service";
 import { findCombinationsByProductId } from "../../services/combination.service";
 import { findProductOptionValueByKeyValue } from "../../services/productOptionValue.service";
@@ -87,7 +88,7 @@ const StockManagement = () => {
   const [modalProduct, setModalProduct] = useState(null);
   const [modalLoading, setModalLoading] = useState(false);
   const [combosData, setCombosData] = useState([]);
-  const [simpleQuantity, setSimpleQuantity] = useState(0);
+  const [simpleDelta, setSimpleDelta] = useState(0); // Changé en Delta (différence)
   const [saving, setSaving] = useState(false);
   const [saveError, setSaveError] = useState(null);
   const [saveSuccess, setSaveSuccess] = useState(false);
@@ -114,6 +115,7 @@ const StockManagement = () => {
     setModalLoading(true);
     setSaveError(null);
     setSaveSuccess(false);
+    setSimpleDelta(0); // Reset le delta à 0
 
     try {
       const combos = await findCombinationsByProductId(product.id).catch(
@@ -126,10 +128,11 @@ const StockManagement = () => {
           let label = `Combinaison #${combo.id}`;
           if (combo.associations?.productOptionValues?.length) {
             const values = await Promise.all(
-              combo.associations.productOptionValues.map(async (valueId) => {
+              combo.associations.productOptionValues.map(async (val) => {
+                const id = typeof val === "object" ? val.id : val;
                 const result = await findProductOptionValueByKeyValue(
                   "id",
-                  valueId
+                  id
                 ).catch(() => []);
                 return result?.[0]?.name ?? "";
               })
@@ -142,15 +145,12 @@ const StockManagement = () => {
             combo.id
           ).catch(() => []);
           const stockObj = stockEntries?.[0] || null;
-          const currentQty = stockObj?.quantity ?? 0;
-          const stockId = stockObj?.id || null;
 
           items.push({
             combinationId: combo.id,
             label,
-            currentQty,
-            stockId,
-            newQty: currentQty,
+            currentQty: stockObj?.quantity ?? 0,
+            delta: 0, // Initialisé à 0 pour saisie d'ajout/retrait
           });
         }
         setCombosData(items);
@@ -160,8 +160,10 @@ const StockManagement = () => {
           0
         ).catch(() => []);
         const stockObj = stockEntries?.[0] || null;
-        const currentQty = stockObj?.quantity ?? 0;
-        setSimpleQuantity(currentQty);
+        setModalProduct((prev) => ({
+          ...prev,
+          currentQty: stockObj?.quantity ?? 0,
+        }));
         setCombosData([]);
       }
     } catch (err) {
@@ -179,27 +181,22 @@ const StockManagement = () => {
     try {
       if (combosData.length > 0) {
         for (const item of combosData) {
-          const payload = {
-            idProduct: modalProduct.id,
-            idProductAttribute: item.combinationId,
-            quantity: item.newQty,
-            id: item.stockId,
-          };
-          console.log("combo data", payload);
-          
+          if (item.delta !== 0) {
+            await updateStockItemWithMovement({
+              idProduct: modalProduct.id,
+              idProductAttribute: item.combinationId,
+              deltaQuantity: item.delta,
+            });
+          }
         }
-    } else {
-        const stockEntries = await findStockAvailableByProductAttribute(
-            modalProduct.id,
-            0
-        );
-        const stockObj = stockEntries?.[0] || null;
-        const payload = {
-          idProduct: modalProduct.id,
-          idProductAttribute: 0,
-          quantity: simpleQuantity,
-          id: stockObj?.id,
-        };
+      } else {
+        if (simpleDelta !== 0) {
+          await updateStockItemWithMovement({
+            idProduct: modalProduct.id,
+            idProductAttribute: 0,
+            deltaQuantity: simpleDelta,
+          });
+        }
       }
 
       setSaveSuccess(true);
@@ -217,7 +214,7 @@ const StockManagement = () => {
   const closeModal = () => {
     setModalProduct(null);
     setCombosData([]);
-    setSimpleQuantity(0);
+    setSimpleDelta(0);
   };
 
   if (loading) {
@@ -248,16 +245,8 @@ const StockManagement = () => {
           </h1>
           <p className="text-slate-500 text-sm">{products.length} produit(s)</p>
         </div>
-        <Link
-          to="/frontOffice/products"
-          className="flex items-center gap-2 text-sm font-medium text-slate-500 hover:text-sky-500"
-        >
-          <ArrowLeft size={16} />
-          Retour au catalogue
-        </Link>
       </div>
 
-      {/* Tableau */}
       <div className="bg-white border border-slate-200 rounded-xl shadow-sm overflow-hidden">
         <table className="min-w-full divide-y divide-slate-200">
           <thead className="bg-slate-50">
@@ -272,7 +261,7 @@ const StockManagement = () => {
                 Stock total
               </th>
               <th className="px-6 py-3 text-right text-xs font-semibold text-slate-500 uppercase">
-                Action
+                Actions
               </th>
             </tr>
           </thead>
@@ -301,34 +290,31 @@ const StockManagement = () => {
                         : "bg-red-100 text-red-700"
                     }`}
                   >
-                    {product.stockQuantity ?? "N/A"}
+                    {product.stockQuantity ?? 0}
                   </span>
                 </td>
-                <td className="px-6 py-4 text-right">
+                <td className="px-6 py-4 text-right flex justify-end gap-2">
+                  <Link
+                    to={`/backOffice/stock/evolution/${product.id}`}
+                    className="p-2 text-slate-400 hover:text-sky-500 transition-colors"
+                    title="Voir l'historique"
+                  >
+                    <HistoryIcon size={18} />
+                  </Link>
                   <button
                     onClick={() => handleAdjustStock(product)}
-                    className="inline-flex items-center gap-1 px-3 py-1.5 bg-sky-600 hover:bg-sky-700 text-white text-xs font-semibold rounded-lg transition-all"
+                    className="p-2 text-slate-400 hover:text-emerald-500 transition-colors"
+                    title="Ajuster le stock"
                   >
-                    Ajuster le stock
-                  </button>
+                    <PlusCircle size={18} />
+                  </button>{" "}
                 </td>
               </tr>
             ))}
-            {products.length === 0 && (
-              <tr>
-                <td
-                  colSpan={4}
-                  className="px-6 py-12 text-center text-slate-500"
-                >
-                  Aucun produit trouvé.
-                </td>
-              </tr>
-            )}
           </tbody>
         </table>
       </div>
 
-      {/* Modale */}
       {modalProduct && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
           <div className="bg-white w-full max-w-lg rounded-xl shadow-lg p-6 max-h-[90vh] overflow-y-auto">
@@ -359,79 +345,75 @@ const StockManagement = () => {
                 {saveSuccess && (
                   <div className="mb-4 p-3 bg-emerald-50 border border-emerald-200 text-emerald-700 rounded-lg text-sm flex items-center gap-2">
                     <Check size={16} />
-                    Stock mis à jour avec succès.
+                    Mouvement enregistré !
                   </div>
                 )}
-
-                {combosData.length === 0 && (
-                  <div className="space-y-4">
-                    <p className="text-sm text-slate-600">
-                      Stock actuel :{" "}
-                      <strong>{modalProduct.stockQuantity ?? "—"}</strong>
-                    </p>
-                    <label className="block text-sm font-medium text-slate-700">
-                      Nouvelle quantité
-                    </label>
-                    <input
-                      type="number"
-                      min="0"
-                      value={simpleQuantity}
-                      onChange={(e) =>
-                        setSimpleQuantity(
-                          Math.max(0, parseInt(e.target.value) || 0)
-                        )
-                      }
-                      className="w-full h-10 rounded-lg border border-slate-200 px-3 text-sm"
-                    />
-                  </div>
-                )}
-
-                {combosData.length > 0 && (
-                  <div className="space-y-4">
-                    {combosData.map((item) => (
+                <div className="space-y-5">
+                  {combosData.length === 0 ? (
+                    <div>
+                      <div className="flex justify-between text-sm mb-1">
+                        <label className="font-medium text-slate-700">
+                          Quantité à ajouter ou à soustraire
+                        </label>
+                        <span className="text-slate-400">
+                          Actuel : {modalProduct.currentQty}
+                        </span>
+                      </div>
+                      <input
+                        type="number"
+                        value={simpleDelta}
+                        onChange={(e) =>
+                          setSimpleDelta(parseInt(e.target.value) || 0)
+                        }
+                        className="w-full h-10 rounded-lg border border-slate-200 px-3 text-sm focus:ring-2 focus:ring-sky-500 outline-none"
+                        placeholder="Ex: 5 ou -5"
+                      />
+                    </div>
+                  ) : (
+                    combosData.map((item) => (
                       <div
                         key={item.combinationId}
                         className="flex items-center justify-between gap-4 p-3 bg-slate-50 rounded-lg"
                       >
-                        <div>
-                          <p className="font-medium text-sm">{item.label}</p>
-                          <p className="text-xs text-slate-500">
-                            Actuel : {item.currentQty}
+                        <div className="flex-1">
+                          <p className="font-medium text-sm text-slate-700">
+                            {item.label}
+                          </p>
+                          <p className="text-xs text-slate-400">
+                            En stock : {item.currentQty}
                           </p>
                         </div>
                         <input
                           type="number"
-                          min="0"
-                          value={item.newQty}
+                          value={item.delta}
                           onChange={(e) => {
-                            const newVal = Math.max(
-                              0,
-                              parseInt(e.target.value) || 0
-                            );
+                            const val = parseInt(e.target.value) || 0;
                             setCombosData((prev) =>
                               prev.map((c) =>
                                 c.combinationId === item.combinationId
-                                  ? { ...c, newQty: newVal }
+                                  ? { ...c, delta: val }
                                   : c
                               )
                             );
                           }}
-                          className="w-24 h-10 rounded-lg border border-slate-200 px-3 text-sm text-center"
+                          className="w-24 h-10 rounded-lg border border-slate-200 px-3 text-sm text-center focus:ring-2 focus:ring-sky-500 outline-none"
                         />
                       </div>
-                    ))}
-                  </div>
-                )}
+                    ))
+                  )}
+                </div>
 
                 <button
                   onClick={handleSave}
                   disabled={saving}
-                  className="mt-6 w-full rounded-lg bg-sky-500 hover:bg-sky-600 disabled:opacity-50 disabled:cursor-not-allowed text-white font-semibold py-2.5 transition-all flex items-center justify-center gap-2"
+                  className="mt-6 w-full rounded-lg bg-sky-600 hover:bg-sky-700 disabled:opacity-50 text-white font-semibold py-2.5 flex items-center justify-center gap-2 transition-all"
                 >
-                  {saving && <Loader2 size={16} className="animate-spin" />}
-                  {saving
-                    ? "Enregistrement..."
-                    : "Enregistrer les modifications"}
+                  {saving ? (
+                    <Loader2 size={16} className="animate-spin" />
+                  ) : (
+                    <Check size={16} />
+                  )}
+                  {saving ? "Enregistrement..." : "Appliquer les mouvements"}
                 </button>
               </>
             )}

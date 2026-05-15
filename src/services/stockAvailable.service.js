@@ -163,6 +163,57 @@ export const updateStockAvailable = async (stock) => {
   }
 };
 
+const buildStockItemMovementXML = ({
+  idProduct,
+  idProductAttribute = 0,
+  deltaQuantity,
+  idShop,
+}) => `<?xml version="1.0" encoding="UTF-8"?>
+<prestashop xmlns:xlink="http://www.w3.org/1999/xlink">
+  <stock_item>
+    <id_product><![CDATA[${Number(idProduct)}]]></id_product>
+    <id_product_attribute><![CDATA[${Number(
+      idProductAttribute || 0
+    )}]]></id_product_attribute>
+    <delta_quantity><![CDATA[${Number(deltaQuantity)}]]></delta_quantity>
+    ${idShop ? `<id_shop><![CDATA[${Number(idShop)}]]></id_shop>` : ""}
+  </stock_item>
+</prestashop>`;
+
+const parseXmlResponseOrThrow = async (response) => {
+  const text = await response.text();
+
+  if (!response.ok) {
+    const errors = parseErrors(text);
+    if (errors.length > 0) {
+      throw new Error(errors.map((error) => error.message).join(", "));
+    }
+    throw new Error(text || `HTTP ${response.status}`);
+  }
+
+  return { success: true, xml: text };
+};
+
+export const updateStockItemWithMovement = async ({
+  idProduct,
+  idProductAttribute = 0,
+  deltaQuantity,
+  idShop,
+}) => {
+  const response = await fetch(`${API_URL()}/stock_items?output_format=XML`, {
+    method: "POST",
+    headers: authHeaders(),
+    body: buildStockItemMovementXML({
+      idProduct,
+      idProductAttribute,
+      deltaQuantity,
+      idShop,
+    }),
+  });
+
+  return parseXmlResponseOrThrow(response);
+};
+
 export const resetStockAvailables = async () => {
   try {
     const stocks = await getAll();
@@ -204,12 +255,26 @@ export const getStockByProductAndAttribute = async (
     );
     if (!response.ok) return null;
     const xml = await response.text();
-    const stock =  parseStockAvailables(xml);
+    const stock = parseStockAvailables(xml);
     console.log(stock);
     return stock;
-    
   } catch (err) {
     console.error("Erreur récupération stock combinaison", err);
     return null;
+  }
+};
+
+export const findStockAvailablesByProductId = async (productId) => {
+  try {
+    const response = await fetch(
+      `${API_URL()}/stock_availables?filter[id_product]=[${productId}]&display=full`,
+      { headers: authHeaders() }
+    );
+    if (!response.ok) return [];
+    const xmlText = await response.text();
+    return parseStockAvailables(xmlText);
+  } catch (error) {
+    console.error("Error fetching stock availables:", error);
+    return [];
   }
 };
