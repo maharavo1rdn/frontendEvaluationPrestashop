@@ -30,6 +30,10 @@ export default function SidebarItem({ item, collapsed }) {
     if (hasChildren) {
       if (!collapsed) setOpen(prev => !prev)
     } else {
+      if (typeof item.onClick === 'function') {
+        item.onClick({ navigate, location })
+        return
+      }
       navigate(item.path)
     }
   }

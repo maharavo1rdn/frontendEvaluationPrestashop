@@ -2,10 +2,13 @@ import {
   Box,
   LayoutDashboard,
   ListRestartIcon,
+  LogOut,
   ShoppingCart,
   Upload,
 } from "lucide-react";
 import Sidebar from "./Sidebar";
+import { useAuth } from "../../pages/auth/AuthContext";
+import { useNavigate } from "react-router-dom";
 
 const BACKOFFICE_ITEMS = [
   {
@@ -43,11 +46,28 @@ const BACKOFFICE_ITEMS = [
 ];
 
 const BackOfficeSidebar = ({ collapsed, onToggle }) => {
+  const { logoutAll } = useAuth();
+  const navigate = useNavigate();
+
+  const footerItems = [
+    {
+      id: "logout",
+      label: "Deconnexion",
+      icon: LogOut,
+      path: "/",
+      onClick: () => {
+        logoutAll();
+        navigate("/");
+      },
+    },
+  ];
+
   return (
     <Sidebar
       collapsed={collapsed}
       onToggle={onToggle}
       navItems={BACKOFFICE_ITEMS}
+      footerItems={footerItems}
       brandLabel="Back office"
     />
   );

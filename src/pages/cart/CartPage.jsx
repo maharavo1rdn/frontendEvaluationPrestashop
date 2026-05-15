@@ -9,10 +9,7 @@ import {
   updateCartItem,
 } from "../../services/frontoffice/cartStore.service";
 import { getCustomerSession } from "../../services/frontoffice/session.service";
-import {
-  checkoutCart,
-  checkoutGuest,
-} from "../../services/frontoffice/checkout.service";
+import { checkoutCart } from "../../services/frontoffice/checkout.service";
 import { useAuth } from "../auth/AuthContext";
 
 const CartPage = () => {
@@ -23,20 +20,6 @@ const CartPage = () => {
   const [error, setError] = useState(null);
 
   const { customer, guest } = useAuth();
-
-  // États pour le formulaire invité
-  const [guestForm, setGuestForm] = useState({
-    firstName: "Jean",
-    lastName: "Dupont",
-    email: "",
-    password: "",
-    address1: "Antananarivo",
-    city: "Antananarivo",
-    postcode: "75002",
-    idCountry: 1,
-    phone: "",
-  });
-  const [showGuestForm, setShowGuestForm] = useState(false);
 
   const refreshCart = (nextCart) => {
     const snapshot = nextCart ?? getCart();
@@ -67,28 +50,11 @@ const CartPage = () => {
     setLoading(true);
 
     try {
-      const customer = getCustomerSession();
-      const result = await checkoutCart({ items: cart.items, customer });
-      clearCart();
-      setStatus(
-        `Commande confirmée (#${result.orderReference || result.orderId}).`
-      );
-    } catch (checkoutError) {
-      setError(checkoutError.message);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const handleGuestCheckout = async (e) => {
-    e.preventDefault();
-    setError(null);
-    setStatus(null);
-    setLoading(true);
-    try {
-      const result = await checkoutGuest({
+      const sessionCustomer = getCustomerSession();
+      const result = await checkoutCart({
         items: cart.items,
-        customerForm: guestForm,
+        customer: sessionCustomer,
+        isGuest: !sessionCustomer?.id && !!guest?.id,
       });
       clearCart();
       setStatus(
@@ -213,8 +179,7 @@ const CartPage = () => {
               <span>{totals.totalAmount.toFixed(2)} €</span>
             </div>
 
-            {/* Client connecté : bouton classique */}
-            {customer && (
+            {(customer || guest) && (
               <button
                 type="button"
                 onClick={handleCheckout}
@@ -224,122 +189,6 @@ const CartPage = () => {
                 {loading && <Loader2 size={16} className="animate-spin" />}
                 {loading ? "Validation en cours..." : "Valider la commande"}
               </button>
-            )}
-
-            {/* Invité : bouton pour afficher le formulaire */}
-            {!customer && guest && !showGuestForm && (
-              <button
-                type="button"
-                onClick={() => setShowGuestForm(true)}
-                className="mt-6 w-full rounded-lg bg-emerald-500 hover:bg-emerald-600 text-white font-semibold py-2.5 transition-all"
-              >
-                Commander en tant qu’invité
-              </button>
-            )}
-
-            {/* Invité : formulaire de création de compte */}
-            {!customer && guest && showGuestForm && (
-              <form onSubmit={handleGuestCheckout} className="mt-6 space-y-3">
-                <input
-                  type="text"
-                  name="firstName"
-                  placeholder="Prénom"
-                  value={guestForm.firstName}
-                  onChange={(e) =>
-                    setGuestForm({ ...guestForm, firstName: e.target.value })
-                  }
-                  className="w-full h-10 rounded-lg border px-3 text-sm"
-                  required
-                />
-                <input
-                  type="text"
-                  name="lastName"
-                  placeholder="Nom"
-                  value={guestForm.lastName}
-                  onChange={(e) =>
-                    setGuestForm({ ...guestForm, lastName: e.target.value })
-                  }
-                  className="w-full h-10 rounded-lg border px-3 text-sm"
-                  required
-                />
-                <input
-                  type="email"
-                  name="email"
-                  placeholder="Email"
-                  value={guestForm.email}
-                  onChange={(e) =>
-                    setGuestForm({ ...guestForm, email: e.target.value })
-                  }
-                  className="w-full h-10 rounded-lg border px-3 text-sm"
-                  required
-                />
-                <input
-                  type="password"
-                  name="password"
-                  placeholder="Mot de passe"
-                  value={guestForm.password}
-                  onChange={(e) =>
-                    setGuestForm({ ...guestForm, password: e.target.value })
-                  }
-                  className="w-full h-10 rounded-lg border px-3 text-sm"
-                  required
-                />
-                <input
-                  type="text"
-                  name="address1"
-                  placeholder="Adresse"
-                  value={guestForm.address1}
-                  onChange={(e) =>
-                    setGuestForm({ ...guestForm, address1: e.target.value })
-                  }
-                  className="w-full h-10 rounded-lg border px-3 text-sm"
-                  required
-                />
-                <div className="grid grid-cols-2 gap-3">
-                  <input
-                    type="text"
-                    name="city"
-                    placeholder="Ville"
-                    value={guestForm.city}
-                    onChange={(e) =>
-                      setGuestForm({ ...guestForm, city: e.target.value })
-                    }
-                    className="h-10 rounded-lg border px-3 text-sm"
-                    required
-                  />
-                  <input
-                    type="text"
-                    name="postcode"
-                    placeholder="Code postal"
-                    value={guestForm.postcode}
-                    onChange={(e) =>
-                      setGuestForm({ ...guestForm, postcode: e.target.value })
-                    }
-                    className="h-10 rounded-lg border px-3 text-sm"
-                    required
-                  />
-                </div>
-                <input
-                  type="text"
-                  name="phone"
-                  placeholder="Téléphone (optionnel)"
-                  value={guestForm.phone}
-                  onChange={(e) =>
-                    setGuestForm({ ...guestForm, phone: e.target.value })
-                  }
-                  className="w-full h-10 rounded-lg border px-3 text-sm"
-                />
-                <button
-                  type="submit"
-                  disabled={loading}
-                  className="w-full rounded-lg bg-sky-500 hover:bg-sky-600 text-white font-semibold py-2.5 transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
-                >
-                  {loading && <Loader2 size={16} className="animate-spin" />}
-                  {loading
-                    ? "Création du compte..."
-                    : "Créer mon compte et commander"}
-                </button>
-              </form>
             )}
           </div>
         </div>

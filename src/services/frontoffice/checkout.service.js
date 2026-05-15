@@ -1,26 +1,16 @@
-import { getCart, clearCart } from "./cartStore.service";
-import { deleteAddress, findAddressByKeyValue } from "../address.service";
+import { getCart } from "./cartStore.service";
+import { findAddressByKeyValue } from "../address.service";
 import { postOrder } from "../order.service";
 import { findProductByKeyValue } from "../product.service";
 import { findCombinationsByProductId } from "../combination.service";
 import { computeCombinationPrice, getTaxRateForGroup } from "./pricing.service";
-import { deleteCustomer, postCustomer } from "../customer.service";
-import { postAddress } from "../address.service";
-import {
-  getGuestSession,
-  saveCustomerSession,
-  clearGuestSession,
-} from "./session.service";
+import { getGuestSession } from "./session.service";
 import { putCart, getCartById } from "../cart.service";
-import { postOrderHistory } from "../orderHistory.service";
 
 const DEFAULT_CURRENCY_ID = 1;
 const DEFAULT_CARRIER_ID = 2;
 const DEFAULT_LANG_ID = 1;
 const DEFAULT_SHOP_ID = 1;
-const DEFAULT_COUNTRY_ID = 8;
-const ACTIVE_COUNTRY_IDS = new Set(["8", "21"]);
-const DEFAULT_ORDER_STATE_ID = 11;
 const DEFAULT_PAYMENT = "Paiement à la livraison";
 const DEFAULT_MODULE = "ps_checkpayment";
 
@@ -31,13 +21,6 @@ const formatDecimal = (value, decimals = 6) => {
     return "0.000000";
   }
   return value.toFixed(decimals);
-};
-
-const resolveActiveCountryId = (idCountry) => {
-  const normalized = String(idCountry ?? DEFAULT_COUNTRY_ID);
-  return ACTIVE_COUNTRY_IDS.has(normalized)
-    ? Number(normalized)
-    : DEFAULT_COUNTRY_ID;
 };
 
 const resolveCartItems = async (items) => {
@@ -112,7 +95,7 @@ const computeTotals = (resolvedItems) => {
   };
 };
 
-// ─── Checkout Customer (logique inchangée) ────────────────────────────────
+// ─── Checkout Customer ────────────────────────────────────────────────────
 
 const checkoutAsCustomer = async ({ items, customer }) => {
   const cart = getCart();
@@ -125,25 +108,46 @@ const checkoutAsCustomer = async ({ items, customer }) => {
     throw new Error("Panier serveur introuvable.");
   }
 
-  const mustUpdateCarrier = !serverCart.idCarrier || serverCart.idCarrier == 0;
-  if (mustUpdateCarrier) {
-    const updated = await putCart(cart.psCartId, {
-      ...serverCart,
-      idCarrier: DEFAULT_CARRIER_ID,   // 2
-    });
-    if (!updated?.success) {
-      throw new Error("Impossible de mettre à jour le transporteur du panier.");
-    }
-  }
-
-  // 3. Adresse du client
   const addresses = await findAddressByKeyValue("id_customer", customer.id);
   const address = addresses?.[0];
   if (!address?.id) {
     throw new Error("Aucune adresse n'est liée à ce compte.");
   }
 
-  // 4. Résoudre les articles et calculer les totaux
+  const cartRows = serverCart.associations?.cartRows ?? [];
+  const mustUpdateCart =
+    String(serverCart.idCustomer ?? 0) !== String(customer.id) ||
+    String(serverCart.idGuest ?? 0) !== "0" ||
+    String(serverCart.idAddressDelivery ?? 0) !== String(address.id) ||
+    String(serverCart.idAddressInvoice ?? 0) !== String(address.id) ||
+    !serverCart.idCarrier ||
+    String(serverCart.idCarrier) === "0" ||
+    cartRows.some(
+      (row) => String(row.idAddressDelivery ?? 0) !== String(address.id)
+    );
+
+  if (mustUpdateCart) {
+    const updated = await putCart(cart.psCartId, {
+      ...serverCart,
+      idCustomer: customer.id,
+      idGuest: 0,
+      secureKey: customer.secureKey,
+      idAddressDelivery: address.id,
+      idAddressInvoice: address.id,
+      idCarrier: DEFAULT_CARRIER_ID,
+      associations: {
+        ...serverCart.associations,
+        cartRows: cartRows.map((row) => ({
+          ...row,
+          idAddressDelivery: address.id,
+        })),
+      },
+    });
+    if (!updated?.success) {
+      throw new Error("Impossible de mettre à jour le panier.");
+    }
+  }
+
   const resolvedItems = await resolveCartItems(items);
   const { totals } = computeTotals(resolvedItems);
 
@@ -191,135 +195,24 @@ const checkoutAsCustomer = async ({ items, customer }) => {
     totalAmount: Number(totals.totalPaid),
   };
 };
-export const checkoutGuest = async ({ items, customerForm }) => {
-  const cart = getCart();
-  if (!cart.psCartId) {
-    throw new Error(
-      "Le panier n'est pas encore prêt sur le serveur. Réessayez dans un instant."
-    );
+
+export const checkoutGuest = async ({ items }) => {
+  const guest = getGuestSession();
+  if (!guest?.id) {
+    throw new Error("La session guest est introuvable.");
   }
 
-  let createdCustomerId = null;
-  let createdAddressId = null;
-  let cartLinkedToCustomer = false;
-
-  try {
-    // 1. Créer le client
-    const createdCustomer = await postCustomer({
-      firstname: customerForm.firstName,
-      lastname: customerForm.lastName,
-      email: customerForm.email,
-      passwd: customerForm.password,
-      idLang: DEFAULT_LANG_ID,
-      idShopGroup: 1,
-      idShop: DEFAULT_SHOP_ID,
-      newsletter: false,
-      optin: false,
-      active: true,
-      deleted: false,
-      isGuest: false,
-    });
-
-    if (!createdCustomer?.success || !createdCustomer?.id) {
-      throw new Error("Impossible de créer le compte client.");
-    }
-    createdCustomerId = createdCustomer.id;
-    const secureKey = createdCustomer.secureKey;
-
-    const createdAddress = await postAddress({
-      idCustomer: createdCustomerId,
-      alias: "Adresse principale",
-      idState:    1,
-      idCountry:   8,
-      firstname: customerForm.firstName,
-      lastname: customerForm.lastName,
-      address1: customerForm.address1,
-      city: customerForm.city,
-      postcode: customerForm.postcode,
-      idCountry: resolveActiveCountryId(customerForm.idCountry),
-      phone: customerForm.phone ?? "0000000000",
-    });
-
-    if (!createdAddress?.success || !createdAddress?.id) {
-      throw new Error("Impossible de créer l'adresse.");
-    }
-    createdAddressId = createdAddress.id;
-
-    const serverCart = await getCartById(cart.psCartId);
-    if (!serverCart || !serverCart.id) {
-      throw new Error("Panier serveur introuvable.");
-    }
-
-    const updatedCart = {
-      ...serverCart,
-      idCustomer: createdCustomerId,
-      idGuest: 0,
-      secureKey: secureKey,
-      idAddressDelivery: createdAddressId,
-      idAddressInvoice: createdAddressId,
-      idCarrier: serverCart.idCarrier || 2,
-      associations: {
-        ...serverCart.associations,
-        cartRows: (serverCart.associations?.cartRows ?? []).map((row) => ({
-          ...row,
-          idAddressDelivery: createdAddressId,
-        })),
-      },
-    };
-
-    const cartUpdateResult = await putCart(cart.psCartId, updatedCart);
-    if (!cartUpdateResult?.success) {
-      throw new Error("Échec de la mise à jour du panier.");
-    }
-    cartLinkedToCustomer = true;
-
-    saveCustomerSession({
-      id: createdCustomerId,
-      secureKey,
-      email: customerForm.email,
-      firstname: customerForm.firstName,
-      lastname: customerForm.lastName,
-      idLang: DEFAULT_LANG_ID,
-    });
-
-    clearGuestSession();
-
-    // 7. Passer la commande
-    const result = await checkoutAsCustomer({
-      items,
-      customer: {
-        id: createdCustomerId,
-        secureKey,
-        idLang: DEFAULT_LANG_ID,
-      },
-    });
-
-    return result;
-  } catch (error) {
-    if (!cartLinkedToCustomer && createdAddressId) {
-      try {
-        await deleteAddress(createdAddressId);
-      } catch (deleteErr) {}
-    }
-    if (!cartLinkedToCustomer && createdCustomerId) {
-      try {
-        await deleteCustomer(createdCustomerId);
-      } catch (deleteErr) {}
-    }
-    throw error;
-  }
+  return checkoutAsCustomer({ items, customer: guest });
 };
 
-export const checkoutCart = async ({ items, customer, customerForm }) => {
+export const checkoutCart = async ({ items, customer, isGuest = false }) => {
+  if (isGuest) {
+    return checkoutGuest({ items });
+  }
+
   if (customer?.id) {
     return checkoutAsCustomer({ items, customer });
   }
 
-  if (customerForm) {
-    return checkoutGuest({ items, customerForm });
-  }
-
-  throw new Error(
-    "Vous devez être connecté ou remplir le formulaire pour passer commande."
-  );
+  throw new Error("Vous devez être connecté pour passer commande.");
 };
