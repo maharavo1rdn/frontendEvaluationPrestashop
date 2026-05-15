@@ -7,9 +7,13 @@ import {
   ChevronLeft,
   ChevronRight,
   ImageOff,
+  LogIn,
 } from "lucide-react";
 import { parseProduct } from "../../XMLUtil/parser/Product.parser";
-import { getStockAvailableById } from "../../services/stockAvailable.service";
+import {
+  getStockAvailableById,
+  getStockByProductAndAttribute,
+} from "../../services/stockAvailable.service";
 import { addCartItem } from "../../services/frontoffice/cartStore.service";
 import { findCombinationsByProductId } from "../../services/combination.service";
 import { findProductOptionValueByKeyValue } from "../../services/productOptionValue.service";
@@ -59,6 +63,8 @@ const ProduitDetail = () => {
   const [images, setImages] = useState([]);
   const [activeImageIndex, setActiveImageIndex] = useState(0);
 
+  const [comboStocks, setComboStocks] = useState({});
+
   useEffect(() => {
     fetchProductDetails();
     return () => {
@@ -102,7 +108,7 @@ const ProduitDetail = () => {
 
       setTaxRate(rate);
 
-      // 🔁 Chargement des images avec authentification
+      // Chargement des images
       const imageIds = extractImageIds(parsed);
       const loadedImages = await Promise.all(
         imageIds.map(async (imgId) => {
@@ -117,6 +123,22 @@ const ProduitDetail = () => {
       setCombinations(combos || []);
 
       if (combos?.length) {
+        const stocks = {};
+        await Promise.all(
+          combos.map(async (combo) => {
+            try {
+              const result = await getStockByProductAndAttribute(
+                parsed.id,
+                combo.id
+              );
+              stocks[combo.id] = result?.[0]?.quantity ?? null;
+            } catch {
+              stocks[combo.id] = null;
+            }
+          })
+        );
+        setComboStocks(stocks);
+
         const defaultCombo = combos.find((combo) => combo.defaultOn);
         setSelectedCombinationId(defaultCombo?.id || combos[0].id || "");
 
@@ -150,10 +172,17 @@ const ProduitDetail = () => {
 
   const handleAddToCart = () => {
     if (!product) return;
-    if (product.stockQuantity !== null && product.stockQuantity <= 0) {
+
+    const selectedStock =
+      combinations.length > 0
+        ? comboStocks[selectedCombinationId] ?? null
+        : product.stockQuantity;
+
+    if (selectedStock !== null && selectedStock <= 0) {
       setStatus("Stock insuffisant pour ajouter ce produit.");
       return;
     }
+
     const selectedCombination = combinations.find(
       (combo) => combo.id === selectedCombinationId
     );
@@ -168,7 +197,7 @@ const ProduitDetail = () => {
       price: priceExcl,
       priceTaxIncl: priceIncl,
       reference: product.reference,
-      stockQuantity: product.stockQuantity,
+      stockQuantity: selectedStock,
       idTaxRulesGroup: product.idTaxRulesGroup,
       idProductAttribute: selectedCombination?.id ?? "0",
       combinationLabel: combinationLabels[selectedCombination?.id] ?? "",
@@ -185,6 +214,13 @@ const ProduitDetail = () => {
     combinationPriceImpact: activeCombination?.price ?? 0,
     taxRate,
   });
+
+  console.log(comboStocks);
+  
+  const displayedStock =
+    combinations.length > 0
+      ? comboStocks[selectedCombinationId] ?? null
+      : product?.stockQuantity;
 
   if (loading) {
     return (
@@ -240,7 +276,7 @@ const ProduitDetail = () => {
 
       <div className="bg-white border border-slate-200 rounded-lg shadow-sm">
         <div className="p-6 border-b border-slate-200 grid grid-cols-1 md:grid-cols-2 gap-6">
-          {/* Galerie avec blobs */}
+          {/* Galerie */}
           <div className="flex flex-col gap-3">
             <div className="relative aspect-square bg-slate-50 rounded-lg overflow-hidden border border-slate-100">
               {images.length > 0 ? (
@@ -352,19 +388,22 @@ const ProduitDetail = () => {
                 Stock :{" "}
                 <span
                   className={`font-semibold ${
-                    product?.stockQuantity > 0
+                    displayedStock !== null && displayedStock > 0
                       ? "text-emerald-600"
                       : "text-red-500"
                   }`}
                 >
-                  {product?.stockQuantity ?? "—"}
+                  {displayedStock !== null ? displayedStock : "—"}
                 </span>
               </p>
               <button
                 type="button"
                 onClick={handleAddToCart}
                 disabled={
-                  product?.stockQuantity !== null && product?.stockQuantity <= 0
+                  (displayedStock !== null && displayedStock <= 0) ||
+                  (combinations.length === 0 &&
+                    product?.stockQuantity !== null &&
+                    product?.stockQuantity <= 0)
                 }
                 className="w-full px-4 py-2.5 rounded-lg bg-emerald-500 hover:bg-emerald-600 disabled:opacity-40 disabled:cursor-not-allowed text-white text-sm font-semibold transition-colors"
               >

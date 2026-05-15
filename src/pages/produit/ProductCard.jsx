@@ -224,7 +224,7 @@ const ProductCard = ({ product, onAddToCart, status }) => {
                 inStock ? "text-slate-400" : "text-red-400"
               }`}
             >
-              Stock : {product.stockQuantity ?? "N/A"}
+              Total en Stock : {product.stockQuantity ?? "N/A"}
             </p>
           </div>
 

@@ -1,4 +1,10 @@
-import { LayoutDashboard, ListRestartIcon, ShoppingCart, Upload } from "lucide-react";
+import {
+  Box,
+  LayoutDashboard,
+  ListRestartIcon,
+  ShoppingCart,
+  Upload,
+} from "lucide-react";
 import Sidebar from "./Sidebar";
 
 const BACKOFFICE_ITEMS = [
@@ -24,7 +30,15 @@ const BACKOFFICE_ITEMS = [
     id: "orders",
     label: "Orders",
     icon: ShoppingCart,
-    children: [{ id: "orders-list", label: "Liste", path: "/backOffice/commandes" }],
+    children: [
+      { id: "orders-list", label: "Liste", path: "/backOffice/commandes" },
+    ],
+  },
+  {
+    id: "stocks",
+    label: "Stock",
+    icon: Box,
+    path: "/backOffice/stocks",
   },
 ];
 
