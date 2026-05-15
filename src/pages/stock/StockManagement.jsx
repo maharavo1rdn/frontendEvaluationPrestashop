@@ -302,7 +302,7 @@ const StockManagement = () => {
                 </td>
                 <td className="px-6 py-4 text-right flex justify-end gap-2">
                   <Link
-                    to={`/admin/stock/evolution/${product.id}`}
+                    to={`/backOffice/stock/evolution/${product.id}`}
                     className="p-2 text-slate-400 hover:text-sky-500 transition-colors"
                     title="Voir l'historique"
                   >
@@ -355,19 +355,12 @@ const StockManagement = () => {
                     Mouvement enregistré !
                   </div>
                 )}
-
-                <p className="text-xs text-slate-400 mb-4 bg-amber-50 p-2 rounded">
-                  Note : Saisissez un nombre positif pour{" "}
-                  <strong>ajouter</strong> (ex: 10) ou négatif pour{" "}
-                  <strong>retirer</strong> (ex: -5).
-                </p>
-
-                <div className="space-y-4">
+                <div className="space-y-5">
                   {combosData.length === 0 ? (
                     <div>
                       <div className="flex justify-between text-sm mb-1">
                         <label className="font-medium text-slate-700">
-                          Quantité à modifier
+                          Quantité à ajouter ou à soustraire
                         </label>
                         <span className="text-slate-400">
                           Actuel : {modalProduct.currentQty}
