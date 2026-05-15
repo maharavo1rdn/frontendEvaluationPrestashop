@@ -189,17 +189,19 @@ export const findCartByKeyValue = async (key, value) => {
 export const getUnorderedCartsByCustomer = async (customerId) => {
   try {
     const userOrders = await findOrderByKeyValue("id_customer", customerId);
-    const orderedCartIds = new Set(userOrders.map((order) => String(order.idCart)));
-    
+    const orderedCartIds = new Set(
+      userOrders.map((order) => String(order.idCart))
+    );
+
     const userCarts = await findCartByKeyValue("id_customer", customerId);
-    
-    const unorderedCarts = userCarts.filter((cart) => {
-      const isUserCart = String(cart.idCustomer) === String(customerId);      
-      const isNotOrdered = !orderedCartIds.has(String(cart.id));
-      return isUserCart && isNotOrdered;
-    });
-    console.log(unorderedCarts);
-    
+
+    const unorderedCarts = userCarts
+      .filter((cart) => {
+        const isUserCart = String(cart.idCustomer) === String(customerId);
+        const isNotOrdered = !orderedCartIds.has(String(cart.id));
+        return isUserCart && isNotOrdered;
+      })
+      .sort((a, b) => new Date(b.dateAdd) - Date(a.dateAdd));
 
     return unorderedCarts;
   } catch (error) {
