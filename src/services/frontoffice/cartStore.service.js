@@ -17,10 +17,9 @@ let pendingCart = null;
 
 const syncCartWithServer = async (cart) => {
   const isGuest = isGuestSession();
-  const customer = isGuest ? null : getCustomerSession();
-  const guest = isGuest ? getGuestSession() : null;
+  const customer = isGuest ? getGuestSession() : getCustomerSession();
 
-  if (!customer?.id && !guest?.id) return;
+  if (!customer?.id) return;
 
   window.dispatchEvent(new CustomEvent("cart:syncing"));
 
@@ -43,7 +42,7 @@ const syncCartWithServer = async (cart) => {
 
     const cartPayload = {
       idCustomer: customer?.id ?? 0,
-      idGuest: guest?.id ?? 0,
+      idGuest: 0,
       idAddressDelivery: address?.id ?? 0,
       idAddressInvoice: address?.id ?? 0,
       idCarrier: 2,

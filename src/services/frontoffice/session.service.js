@@ -1,4 +1,5 @@
 const CUSTOMER_KEY = "frontoffice_customer_session";
+const LEGACY_CUSTOMER_KEY = "customer_session";
 
 export const saveCustomerSession = (customer) => {
   localStorage.setItem(CUSTOMER_KEY, JSON.stringify(customer));
@@ -15,6 +16,7 @@ export const getCustomerSession = () => {
 
 export const clearCustomerSession = () => {
   localStorage.removeItem(CUSTOMER_KEY);
+  localStorage.removeItem(LEGACY_CUSTOMER_KEY);
 };
 
 const GUEST_KEY = "frontoffice_guest_session";
@@ -22,7 +24,7 @@ const GUEST_KEY = "frontoffice_guest_session";
 export const saveGuestSession = (guest) => {
   sessionStorage.setItem(
     GUEST_KEY,
-    JSON.stringify({ id: guest.id, isGuest: true })
+    JSON.stringify({ ...guest, isGuest: true })
   );
 };
 
