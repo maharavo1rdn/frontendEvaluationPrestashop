@@ -6,19 +6,19 @@ const BACKOFFICE_ITEMS = [
     id: "dashboard",
     label: "Tableau de bord",
     icon: LayoutDashboard,
-    path: "/bakcOffice/dashboard",
+    path: "/backOffice/dashboard",
   },
   {
     id: "reset",
     label: "Reset table",
     icon: ListRestartIcon,
-    path: "/bakcOffice/reset",
+    path: "/backOffice/reset",
   },
   {
     id: "import",
     label: "Import",
     icon: Upload,
-    path: "/bakcOffice/import",
+    path: "/backOffice/import",
   },
   {
     id: "orders",

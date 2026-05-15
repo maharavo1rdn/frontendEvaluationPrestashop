@@ -97,13 +97,6 @@ const RESET_TABLES = [
     reset: resetProductFeatureValues,
   },
   {
-    id: "stock-availables",
-    label: "stock_availables",
-    table: "ps_stock_available",
-    description: "Stocks disponibles",
-    reset: resetStockAvailables,
-  },
-  {
     id: "products",
     label: "products",
     table: "ps_product",

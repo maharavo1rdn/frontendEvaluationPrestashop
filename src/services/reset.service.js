@@ -26,7 +26,7 @@ const TABLE_RESETTERS = [
   { id: "product-options", reset: resetProductOptions },
   { id: "feature-values", reset: resetProductFeatureValues },
   { id: "products", reset: resetProducts },
-  { id: "stock-availables", reset: resetStockAvailables },
+  // { id: "stock-availables", reset: resetStockAvailables },
   { id: "categories", reset: resetCategories },
   { id: "tax-rules", reset: resetTaxRules },
   { id: "tax-rule-groups", reset: resetTaxRulesGroups },

@@ -1,4 +1,4 @@
-import { Routes, Route } from "react-router-dom";
+import { Navigate, Routes, Route } from "react-router-dom";
 import ClientsRoutes from "./client/ClientsRoutes";
 import ProduitsRoutes from "./produit/ProduitsRoutes";
 import CartRoutes from "./cart/CartRoutes";

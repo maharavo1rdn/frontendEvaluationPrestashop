@@ -384,7 +384,7 @@ export const importOrdersFromCSV = async (file, onProgress) => {
       const etatRaw = (row.etat || "").toLowerCase().trim();
       console.log(cart);
       
-      if (!etatRaw || etatRaw === "dans le panier panier") {
+      if (!etatRaw || etatRaw.includes("dans le panier")) {
         processResult = {
           success: true,
           email,

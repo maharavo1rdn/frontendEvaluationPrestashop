@@ -6,7 +6,7 @@ const ImportRoutes = () => {
     <>
       <Routes>
         <Route
-          path="/bakcOffice/import"
+          path="/backOffice/import"
           element={
             <EmployeeProtectedRoute>
               <ImportAll />
