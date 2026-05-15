@@ -11,8 +11,7 @@ import {
 import { getAllEnriched } from "../../services/product.service";
 import {
   findStockAvailableByProductAttribute,
-  updateStockAvailable,
-  postStockAvailable,
+  updateStockItemWithMovement,
 } from "../../services/stockAvailable.service";
 import { findCombinationsByProductId } from "../../services/combination.service";
 import { findProductOptionValueByKeyValue } from "../../services/productOptionValue.service";
@@ -150,18 +149,12 @@ const StockManagement = () => {
             label,
             currentQty,
             stockId,
-            newQty: currentQty,
+            newQty: 0,
           });
         }
         setCombosData(items);
       } else {
-        const stockEntries = await findStockAvailableByProductAttribute(
-          product.id,
-          0
-        ).catch(() => []);
-        const stockObj = stockEntries?.[0] || null;
-        const currentQty = stockObj?.quantity ?? 0;
-        setSimpleQuantity(currentQty);
+        setSimpleQuantity(0);
         setCombosData([]);
       }
     } catch (err) {
@@ -179,27 +172,29 @@ const StockManagement = () => {
     try {
       if (combosData.length > 0) {
         for (const item of combosData) {
-          const payload = {
+          const deltaQuantity = Number(item.newQty);
+          if (deltaQuantity === 0) {
+            continue;
+          }
+
+          await updateStockItemWithMovement({
             idProduct: modalProduct.id,
             idProductAttribute: item.combinationId,
-            quantity: item.newQty,
-            id: item.stockId,
-          };
-          console.log("combo data", payload);
-          
+            deltaQuantity,
+            idShop: 1
+          });
         }
-    } else {
-        const stockEntries = await findStockAvailableByProductAttribute(
-            modalProduct.id,
-            0
-        );
-        const stockObj = stockEntries?.[0] || null;
-        const payload = {
-          idProduct: modalProduct.id,
-          idProductAttribute: 0,
-          quantity: simpleQuantity,
-          id: stockObj?.id,
-        };
+      } else {
+        const deltaQuantity = Number(simpleQuantity);
+        
+        if (deltaQuantity !== 0) {
+          await updateStockItemWithMovement({
+            idProduct: modalProduct.id,
+            idProductAttribute: 0,
+            deltaQuantity,
+            idShop: 1
+          });
+        }
       }
 
       setSaveSuccess(true);
@@ -370,16 +365,13 @@ const StockManagement = () => {
                       <strong>{modalProduct.stockQuantity ?? "—"}</strong>
                     </p>
                     <label className="block text-sm font-medium text-slate-700">
-                      Nouvelle quantité
+                      Quantité à ajouter ou soustraire
                     </label>
                     <input
                       type="number"
-                      min="0"
                       value={simpleQuantity}
                       onChange={(e) =>
-                        setSimpleQuantity(
-                          Math.max(0, parseInt(e.target.value) || 0)
-                        )
+                        setSimpleQuantity(parseInt(e.target.value) || 0)
                       }
                       className="w-full h-10 rounded-lg border border-slate-200 px-3 text-sm"
                     />
@@ -401,13 +393,9 @@ const StockManagement = () => {
                         </div>
                         <input
                           type="number"
-                          min="0"
                           value={item.newQty}
                           onChange={(e) => {
-                            const newVal = Math.max(
-                              0,
-                              parseInt(e.target.value) || 0
-                            );
+                            const newVal = parseInt(e.target.value) || 0;
                             setCombosData((prev) =>
                               prev.map((c) =>
                                 c.combinationId === item.combinationId
