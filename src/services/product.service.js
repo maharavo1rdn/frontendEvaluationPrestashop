@@ -115,7 +115,9 @@ export const searchProducts = async ({
   let products = parseProducts(xmlText);
   if (name) {
     const searchName = name.toLowerCase();
-    products = products.filter((p) => p.name?.toLowerCase().includes(searchName));
+    products = products.filter((p) =>
+      p.name?.toLowerCase().includes(searchName)
+    );
   }
   return products;
 };
@@ -147,6 +149,41 @@ export const findProductByKeyValue = async (key, value) => {
   }
 };
 
+export const getProductById = async (id) => {
+  try {
+    const response = await fetch(
+      `${API_URL()}/products/${id}?output_format=XML`,
+      {
+        headers: {
+          Authorization: `Basic ${btoa(WS_KEY() + ":")}`,
+          Accept: "application/xml",
+        },
+      }
+    );
+
+    if (!response.ok) {
+      const errText = await response.text();
+      const errors = parseErrors(errText);
+      throw new Error(
+        `Erreur HTTP ${response.status} — ${
+          errors[0]?.message || "Produit introuvable"
+        }`
+      );
+    }
+
+    const xmlText = await response.text();
+    const product = parseProduct(xmlText);
+
+    if (product) {
+      product.images = extractImagesFromProduct(product);
+    }
+
+    return product;
+  } catch (error) {
+    console.error(`[ProductService] Error in getProductById(${id}):`, error);
+    throw error;
+  }
+};
 export const postProduct = async (category) => {
   const xml = buildProductXML(category);
   try {
