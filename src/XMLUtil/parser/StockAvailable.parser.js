@@ -20,6 +20,7 @@ export const parseStockAvailable = (xmlString) => {
 
 const parseStockAvailables = (xmlString) => {
   const result = parseXML(xmlString);
+  
   const raw = result?.prestashop?.stock_availables?.stock_available;
   return toArray(raw).map(mapStockAvailable);
 };

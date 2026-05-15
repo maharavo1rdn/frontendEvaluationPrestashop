@@ -187,3 +187,29 @@ export const resetStockAvailables = async () => {
     throw error;
   }
 };
+
+export const getStockByProductAndAttribute = async (
+  productId,
+  productAttributeId
+) => {
+  try {
+    const response = await fetch(
+      `${API_URL()}/stock_availables?filter[id_product]=${productId}&filter[id_product_attribute]=${productAttributeId}&output_format=XML&display=full`,
+      {
+        headers: {
+          Authorization: `Basic ${btoa(WS_KEY() + ":")}`,
+          Accept: "application/xml",
+        },
+      }
+    );
+    if (!response.ok) return null;
+    const xml = await response.text();
+    const stock =  parseStockAvailables(xml);
+    console.log(stock);
+    return stock;
+    
+  } catch (err) {
+    console.error("Erreur récupération stock combinaison", err);
+    return null;
+  }
+};
