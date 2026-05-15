@@ -1,29 +1,39 @@
 import { useState, useEffect } from "react";
 import { useNavigate, Link } from "react-router-dom";
 import { AlertCircle, Loader2, User, LogIn } from "lucide-react";
-import { saveCustomerSession, getCustomerSession } from "../../services/frontoffice/session.service";
+import {
+  saveCustomerSession,
+  getCustomerSession,
+} from "../../services/frontoffice/session.service";
 import { getAll } from "../../services/customer.service";
 import { getUnorderedCartsByCustomer } from "../../services/cart.service";
+import { loadCartFromServer } from "../../services/frontoffice/cartStore.service";
 
 const UserSelector = () => {
   const navigate = useNavigate();
   const [customers, setCustomers] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
-  
+
   const currentSession = getCustomerSession();
   const isAlreadyConnected = !!currentSession?.id;
-  
+
   useEffect(() => {
     const fetchCustomers = async () => {
       try {
-        const unorders = await getUnorderedCartsByCustomer(currentSession?.id);
-        console.log("ici",unorders);
+        const unordersCarts = await getUnorderedCartsByCustomer(
+          currentSession?.id
+        );
+        if (unordersCarts.length > 0) {
+          await loadCartFromServer(unordersCarts[0]);
+        }
         setLoading(true);
         setError(null);
         const data = await getAll();
         setCustomers(data || []);
       } catch (err) {
+        console.error(err.message);
+        
         setError("Impossible de charger la liste des utilisateurs.");
       } finally {
         setLoading(false);
@@ -53,9 +63,13 @@ const UserSelector = () => {
       <div className="w-full max-w-2xl">
         <div className="rounded-2xl border border-slate-200 bg-white p-8 shadow-sm">
           <div className="mb-8">
-            <p className="text-sm font-semibold text-sky-600 mb-2">Front office</p>
+            <p className="text-sm font-semibold text-sky-600 mb-2">
+              Front office
+            </p>
             <h1 className="text-3xl font-bold text-slate-900">
-              {isAlreadyConnected ? "Vous êtes connecté" : "Choisir un utilisateur"}
+              {isAlreadyConnected
+                ? "Vous êtes connecté"
+                : "Choisir un utilisateur"}
             </h1>
             <p className="mt-2 text-sm text-slate-500">
               {isAlreadyConnected
