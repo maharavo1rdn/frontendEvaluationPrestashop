@@ -2,6 +2,7 @@ import { buildCartXML } from "../XMLUtil/builder/Cart.builder";
 import parseCarts, { parseCart } from "../XMLUtil/parser/Cart.parser";
 import parseErrors from "../XMLUtil/parser/Error.parser";
 import { API_URL, WS_KEY, authHeaders } from "../config/config.service";
+import { findOrderByKeyValue } from "./order.service";
 
 const DEFAULT_DISPLAY = "full";
 
@@ -154,6 +155,60 @@ export const resetCarts = async () => {
 
     return { success: true, deleted: totalDeleted };
   } catch (error) {
+    throw error;
+  }
+};
+
+export const findCartByKeyValue = async (key, value) => {
+  try {
+    const params = new URLSearchParams({
+      [`filter[${key}]`]: `[${value}]`,
+      output_format: "XML",
+      display: "full",
+    });
+    const queryString = params
+      .toString()
+      .replace(/%5B/g, "[")
+      .replace(/%5D/g, "]");
+
+    const response = await fetch(`${API_URL()}/carts?${queryString}`, {
+      method: "GET",
+      headers: {
+        Authorization: `Basic ${btoa(WS_KEY() + ":")}`,
+        Accept: "application/xml",
+      },
+    });
+    const xmlText = await response.text();
+    if (!response.ok) throw new Error(`HTTP ${response.status} — ${xmlText}`);
+    return parseCarts(xmlText);
+  } catch (error) {
+    throw error;
+  }
+};
+
+export const getUnorderedCartsByCustomer = async (customerId) => {
+  try {
+    const userOrders = await findOrderByKeyValue("id_customer", customerId);
+    const orderedCartIds = new Set(
+      userOrders.map((order) => String(order.idCart))
+    );
+
+    const userCarts = await findCartByKeyValue("id_customer", customerId);
+
+    const unorderedCarts = userCarts
+      .filter((cart) => {
+        const isUserCart = String(cart.idCustomer) === String(customerId);
+        const isNotOrdered = !orderedCartIds.has(String(cart.id));
+        return isUserCart && isNotOrdered;
+      })
+      .sort((a, b) => new Date(b.dateAdd) - Date(a.dateAdd));
+
+    return unorderedCarts;
+  } catch (error) {
+    console.error(
+      "Erreur lors de la récupération des paniers non commandés:",
+      error
+    );
     throw error;
   }
 };

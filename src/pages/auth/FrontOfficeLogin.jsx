@@ -30,7 +30,7 @@ const FrontOfficeLogin = () => {
       );
       saveCustomerSession(customer);
       loginCustomer(customerData);
-      navigate("/frontOffice/products");
+      navigate("/frontOffice/userSelector");
     } catch (err) {
       setError(err.message);
     } finally {

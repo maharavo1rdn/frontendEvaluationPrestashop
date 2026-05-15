@@ -1,9 +1,14 @@
-import { field, optionalField, wrapPrestashop } from "./xml.builder";
+import { field, optionalField, optionalLangField, wrapPrestashop } from "./xml.builder";
 
 const boolValue = (value) => {
   if (value === undefined || value === null) return undefined;
   if (value === "0" || value === 0 || value === false) return 0; // Force 0 pour ces cas
   return 1;
+};
+
+const resolveCarrierId = (value) => {
+  const carrierId = Number(value);
+  return Number.isFinite(carrierId) && carrierId > 0 ? carrierId : 2;
 };
 
 
@@ -55,7 +60,7 @@ export const buildOrderXML = (order) => {
     ${field("id_currency", order.idCurrency ?? 0)}
     ${field("id_lang", order.idLang ?? 1)}
     ${field("id_customer", order.idCustomer ?? 0)}
-    ${field("id_carrier", order.idCarrier ?? 2)}
+    ${field("id_carrier", resolveCarrierId(order.idCarrier ?? order.id_carrier))}
     ${field("id_shop", order.idShop ?? 1)}
     
     ${field("current_state", order.currentState)}

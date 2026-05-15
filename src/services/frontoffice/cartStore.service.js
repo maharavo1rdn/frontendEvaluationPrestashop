@@ -5,6 +5,11 @@ import {
   isGuestSession,
 } from "./session.service";
 import { findAddressByKeyValue } from "../address.service";
+import { findProductByKeyValue } from "../product.service";
+import { findCombinationsByProductId } from "../combination.service";
+import { findProductOptionValueByKeyValue } from "../productOptionValue.service";
+import { getTaxRateForGroup, computeCombinationPrice } from "./pricing.service";
+import { getStockAvailableById } from "../stockAvailable.service";
 
 const STORAGE_KEY = "frontoffice_cart";
 let syncInFlight = false;
@@ -250,4 +255,117 @@ export const clearCart = async () => {
   );
 
   return { items: [], _version: 0 };
+};
+
+export const loadCartFromServer = async (serverCart) => {
+  if (!serverCart || !serverCart.id) return;
+
+  const rows = serverCart.associations?.cartRows ?? [];
+  const items = [];
+
+  for (const row of rows) {
+    const productId = row.idProduct;
+    const attrId = row.idProductAttribute || 0;
+    const quantity = Number(row.quantity ?? 1);
+
+    let name = null;
+    let reference = null;
+    let price = null;
+    let priceTaxIncl = null;
+    let taxRate = null;
+    let idTaxRulesGroup = null;
+    let combinationLabel = "";
+    let stockQuantity = null;
+
+    try {
+      // 1. Récupérer le produit complet
+      const products = await findProductByKeyValue("id", productId);
+      const product = products?.[0];
+
+      if (product) {
+        name = product.name ?? null;
+        reference = product.reference ?? null;
+        idTaxRulesGroup = product.idTaxRulesGroup ?? null;
+
+        // 2. Gérer la déclinaison si présente
+        let combination = null;
+        if (attrId && String(attrId) !== "0") {
+          const combos = await findCombinationsByProductId(product.id).catch(
+            () => []
+          );
+          combination = combos.find((c) => String(c.id) === String(attrId));
+          if (combination) {
+            if (combination.associations?.productOptionValues?.length) {
+              const values = await Promise.all(
+                combination.associations.productOptionValues.map(
+                  async (valueId) => {
+                    const result = await findProductOptionValueByKeyValue(
+                      "id",
+                      valueId
+                    ).catch(() => []);
+                    return result?.[0]?.name ?? "";
+                  }
+                )
+              );
+              combinationLabel = values.filter(Boolean).join(" / ");
+            } else {
+              combinationLabel = `Combinaison #${combination.id}`;
+            }
+          }
+        }
+
+        // 3. Prix et TVA
+        const taxRateValue = await getTaxRateForGroup(
+          product.idTaxRulesGroup
+        ).catch(() => 0);
+        taxRate = taxRateValue;
+
+        const { priceExcl, priceIncl } = computeCombinationPrice({
+          basePrice: product.price ?? 0,
+          combinationPriceImpact: combination?.price ?? 0,
+          taxRate: taxRateValue,
+        });
+        price = Number(priceExcl);
+        priceTaxIncl = Number(priceIncl);
+
+        // 4. Stock
+        if (product.associations?.stockAvailables?.length) {
+          const stockId = product.associations.stockAvailables[0].id;
+          if (stockId) {
+            const stock = await getStockAvailableById(stockId).catch(
+              () => null
+            );
+            stockQuantity = stock?.quantity ?? null;
+          }
+        }
+      }
+    } catch (err) {
+      console.warn(`Impossible d’enrichir le produit ${productId}:`, err);
+    }
+
+    items.push({
+      cartKey: `${productId ?? ""}_${attrId ?? "0"}`,
+      idProduct: String(productId ?? ""),
+      idProductAttribute: String(attrId ?? "0"),
+      name,
+      reference,
+      price,
+      priceTaxIncl,
+      taxRate,
+      idTaxRulesGroup,
+      combinationLabel,
+      quantity,
+      stockQuantity,
+      cartRowId: row.id,
+    });
+  }
+
+  const cart = {
+    items,
+    _version: 0,
+    psCartId: serverCart.id,
+  };
+
+  window.localStorage.setItem(STORAGE_KEY, JSON.stringify(cart));
+  window.dispatchEvent(new CustomEvent("cart:updated", { detail: cart }));
 };
