@@ -3,6 +3,7 @@ import { useNavigate, Link } from "react-router-dom";
 import { AlertCircle, Loader2, User, LogIn } from "lucide-react";
 import { saveCustomerSession, getCustomerSession } from "../../services/frontoffice/session.service";
 import { getAll } from "../../services/customer.service";
+import { getUnorderedCartsByCustomer } from "../../services/cart.service";
 
 const UserSelector = () => {
   const navigate = useNavigate();
@@ -12,10 +13,12 @@ const UserSelector = () => {
   
   const currentSession = getCustomerSession();
   const isAlreadyConnected = !!currentSession?.id;
-
+  
   useEffect(() => {
     const fetchCustomers = async () => {
       try {
+        const unorders = await getUnorderedCartsByCustomer(currentSession?.id);
+        console.log("ici",unorders);
         setLoading(true);
         setError(null);
         const data = await getAll();

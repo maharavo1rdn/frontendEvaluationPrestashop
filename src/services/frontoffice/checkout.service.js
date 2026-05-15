@@ -117,19 +117,35 @@ const computeTotals = (resolvedItems) => {
 const checkoutAsCustomer = async ({ items, customer }) => {
   const cart = getCart();
   if (!cart.psCartId) {
-    throw new Error(
-      "Le panier n'est pas encore prêt sur le serveur. Réessayez dans un instant."
-    );
+    throw new Error("Le panier n'est pas encore prêt sur le serveur.");
   }
 
+  const serverCart = await getCartById(cart.psCartId);
+  if (!serverCart || !serverCart.id) {
+    throw new Error("Panier serveur introuvable.");
+  }
+
+  const mustUpdateCarrier = !serverCart.idCarrier || serverCart.idCarrier == 0;
+  if (mustUpdateCarrier) {
+    const updated = await putCart(cart.psCartId, {
+      ...serverCart,
+      idCarrier: DEFAULT_CARRIER_ID,   // 2
+    });
+    if (!updated?.success) {
+      throw new Error("Impossible de mettre à jour le transporteur du panier.");
+    }
+  }
+
+  // 3. Adresse du client
   const addresses = await findAddressByKeyValue("id_customer", customer.id);
   const address = addresses?.[0];
   if (!address?.id) {
     throw new Error("Aucune adresse n'est liée à ce compte.");
   }
 
+  // 4. Résoudre les articles et calculer les totaux
   const resolvedItems = await resolveCartItems(items);
-  const { totals, paymentAmount } = computeTotals(resolvedItems);
+  const { totals } = computeTotals(resolvedItems);
 
   const orderRows = resolvedItems.map((item) => ({
     productId: item.product.id,
@@ -154,7 +170,7 @@ const checkoutAsCustomer = async ({ items, customer }) => {
     idLang: customer.idLang ?? DEFAULT_LANG_ID,
     idShop: DEFAULT_SHOP_ID,
     idCarrier: DEFAULT_CARRIER_ID,
-    currentState: DEFAULT_ORDER_STATE_ID,
+    currentState: 11,
     conversionRate: 1,
     secureKey: customer.secureKey,
     payment: DEFAULT_PAYMENT,
@@ -165,14 +181,8 @@ const checkoutAsCustomer = async ({ items, customer }) => {
 
   const createdOrder = await postOrder(orderPayload);
   if (!createdOrder?.success || !createdOrder?.id) {
-    throw new Error(
-      createdOrder?.error || "Création de la commande impossible."
-    );
+    throw new Error(createdOrder?.error || "Création de la commande impossible.");
   }
-  await postOrderHistory({
-    idOrder: createdOrder.id,
-    idOrderState: DEFAULT_ORDER_STATE_ID,
-  });
 
   return {
     cartId: cart.psCartId,
@@ -181,7 +191,6 @@ const checkoutAsCustomer = async ({ items, customer }) => {
     totalAmount: Number(totals.totalPaid),
   };
 };
-
 export const checkoutGuest = async ({ items, customerForm }) => {
   const cart = getCart();
   if (!cart.psCartId) {
@@ -220,6 +229,8 @@ export const checkoutGuest = async ({ items, customerForm }) => {
     const createdAddress = await postAddress({
       idCustomer: createdCustomerId,
       alias: "Adresse principale",
+      idState:    1,
+      idCountry:   8,
       firstname: customerForm.firstName,
       lastname: customerForm.lastName,
       address1: customerForm.address1,

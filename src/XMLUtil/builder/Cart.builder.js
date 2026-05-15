@@ -3,6 +3,17 @@ import { field, optionalField, wrapPrestashop } from "./xml.builder";
 const boolValue = (value) =>
 	value === undefined || value === null ? undefined : value ? 1 : 0;
 
+const resolveCarrierId = (value) => {
+	const carrierId = Number(value);
+	return Number.isFinite(carrierId) && carrierId > 0 ? carrierId : 2;
+};
+
+const rawCdataField = (tag, value) =>
+	`<${tag}><![CDATA[${String(value ?? "").replace(/]]>/g, "]]]]><![CDATA[>")}]]></${tag}>`;
+
+const optionalRawCdataField = (tag, value) =>
+	value === undefined || value === null ? "" : rawCdataField(tag, value);
+
 const buildCartRows = (rows = []) => {
 	if (!rows.length) return "";
 	return `
@@ -36,6 +47,7 @@ const buildAssociations = (associations = {}) => {
 export const buildCartXML = (cart) => {
 	const allowSeperatedPackage =
 		cart.allowSeperatedPackage ?? cart.allowSeparatedPackage;
+	const idCarrier = resolveCarrierId(cart.idCarrier);
 
 	const inner = `
 	<cart>
@@ -44,15 +56,14 @@ export const buildCartXML = (cart) => {
 		${field("id_address_delivery", cart.idAddressDelivery ?? 0)}
 		${field("id_address_invoice", cart.idAddressInvoice ?? 0)}
 		${field("id_currency", cart.idCurrency ?? 0)}
-		${field("id_shop", cart.idShop ?? 1)}
 		${field("id_customer", cart.idCustomer ?? 0)}
 		${optionalField("id_guest", cart.idGuest)}
 		${field("id_lang", cart.idLang ?? 1)}
-		${optionalField("id_shop", cart.idShop ?? 1)}
-	    ${optionalField("date_add", cart.dateAdd)}
+		${field("id_shop", cart.idShop ?? 1)}
 		${optionalField("id_shop_group", cart.idShopGroup)}
-		${optionalField("id_carrier", cart.idCarrier)}
-		${optionalField("delivery_option", cart.deliveryOption)}
+		${field("id_carrier", idCarrier)}
+		${optionalField("date_add", cart.dateAdd)}
+		${optionalRawCdataField("delivery_option", cart.deliveryOption)}
 		${optionalField("secure_key", cart.secureKey)}
 		${optionalField("recyclable", boolValue(cart.recyclable))}
 		${optionalField("gift", boolValue(cart.gift))}
