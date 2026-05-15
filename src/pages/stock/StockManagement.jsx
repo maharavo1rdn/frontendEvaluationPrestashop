@@ -310,11 +310,11 @@ const StockManagement = () => {
                   </Link>
                   <button
                     onClick={() => handleAdjustStock(product)}
-                    className="p-2 text-sky-600 hover:bg-sky-50 rounded-lg transition-all"
+                    className="p-2 text-slate-400 hover:text-emerald-500 transition-colors"
                     title="Ajuster le stock"
                   >
-                    <PlusCircle size={22} />
-                  </button>
+                    <PlusCircle size={18} />
+                  </button>{" "}
                 </td>
               </tr>
             ))}
