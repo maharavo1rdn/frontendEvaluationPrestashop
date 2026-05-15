@@ -245,13 +245,6 @@ const StockManagement = () => {
           </h1>
           <p className="text-slate-500 text-sm">{products.length} produit(s)</p>
         </div>
-        <Link
-          to="/admin/products"
-          className="flex items-center gap-2 text-sm font-medium text-slate-500 hover:text-sky-500"
-        >
-          <ArrowLeft size={16} />
-          Retour au catalogue
-        </Link>
       </div>
 
       <div className="bg-white border border-slate-200 rounded-xl shadow-sm overflow-hidden">
