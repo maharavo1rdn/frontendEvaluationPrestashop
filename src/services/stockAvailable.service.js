@@ -255,12 +255,26 @@ export const getStockByProductAndAttribute = async (
     );
     if (!response.ok) return null;
     const xml = await response.text();
-    const stock =  parseStockAvailables(xml);
+    const stock = parseStockAvailables(xml);
     console.log(stock);
     return stock;
-    
   } catch (err) {
     console.error("Erreur récupération stock combinaison", err);
     return null;
+  }
+};
+
+export const findStockAvailablesByProductId = async (productId) => {
+  try {
+    const response = await fetch(
+      `${API_URL()}/stock_availables?filter[id_product]=[${productId}]&display=full`,
+      { headers: authHeaders() }
+    );
+    if (!response.ok) return [];
+    const xmlText = await response.text();
+    return parseStockAvailables(xmlText);
+  } catch (error) {
+    console.error("Error fetching stock availables:", error);
+    return [];
   }
 };
