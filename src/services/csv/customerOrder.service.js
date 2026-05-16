@@ -11,7 +11,8 @@ import { findProductOptionValueByKeyValue } from "../productOptionValue.service"
 import { findTaxRulesByGroupId } from "../taxRule.service";
 import { findTaxByKeyValue } from "../tax.service";
 import { parseDate as parseCSVDate, parseNumber } from "../../utils/utils";
-
+import { findStockAvailableByProductAttribute } from "../stockAvailable.service";
+import { createStockAdjustmentMovement } from "../stockMovement.service";
 // ─── Constantes ───────────────────────────────────────────────────────────────
 
 const ORDER_STATE_MAP = {
@@ -458,8 +459,31 @@ export const importOrdersFromCSV = async (file, onProgress) => {
       // 5. Paiement manuel DÉSACTIVÉ :
       // Le webservice génère tout seul le paiement lors du changement d'historique.
       // await createOrderPayment({ ... });
-      await createOrderHistory(order.id, idOrderStateFinal, dateAdd);
-
+      await createOrderHistory(order.id, idOrderStateFinal, dateAdd);      
+      // 6. Stock
+      for (const item of resolvedItems) {
+        try {
+          const stockEntries = await findStockAvailableByProductAttribute(
+            item.product.id,
+            item.combination?.id ?? 0
+          );
+          const stockId = stockEntries?.[0]?.id;
+          if (stockId) {
+            await createStockAdjustmentMovement({
+              idProduct: item.product.id,
+              idProductAttribute: item.combination?.id ?? 0,
+              idStock: stockId,
+              deltaQuantity: -item.quantity,
+              dateAdd,
+            });
+          }
+        } catch (movementErr) {
+          console.warn(
+            `Échec mouvement stock pour produit ${item.product.id}:`,
+            movementErr
+          );
+        }
+      }
       processResult = {
         success: true,
         email,

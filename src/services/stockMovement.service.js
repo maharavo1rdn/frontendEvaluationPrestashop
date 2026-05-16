@@ -40,17 +40,15 @@ export const getStockMovements = async (filters = {}) => {
     const response = await fetch(
       `${API_URL()}/stock_movements?${queryString}`,
       {
-        headers: {
-          Authorization: `Basic ${btoa(
-            authHeaders().Authorization.split(" ")[1]
-          )}`,
-          Accept: "application/xml",
-        },
+        headers: authHeaders(),
       }
     );
     if (!response.ok) {
       const text = await response.text();
+
       const errors = parseErrors(text);
+      console.error("ici",error);
+
       throw new Error(
         errors.length
           ? errors.map((e) => e.message).join(", ")
@@ -79,12 +77,7 @@ export const getStockMovementById = async (id) => {
     const response = await fetch(
       `${API_URL()}/stock_movements/${id}?output_format=XML`,
       {
-        headers: {
-          Authorization: `Basic ${btoa(
-            authHeaders().Authorization.split(" ")[1]
-          )}`,
-          Accept: "application/xml",
-        },
+        headers: authHeaders(),
       }
     );
     if (!response.ok) {
@@ -98,11 +91,33 @@ export const getStockMovementById = async (id) => {
   }
 };
 
+export const updateStockMovement = async (id, mvt) => {
+  const xml = buildStockMvtXML({ ...mvt, id });
+  try {
+    const response = await fetch(`${API_URL()}/stock_movements/${id}`, {
+      method: "PUT",
+      headers: authHeaders(),
+      body: xml,
+    });
+    const responseXml = await response.text();
+    if (!response.ok) {
+      const errors = parseErrors(responseXml);
+      throw new Error(
+        errors.length
+          ? errors.map((e) => e.message).join(", ")
+          : `HTTP ${response.status} - ${responseXml}`
+      );
+    }
+    return { success: true, id };
+  } catch (err) {
+    return { success: false, error: err.message };
+  }
+};
 export const postStockMovement = async (mvt) => {
   const payload = {
     ...mvt,
     idEmployee: mvt.idEmployee || DEFAULT_EMPLOYEE_ID,
-    dateAdd: mvt.dateAdd || new Date(),
+    dateAdd: mvt.dateAdd,
   };
   const xml = buildStockMvtXML(payload);
   try {
@@ -124,6 +139,17 @@ export const postStockMovement = async (mvt) => {
       );
     }
     const created = parseStockMovement(responseXml);
+    if (mvt.dateAdd) {
+      const fullMovement = await getStockMovementById(created.id);
+      if (fullMovement) {
+        console.log(fullMovement);
+
+        await updateStockMovement(created.id, {
+          ...fullMovement,
+          dateAdd: mvt.dateAdd
+        });
+      }
+    }
     return { success: true, id: created.id };
   } catch (err) {
     return { success: false, error: err.message };
@@ -136,9 +162,10 @@ export const createStockAdjustmentMovement = async ({
   idStock,
   deltaQuantity,
   priceTe = 0,
+  dateAdd,
 }) => {
   const isPositive = deltaQuantity >= 0;
-  const idReason = isPositive ? 1 : 2; // 1 = Augmentation, 2 = Diminution
+  const idReason = isPositive ? 1 : 2;
   const sign = isPositive ? 1 : -1;
   const physicalQuantity = Math.abs(deltaQuantity);
 
@@ -150,5 +177,6 @@ export const createStockAdjustmentMovement = async ({
     physicalQuantity,
     sign,
     priceTe,
+    dateAdd,
   });
 };
