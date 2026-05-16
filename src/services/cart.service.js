@@ -3,6 +3,7 @@ import parseCarts, { parseCart } from "../XMLUtil/parser/Cart.parser";
 import parseErrors from "../XMLUtil/parser/Error.parser";
 import { API_URL, WS_KEY, authHeaders } from "../config/config.service";
 import { findOrderByKeyValue } from "./order.service";
+import { getAll as getAllOrders } from "./order.service";
 
 const DEFAULT_DISPLAY = "full";
 
@@ -209,6 +210,24 @@ export const getUnorderedCartsByCustomer = async (customerId) => {
       "Erreur lors de la récupération des paniers non commandés:",
       error
     );
+    throw error;
+  }
+};
+
+export const getUnorderedCarts = async () => {
+  try {
+    const orders = await getAllOrders();
+    const orderedCartIds = new Set(orders.map((order) => String(order.idCart)));
+
+    const carts = await getAll();
+
+    const unorderedCarts = carts
+      .filter((cart) => !orderedCartIds.has(String(cart.id)))
+      .sort((a, b) => new Date(b.dateAdd) - new Date(a.dateAdd));
+
+    return unorderedCarts;
+  } catch (error) {
+    console.error("Erreur lors de la récupération des paniers non commandés:", error);
     throw error;
   }
 };
