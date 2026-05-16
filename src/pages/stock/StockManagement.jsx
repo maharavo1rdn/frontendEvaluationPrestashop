@@ -8,16 +8,17 @@ import {
   X,
   Check,
   History as HistoryIcon,
-  PlusCircle, // Import de l'icône demandée
+  PlusCircle,
 } from "lucide-react";
 import { getAllEnriched } from "../../services/product.service";
 import {
   findStockAvailableByProductAttribute,
-  updateStockItemWithMovement, // Utilisation de la fonction de mouvement (delta)
+  updateStockAvailable, // ← utilisation de updateStockAvailable
 } from "../../services/stockAvailable.service";
 import { findCombinationsByProductId } from "../../services/combination.service";
 import { findProductOptionValueByKeyValue } from "../../services/productOptionValue.service";
 import { API_URL, WS_KEY } from "../../config/config.service";
+import { createStockAdjustmentMovement } from "../../services/stockMovement.service";
 
 const getFirstImageId = (product) => {
   const raw = product?.associations?.images;
@@ -88,7 +89,7 @@ const StockManagement = () => {
   const [modalProduct, setModalProduct] = useState(null);
   const [modalLoading, setModalLoading] = useState(false);
   const [combosData, setCombosData] = useState([]);
-  const [simpleDelta, setSimpleDelta] = useState(0); // Changé en Delta (différence)
+  const [simpleDelta, setSimpleDelta] = useState(0); // différence saisie
   const [saving, setSaving] = useState(false);
   const [saveError, setSaveError] = useState(null);
   const [saveSuccess, setSaveSuccess] = useState(false);
@@ -115,7 +116,7 @@ const StockManagement = () => {
     setModalLoading(true);
     setSaveError(null);
     setSaveSuccess(false);
-    setSimpleDelta(0); // Reset le delta à 0
+    setSimpleDelta(0);
 
     try {
       const combos = await findCombinationsByProductId(product.id).catch(
@@ -150,7 +151,8 @@ const StockManagement = () => {
             combinationId: combo.id,
             label,
             currentQty: stockObj?.quantity ?? 0,
-            delta: 0, // Initialisé à 0 pour saisie d'ajout/retrait
+            stockId: stockObj?.id ?? null, // ← id du stock_available
+            delta: 0,
           });
         }
         setCombosData(items);
@@ -163,6 +165,7 @@ const StockManagement = () => {
         setModalProduct((prev) => ({
           ...prev,
           currentQty: stockObj?.quantity ?? 0,
+          stockId: stockObj?.id ?? null,
         }));
         setCombosData([]);
       }
@@ -181,21 +184,54 @@ const StockManagement = () => {
     try {
       if (combosData.length > 0) {
         for (const item of combosData) {
-          if (item.delta !== 0) {
-            await updateStockItemWithMovement({
+          if (item.delta !== 0 && item.stockId) {
+            const newQuantity = item.currentQty + item.delta;
+            await updateStockAvailable({
+              id: item.stockId,
               idProduct: modalProduct.id,
               idProductAttribute: item.combinationId,
-              deltaQuantity: item.delta,
+              idShop: 1,
+              quantity: newQuantity,
+              dependsOnStock: 0,
+              outOfStock: 2,
             });
+            try {
+              await createStockAdjustmentMovement({
+                idProduct: modalProduct.id,
+                idProductAttribute: item.combinationId,
+                idStock: item.stockId,
+                deltaQuantity: item.delta,
+              });
+            } catch (movementErr) {
+              console.warn(
+                "Échec de l'enregistrement du mouvement",
+                movementErr
+              );
+            }
           }
         }
       } else {
-        if (simpleDelta !== 0) {
-          await updateStockItemWithMovement({
+        if (simpleDelta !== 0 && modalProduct.stockId) {
+          const newQuantity = (modalProduct.currentQty || 0) + simpleDelta;
+          await updateStockAvailable({
+            id: modalProduct.stockId,
             idProduct: modalProduct.id,
             idProductAttribute: 0,
-            deltaQuantity: simpleDelta,
+            idShop: 1,
+            quantity: newQuantity,
+            dependsOnStock: 0,
+            outOfStock: 2,
           });
+          try {
+            await createStockAdjustmentMovement({
+              idProduct: modalProduct.id,
+              idProductAttribute: 0,
+              idStock: modalProduct.stockId,
+              deltaQuantity: simpleDelta,
+            });
+          } catch (movementErr) {
+            console.warn("Échec de l'enregistrement du mouvement", movementErr);
+          }
         }
       }
 
@@ -307,7 +343,7 @@ const StockManagement = () => {
                     title="Ajuster le stock"
                   >
                     <PlusCircle size={18} />
-                  </button>{" "}
+                  </button>
                 </td>
               </tr>
             ))}

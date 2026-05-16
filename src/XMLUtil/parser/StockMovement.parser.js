@@ -1,4 +1,3 @@
-// src/XMLUtil/parser/StockMovement.parser.js
 import {
   parseXML,
   getValue,
@@ -13,13 +12,22 @@ export const mapStockMovement = (node) => ({
   idProduct: getValue(node.id_product),
   idProductAttribute: getValue(node.id_product_attribute),
   idWarehouse: getValue(node.id_warehouse),
-  idStock: getValue(node.id_stock), // Lien vers stock_available
-  idReason: getValue(node.id_stock_mvt_reason),
+  idCurrency: getValue(node.id_currency),
+  managementType: getValue(node.management_type),
   idEmployee: getValue(node.id_employee),
+  idStock: getValue(node.id_stock),
+  idStockMvtReason: getValue(node.id_stock_mvt_reason),
+  idOrder: getValue(node.id_order),
+  idSupplyOrder: getValue(node.id_supply_order),
   productName: getTranslatableValue(node.product_name),
+  ean13: getValue(node.ean13),
+  upc: getValue(node.upc),
   reference: getValue(node.reference),
-  quantity: getInteger(node.physical_quantity),
-  sign: getInteger(node.sign), // 1 pour ajout, -1 pour retrait
+  mpn: getValue(node.mpn),
+  physicalQuantity: getInteger(node.physical_quantity),
+  sign: getInteger(node.sign),
+  lastWa: getNumber(node.last_wa),
+  currentWa: getNumber(node.current_wa),
   priceTe: getNumber(node.price_te),
   dateAdd: getValue(node.date_add),
 });
