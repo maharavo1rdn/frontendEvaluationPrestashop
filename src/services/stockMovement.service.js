@@ -37,14 +37,17 @@ export const getStockMovements = async (filters = {}) => {
       .toString()
       .replace(/%5B/g, "[")
       .replace(/%5D/g, "]");
-    const response = await fetch(`${API_URL()}/stock_movements?${queryString}`, {
-      headers: {
-        Authorization: `Basic ${btoa(
-          authHeaders().Authorization.split(" ")[1]
-        )}`,
-        Accept: "application/xml",
-      },
-    });
+    const response = await fetch(
+      `${API_URL()}/stock_movements?${queryString}`,
+      {
+        headers: {
+          Authorization: `Basic ${btoa(
+            authHeaders().Authorization.split(" ")[1]
+          )}`,
+          Accept: "application/xml",
+        },
+      }
+    );
     if (!response.ok) {
       const text = await response.text();
       const errors = parseErrors(text);
@@ -103,11 +106,14 @@ export const postStockMovement = async (mvt) => {
   };
   const xml = buildStockMvtXML(payload);
   try {
-    const response = await fetch(`${API_URL()}/stock_movements?output_format=XML`, {
-      method: "POST",
-      headers: authHeaders(),
-      body: xml,
-    });
+    const response = await fetch(
+      `${API_URL()}/stock_movements?output_format=XML`,
+      {
+        method: "POST",
+        headers: authHeaders(),
+        body: xml,
+      }
+    );
     const responseXml = await response.text();
     if (!response.ok) {
       const errors = parseErrors(responseXml);
