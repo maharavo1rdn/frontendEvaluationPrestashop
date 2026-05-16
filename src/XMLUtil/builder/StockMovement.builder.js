@@ -1,4 +1,14 @@
 import { field, optionalField, wrapPrestashop } from "./xml.builder";
+
+const formatDate = (date) => {
+  if (!date) return "";
+  const d = date instanceof Date ? date : new Date(date);
+  const pad = (n) => String(n).padStart(2, "0");
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())} ${pad(
+    d.getHours()
+  )}:${pad(d.getMinutes())}:${pad(d.getSeconds())}`;
+};
+
 export const buildStockMvtXML = (mvt) => {
   let productNameXml = "";
   if (mvt.productName && typeof mvt.productName === "object") {
@@ -33,7 +43,7 @@ export const buildStockMvtXML = (mvt) => {
     ${optionalField("last_wa", mvt.lastWa)}
     ${optionalField("current_wa", mvt.currentWa)}
     ${field("price_te", mvt.priceTe)}
-    ${field("date_add", mvt.dateAdd)}
+    ${field("date_add", formatDate(mvt.dateAdd))}
   </stock_mvt>`;
   
   return wrapPrestashop(inner);

@@ -5,6 +5,8 @@ import { findProductByKeyValue } from "../product.service";
 import { findCombinationsByProductId } from "../combination.service";
 import { computeCombinationPrice, getTaxRateForGroup } from "./pricing.service";
 import { putCart, getCartById } from "../cart.service";
+import { findStockAvailableByProductAttribute } from "../stockAvailable.service";
+import { createStockAdjustmentMovement } from "../stockMovement.service";
 
 const DEFAULT_CURRENCY_ID = 1;
 const DEFAULT_CARRIER_ID = 2;
@@ -186,6 +188,30 @@ const checkoutAsCustomer = async ({ items, customer }) => {
     throw new Error(
       createdOrder?.error || "Création de la commande impossible."
     );
+  }
+
+  for (const item of resolvedItems) {
+    try {
+      const stockEntries = await findStockAvailableByProductAttribute(
+        item.product.id,
+        item.combination?.id ?? 0
+      );
+      const stockId = stockEntries?.[0]?.id;
+      if (stockId) {
+        await createStockAdjustmentMovement({
+          idProduct: item.product.id,
+          idProductAttribute: item.combination?.id ?? 0,
+          idStock: stockId,
+          deltaQuantity: -item.quantity,
+          dateAdd: new Date(),
+        });
+      }
+    } catch (movementErr) {
+      console.warn(
+        `Échec mouvement de stock pour le produit ${item.product.id}:`,
+        movementErr
+      );
+    }
   }
 
   return {
