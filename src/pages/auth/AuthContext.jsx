@@ -1,8 +1,6 @@
 import { createContext, useContext, useState } from "react";
 import {
-  clearCustomerSession,
   clearGuestSession,
-  getCustomerSession,
   getGuestSession,
   saveCustomerSession,
   saveGuestSession,
@@ -17,7 +15,7 @@ export const AuthProvider = ({ children }) => {
   });
 
   const [customer, setCustomer] = useState(() => {
-    return getCustomerSession();
+    return null;
   });
 
   const [guest, setGuest] = useState(() => getGuestSession());
@@ -35,10 +33,9 @@ export const AuthProvider = ({ children }) => {
   };
 
   const loginGuest = (data) => {
-    clearCustomerSession();
-    setCustomer(null);
+    clearGuestSession();
     saveGuestSession(data);
-    setGuest({ ...data, isGuest: true });
+    setGuest(data);
   };
 
   const logoutAll = () => {

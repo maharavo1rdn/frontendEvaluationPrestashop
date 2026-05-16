@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
-import { AlertCircle, Loader2, ShoppingCart, Trash2 } from "lucide-react";
+import { AlertCircle, Loader2, ShoppingCart, Trash2, X } from "lucide-react";
 import {
   clearCart,
   getCart,
@@ -11,6 +11,7 @@ import {
 import { getCustomerSession } from "../../services/frontoffice/session.service";
 import { checkoutCart } from "../../services/frontoffice/checkout.service";
 import { useAuth } from "../auth/AuthContext";
+import { LoginFrontOffice } from "../../services/auth/frontoffice.service";
 
 const CartPage = () => {
   const [cart, setCart] = useState({ items: [] });
@@ -19,7 +20,14 @@ const CartPage = () => {
   const [status, setStatus] = useState(null);
   const [error, setError] = useState(null);
 
-  const { customer, guest } = useAuth();
+  const { customer, guest, loginCustomer } = useAuth();
+
+  // États pour le popup de connexion invité
+  const [showLoginModal, setShowLoginModal] = useState(false);
+  const [loginEmail, setLoginEmail] = useState("");
+  const [loginPassword, setLoginPassword] = useState("");
+  const [loginError, setLoginError] = useState(null);
+  const [loginLoading, setLoginLoading] = useState(false);
 
   const refreshCart = (nextCart) => {
     const snapshot = nextCart ?? getCart();
@@ -29,9 +37,7 @@ const CartPage = () => {
 
   useEffect(() => {
     refreshCart();
-    const handleUpdate = (event) => {
-      refreshCart(event.detail);
-    };
+    const handleUpdate = (event) => refreshCart(event.detail);
     window.addEventListener("cart:updated", handleUpdate);
     return () => window.removeEventListener("cart:updated", handleUpdate);
   }, []);
@@ -44,17 +50,16 @@ const CartPage = () => {
     removeCartItem(cartKey);
   };
 
-  const handleCheckout = async () => {
+  // Checkout pour un client déjà connecté (ou après connexion)
+  const handleCheckout = async (customerOverride) => {
     setError(null);
     setStatus(null);
     setLoading(true);
-
     try {
-      const sessionCustomer = getCustomerSession();
+      const sessionCustomer = customerOverride || getCustomerSession();
       const result = await checkoutCart({
         items: cart.items,
         customer: sessionCustomer,
-        isGuest: !sessionCustomer?.id && !!guest?.id,
       });
       clearCart();
       setStatus(
@@ -67,8 +72,28 @@ const CartPage = () => {
     }
   };
 
+  const handleLoginSubmit = async (e) => {
+    e.preventDefault();
+    setLoginError(null);
+    setLoginLoading(true);
+    try {
+      const { customer: loggedCustomer, customerData } = await LoginFrontOffice(
+        loginEmail,
+        loginPassword
+      );
+      loginCustomer(customerData);
+      setShowLoginModal(false);
+      handleCheckout(loggedCustomer);
+    } catch (err) {
+      setLoginError(err.message);
+    } finally {
+      setLoginLoading(false);
+    }
+  };
+
   return (
     <div className="p-8 max-w-5xl mx-auto">
+      {/* En-tête */}
       <div className="flex items-center justify-between mb-8 border-b border-slate-200 pb-6">
         <div>
           <h1 className="text-2xl font-bold text-slate-900">Votre panier</h1>
@@ -84,13 +109,13 @@ const CartPage = () => {
         </Link>
       </div>
 
+      {/* Messages statut / erreur */}
       {status && (
         <div className="mb-6 flex items-center gap-3 px-4 py-3 rounded-lg bg-emerald-50 border border-emerald-200 text-emerald-700 text-sm font-medium">
           <ShoppingCart size={18} />
           {status}
         </div>
       )}
-
       {error && (
         <div className="mb-6 flex items-center gap-3 px-4 py-3 rounded-lg bg-red-50 border border-red-200 text-red-600 text-sm font-medium">
           <AlertCircle size={18} />
@@ -98,6 +123,7 @@ const CartPage = () => {
         </div>
       )}
 
+      {/* Panier vide */}
       {cart.items.length === 0 ? (
         <div className="py-20 text-center bg-white border border-slate-200 rounded-xl">
           <ShoppingCart size={30} className="mx-auto mb-3 text-slate-300" />
@@ -105,6 +131,7 @@ const CartPage = () => {
         </div>
       ) : (
         <div className="grid lg:grid-cols-[2fr_1fr] gap-6">
+          {/* Liste des articles */}
           <div className="bg-white border border-slate-200 rounded-xl shadow-sm overflow-hidden">
             <div className="divide-y divide-slate-100">
               {cart.items.map((item) => (
@@ -164,6 +191,7 @@ const CartPage = () => {
             </div>
           </div>
 
+          {/* Résumé et bouton de commande */}
           <div className="bg-white border border-slate-200 rounded-xl shadow-sm p-6 h-fit">
             <h2 className="text-lg font-bold text-slate-900 mb-4">Résumé</h2>
             <div className="flex items-center justify-between text-sm text-slate-600 mb-2">
@@ -179,10 +207,11 @@ const CartPage = () => {
               <span>{totals.totalAmount.toFixed(2)} €</span>
             </div>
 
-            {(customer || !guest) && (
+            {/* Client connecté : bouton direct */}
+            {customer && (
               <button
                 type="button"
-                onClick={handleCheckout}
+                onClick={() => handleCheckout()}
                 disabled={loading}
                 className="mt-6 w-full rounded-lg bg-sky-500 hover:bg-sky-600 text-white font-semibold py-2.5 transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
               >
@@ -190,6 +219,78 @@ const CartPage = () => {
                 {loading ? "Validation en cours..." : "Valider la commande"}
               </button>
             )}
+
+            {/* Invité : bouton qui ouvre le popup de connexion */}
+            {!customer && guest && (
+              <button
+                type="button"
+                onClick={() => {
+                  setLoginError(null);
+                  setShowLoginModal(true);
+                }}
+                disabled={loading}
+                className="mt-6 w-full rounded-lg bg-emerald-500 hover:bg-emerald-600 text-white font-semibold py-2.5 transition-all"
+              >
+                Se connecter pour commander
+              </button>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* Popup de connexion (invité) */}
+      {showLoginModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
+          <div className="bg-white rounded-2xl shadow-xl w-full max-w-md p-6 relative">
+            <button
+              onClick={() => setShowLoginModal(false)}
+              className="absolute top-4 right-4 text-slate-400 hover:text-slate-600"
+            >
+              <X size={20} />
+            </button>
+            <h2 className="text-xl font-bold text-slate-900 mb-4">
+              Connectez-vous pour commander
+            </h2>
+            {loginError && (
+              <div className="mb-4 flex items-center gap-2 px-3 py-2 rounded bg-red-50 text-red-600 text-sm">
+                <AlertCircle size={16} />
+                {loginError}
+              </div>
+            )}
+            <form onSubmit={handleLoginSubmit} className="space-y-4">
+              <label className="grid gap-1 text-sm font-semibold text-slate-700">
+                Email
+                <input
+                  type="email"
+                  value={loginEmail}
+                  onChange={(e) => setLoginEmail(e.target.value)}
+                  className="h-10 rounded-lg border border-slate-200 px-3 text-sm"
+                  placeholder="votre@email.com"
+                  required
+                  disabled={loginLoading}
+                />
+              </label>
+              <label className="grid gap-1 text-sm font-semibold text-slate-700">
+                Mot de passe
+                <input
+                  type="password"
+                  value={loginPassword}
+                  onChange={(e) => setLoginPassword(e.target.value)}
+                  className="h-10 rounded-lg border border-slate-200 px-3 text-sm"
+                  placeholder="••••••••"
+                  required
+                  disabled={loginLoading}
+                />
+              </label>
+              <button
+                type="submit"
+                disabled={loginLoading}
+                className="w-full rounded-lg bg-sky-500 hover:bg-sky-600 text-white font-semibold py-2.5 transition-all disabled:opacity-50 flex items-center justify-center gap-2"
+              >
+                {loginLoading && <Loader2 size={16} className="animate-spin" />}
+                {loginLoading ? "Connexion..." : "Se connecter"}
+              </button>
+            </form>
           </div>
         </div>
       )}

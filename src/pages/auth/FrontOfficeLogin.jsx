@@ -4,11 +4,10 @@ import { AlertCircle, Loader2, UserX } from "lucide-react";
 import { LoginFrontOffice } from "../../services/auth/frontoffice.service";
 import {
   saveCustomerSession,
+  saveGuestSession,
 } from "../../services/frontoffice/session.service";
-import { ensureStaticGuestCustomer } from "../../services/frontoffice/guestCustomer.service";
+import { postGuest } from "../../services/guest.service";
 import { useAuth } from "./AuthContext";
-import { getUnorderedCartsByCustomer } from "../../services/cart.service";
-import { loadCartFromServer } from "../../services/frontoffice/cartStore.service";
 
 const FrontOfficeLogin = () => {
   const navigate = useNavigate();
@@ -43,14 +42,19 @@ const FrontOfficeLogin = () => {
     setError(null);
     setGuestLoading(true);
     try {
-      const guestCustomer = await ensureStaticGuestCustomer();
-      loginGuest(guestCustomer);
+      const result = await postGuest({
+        acceptLanguage: navigator.language?.slice(0, 8) ?? "fr",
+        javascript: true,
+        screenResolutionX: window.screen?.width ?? 0,
+        screenResolutionY: window.screen?.height ?? 0,
+      });
 
-      const unorderedCarts = await getUnorderedCartsByCustomer(guestCustomer.id);
-      if (unorderedCarts.length > 0) {
-        await loadCartFromServer(unorderedCarts[0]);
+      if (!result?.success || !result?.id) {
+        throw new Error("Impossible de créer la session anonyme.");
       }
 
+      saveGuestSession({ id: result.id });
+      loginGuest({ id: result.id, isGuest: true });
       navigate("/frontOffice/products");
     } catch (err) {
       setError(err.message);
@@ -131,7 +135,7 @@ const FrontOfficeLogin = () => {
             ) : (
               <UserX size={16} />
             )}
-            {guestLoading ? "Connexion en cours..." : "Continuer sans compte"}
+            {guestLoading ? "Création en cours..." : "Continuer sans compte"}
           </button>
 
           <div className="mt-6 flex items-center justify-center">

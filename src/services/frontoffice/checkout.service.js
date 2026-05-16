@@ -4,7 +4,6 @@ import { postOrder } from "../order.service";
 import { findProductByKeyValue } from "../product.service";
 import { findCombinationsByProductId } from "../combination.service";
 import { computeCombinationPrice, getTaxRateForGroup } from "./pricing.service";
-import { getGuestSession } from "./session.service";
 import { putCart, getCartById } from "../cart.service";
 
 const DEFAULT_CURRENCY_ID = 1;
@@ -95,8 +94,6 @@ const computeTotals = (resolvedItems) => {
   };
 };
 
-// ─── Checkout Customer ────────────────────────────────────────────────────
-
 const checkoutAsCustomer = async ({ items, customer }) => {
   const cart = getCart();
   if (!cart.psCartId) {
@@ -108,46 +105,24 @@ const checkoutAsCustomer = async ({ items, customer }) => {
     throw new Error("Panier serveur introuvable.");
   }
 
+  const mustUpdateCarrier = !serverCart.idCarrier || serverCart.idCarrier == 0;
+  if (mustUpdateCarrier) {
+    const updated = await putCart(cart.psCartId, {
+      ...serverCart,
+      idCarrier: DEFAULT_CARRIER_ID,
+    });
+    if (!updated?.success) {
+      throw new Error("Impossible de mettre à jour le transporteur du panier.");
+    }
+  }
+
   const addresses = await findAddressByKeyValue("id_customer", customer.id);
   const address = addresses?.[0];
   if (!address?.id) {
     throw new Error("Aucune adresse n'est liée à ce compte.");
   }
 
-  const cartRows = serverCart.associations?.cartRows ?? [];
-  const mustUpdateCart =
-    String(serverCart.idCustomer ?? 0) !== String(customer.id) ||
-    String(serverCart.idGuest ?? 0) !== "0" ||
-    String(serverCart.idAddressDelivery ?? 0) !== String(address.id) ||
-    String(serverCart.idAddressInvoice ?? 0) !== String(address.id) ||
-    !serverCart.idCarrier ||
-    String(serverCart.idCarrier) === "0" ||
-    cartRows.some(
-      (row) => String(row.idAddressDelivery ?? 0) !== String(address.id)
-    );
-
-  if (mustUpdateCart) {
-    const updated = await putCart(cart.psCartId, {
-      ...serverCart,
-      idCustomer: customer.id,
-      idGuest: 0,
-      secureKey: customer.secureKey,
-      idAddressDelivery: address.id,
-      idAddressInvoice: address.id,
-      idCarrier: DEFAULT_CARRIER_ID,
-      associations: {
-        ...serverCart.associations,
-        cartRows: cartRows.map((row) => ({
-          ...row,
-          idAddressDelivery: address.id,
-        })),
-      },
-    });
-    if (!updated?.success) {
-      throw new Error("Impossible de mettre à jour le panier.");
-    }
-  }
-
+  // 4. Résoudre les articles et calculer les totaux
   const resolvedItems = await resolveCartItems(items);
   const { totals } = computeTotals(resolvedItems);
 
@@ -185,7 +160,9 @@ const checkoutAsCustomer = async ({ items, customer }) => {
 
   const createdOrder = await postOrder(orderPayload);
   if (!createdOrder?.success || !createdOrder?.id) {
-    throw new Error(createdOrder?.error || "Création de la commande impossible.");
+    throw new Error(
+      createdOrder?.error || "Création de la commande impossible."
+    );
   }
 
   return {
@@ -196,23 +173,9 @@ const checkoutAsCustomer = async ({ items, customer }) => {
   };
 };
 
-export const checkoutGuest = async ({ items }) => {
-  const guest = getGuestSession();
-  if (!guest?.id) {
-    throw new Error("La session guest est introuvable.");
+export const checkoutCart = async ({ items, customer }) => {
+  if (!customer?.id) {
+    throw new Error("Vous devez être connecté pour passer commande.");
   }
-
-  return checkoutAsCustomer({ items, customer: guest });
-};
-
-export const checkoutCart = async ({ items, customer, isGuest = false }) => {
-  if (isGuest) {
-    return checkoutGuest({ items });
-  }
-
-  if (customer?.id) {
-    return checkoutAsCustomer({ items, customer });
-  }
-
-  throw new Error("Vous devez être connecté pour passer commande.");
+  return checkoutAsCustomer({ items, customer });
 };
