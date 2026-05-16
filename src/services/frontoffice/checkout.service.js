@@ -105,24 +105,47 @@ const checkoutAsCustomer = async ({ items, customer }) => {
     throw new Error("Panier serveur introuvable.");
   }
 
-  const mustUpdateCarrier = !serverCart.idCarrier || serverCart.idCarrier == 0;
-  if (mustUpdateCarrier) {
-    const updated = await putCart(cart.psCartId, {
-      ...serverCart,
-      idCarrier: DEFAULT_CARRIER_ID,
-    });
-    if (!updated?.success) {
-      throw new Error("Impossible de mettre à jour le transporteur du panier.");
-    }
-  }
-
   const addresses = await findAddressByKeyValue("id_customer", customer.id);
   const address = addresses?.[0];
   if (!address?.id) {
     throw new Error("Aucune adresse n'est liée à ce compte.");
   }
 
-  // 4. Résoudre les articles et calculer les totaux
+  const cartRows = serverCart.associations?.cartRows ?? [];
+  const mustUpdateCart =
+    String(serverCart.idCustomer ?? 0) !== String(customer.id) ||
+    String(serverCart.idGuest ?? 0) !== "0" ||
+    String(serverCart.idAddressDelivery ?? 0) !== String(address.id) ||
+    String(serverCart.idAddressInvoice ?? 0) !== String(address.id) ||
+    !serverCart.idCarrier ||
+    String(serverCart.idCarrier) === "0" ||
+    cartRows.some(
+      (row) => String(row.idAddressDelivery ?? 0) !== String(address.id)
+    );
+
+  if (mustUpdateCart) {
+    const updatedCartPayload = {
+      ...serverCart,
+      idCustomer: customer.id,
+      idGuest: 0,
+      secureKey: customer.secureKey,
+      idAddressDelivery: address.id,
+      idAddressInvoice: address.id,
+      idCarrier: serverCart.idCarrier || DEFAULT_CARRIER_ID,
+      associations: {
+        ...serverCart.associations,
+        cartRows: cartRows.map((row) => ({
+          ...row,
+          idAddressDelivery: address.id,
+        })),
+      },
+    };
+    const updated = await putCart(cart.psCartId, updatedCartPayload);
+    if (!updated?.success) {
+      throw new Error("Impossible de mettre à jour le panier.");
+    }
+  }
+
   const resolvedItems = await resolveCartItems(items);
   const { totals } = computeTotals(resolvedItems);
 
