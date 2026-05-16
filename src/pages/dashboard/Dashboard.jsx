@@ -9,6 +9,7 @@ import {
   AlertCircle,
   CheckCircle2,
   Clock,
+  Package,
 } from "lucide-react";
 
 const Dashboard = () => {
@@ -62,7 +63,7 @@ const Dashboard = () => {
           Tableau de Bord
         </h1>
         <p className="text-slate-500 mt-1">
-          Analyse des ventes et des encaissements réeels
+          Analyse des ventes et des encaissements réels
         </p>
       </div>
 
@@ -120,6 +121,36 @@ const Dashboard = () => {
           </p>
         </div>
 
+        <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm">
+          <div className="p-2 bg-yellow-50 text-yellow-600 rounded-lg w-fit mb-4">
+            <Package size={24} />
+          </div>
+          <h3 className="text-slate-500 text-sm font-semibold uppercase tracking-wider">
+            Paniers non commandés
+          </h3>
+          <p className="text-2xl font-bold text-slate-900 mt-1">
+            {stats.unorderedCartsCount}
+          </p>
+          <div className="mt-2 flex items-center text-xs text-slate-400">
+            En attente de validation
+          </div>
+        </div>
+
+        {/* ========== AJOUT : Total des paniers ========== */}
+        <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm">
+          <div className="p-2 bg-amber-50 text-amber-600 rounded-lg w-fit mb-4">
+            <TrendingUp size={24} />
+          </div>
+          <h3 className="text-slate-500 text-sm font-semibold uppercase tracking-wider">
+            Total paniers
+          </h3>
+          <p className="text-2xl font-bold text-slate-900 mt-1">
+            {formatPrice(stats.unorderedCartsTotal)}
+          </p>
+          <div className="mt-2 flex items-center text-xs text-slate-400">
+            Valeur estimée des paniers en cours
+          </div>
+        </div>
       </div>
 
       {/* ii. Par jour (Tableau détaillé) */}
