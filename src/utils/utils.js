@@ -1,11 +1,42 @@
+export const CSV_IMPORT_COLUMNS = [
+  "date_availability_produit",
+  "nom",
+  "reference",
+  "prix_ttc",
+  "Taxe",
+  "categorie",
+  "prix_achat",
+  "specificité",
+  "karazany",
+  "stock_initial",
+  "prix_vente_ttc",
+  "date",
+  "email",
+  "pwd",
+  "adresse",
+  "achat",
+  "etat",
+];
+
+export const normalizeCSVHeader = (header) => {
+  const trimmed = String(header ?? "").trim();
+  const match = CSV_IMPORT_COLUMNS.find(
+    (column) => column.toLowerCase() === trimmed.toLowerCase()
+  );
+  return match ?? trimmed;
+};
+
 export const parseNumber = (value) => {
   if (value === null || value === undefined || value === "") return 0;
   if (typeof value === "number" && Number.isFinite(value)) return value;
 
   const raw = String(value).trim();
   if (!raw) return 0;
+  if (!/^-?[0-9,.\s\u00A0%]+$/.test(raw)) return Number.NaN;
+  if (raw.slice(1).includes("-")) return Number.NaN;
 
-  const cleaned = raw.replace(/[%\s\u00A0]/g, "");
+  const isNegative = raw.startsWith("-");
+  const cleaned = raw.replace(/^-/, "").replace(/[%\s\u00A0]/g, "");
   const lastComma = cleaned.lastIndexOf(",");
   const lastDot = cleaned.lastIndexOf(".");
   const decimalIndex = Math.max(lastComma, lastDot);
@@ -13,7 +44,8 @@ export const parseNumber = (value) => {
   if (decimalIndex === -1) {
     const digits = cleaned.replace(/[^0-9]/g, "");
     const numeric = parseFloat(digits);
-    return Number.isNaN(numeric) ? 0 : numeric;
+    if (Number.isNaN(numeric)) return Number.NaN;
+    return isNegative ? -numeric : numeric;
   }
 
   const integerPart = cleaned
@@ -25,7 +57,8 @@ export const parseNumber = (value) => {
 
   const normalized = `${integerPart}.${fractionalPart}`;
   const numeric = parseFloat(normalized);
-  return Number.isNaN(numeric) ? 0 : numeric;
+  if (Number.isNaN(numeric)) return Number.NaN;
+  return isNegative ? -numeric : numeric;
 };
 
 export const parsePercentage = (value) => {
@@ -33,7 +66,40 @@ export const parsePercentage = (value) => {
   return parseNumber(String(value).replace(/%/g, ""));
 };
 
+export const isPositiveNumberValue = (value, { allowEmpty = true } = {}) => {
+  if (value === null || value === undefined || String(value).trim() === "") {
+    return allowEmpty;
+  }
+  const numeric = parseNumber(value);
+  return Number.isFinite(numeric) && numeric >= 0;
+};
+
+export const isPositivePercentageValue = (
+  value,
+  { allowEmpty = true } = {}
+) => {
+  if (value === null || value === undefined || String(value).trim() === "") {
+    return allowEmpty;
+  }
+  const numeric = parsePercentage(value);
+  return Number.isFinite(numeric) && numeric >= 0;
+};
+
 const pad2 = (value) => String(value).padStart(2, "0");
+
+export const isValidDDMMYYYYDate = (value) => {
+  if (!value?.trim()) return false;
+  const raw = String(value).trim();
+  if (!/^\d{2}\/\d{2}\/\d{4}$/.test(raw)) return false;
+
+  const [day, month, year] = raw.split("/");
+  const date = new Date(Date.UTC(Number(year), Number(month) - 1, Number(day)));
+  return (
+    date.getUTCFullYear() === Number(year) &&
+    date.getUTCMonth() + 1 === Number(month) &&
+    date.getUTCDate() === Number(day)
+  );
+};
 
 export const parseDate = (dateStr) => {
   if (dateStr === null || dateStr === undefined) return null;

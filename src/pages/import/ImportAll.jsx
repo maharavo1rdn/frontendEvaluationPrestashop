@@ -12,6 +12,8 @@ import { importProductsFromCSV } from "../../services/csv/product.csv.service";
 import importProductOptionsFromCSV from "../../services/csv/productOption.csv.service";
 import importOrdersFromCSV from "../../services/csv/customerOrder.service";
 import importProductImagesFromZip from "../../services/zip/productImage.zip.service";
+import { validateAllFiles } from "../../services/csv/validator.service";
+import { resetAllTables } from "../../services/reset.service";
 
 const STEPS = [
   {
@@ -114,8 +116,61 @@ export default function ImportAll() {
 
     pushLog("info", "═══════════ Import global démarré ═══════════");
 
+    const selectedFiles = Object.fromEntries(
+      STEPS.map((step) => [step.key, fileRefs.current[step.key]?.files?.[0]])
+    );
+    const selectedCsvFiles = {
+      products: selectedFiles.products,
+      productOptions: selectedFiles.options,
+      orders: selectedFiles.orders,
+    };
+    const hasCsvFile = Object.values(selectedCsvFiles).some(Boolean);
+
+    if (hasCsvFile) {
+      pushLog(
+        "info",
+        "[Validation] Lecture complète des CSV en mémoire avant import..."
+      );
+
+      try {
+        const validation = await validateAllFiles(selectedCsvFiles);
+
+        if (!validation.valid) {
+          Object.entries(selectedCsvFiles).forEach(([key, file]) => {
+            if (!file) return;
+            const stepKey = key === "productOptions" ? "options" : key;
+            setStatus(stepKey, { status: STATUS.error });
+          });
+
+          validation.errors.forEach((error) => {
+            const line = error.line ? ` ligne ${error.line}` : "";
+            pushLog("error", `[Validation] ${error.file}${line} — ${error.message}`);
+          });
+          pushLog(
+            "error",
+            "[Validation] Import annulé : aucune donnée n'a été envoyée en base."
+          );
+          setRunning(false);
+          return;
+        }
+
+        pushLog(
+          "success",
+          "[Validation] Feu vert : colonnes, dates et montants conformes."
+        );
+      } catch (err) {
+        pushLog("error", `[Validation] Échec de lecture CSV — ${err.message}`);
+        pushLog(
+          "error",
+          "[Validation] Import annulé : aucune donnée n'a été envoyée en base."
+        );
+        setRunning(false);
+        return;
+      }
+    }
+
     for (const step of STEPS) {
-      const file = fileRefs.current[step.key]?.files?.[0];
+      const file = selectedFiles[step.key];
 
       if (!file) {
         setStatus(step.key, { status: STATUS.skipped });
@@ -140,6 +195,10 @@ export default function ImportAll() {
                 rowResult.reference ||
                 rowResult.productReference ||
                 `ligne ${done}`;
+              // en cas de règle métier
+              // if (!rowResult.success) {
+              //     resetAllTables();
+              // }
               pushLog(
                 rowResult.success ? "success" : "error",
                 `[${step.label}] ${rowResult.success ? "✓" : "✗"} ${name}${

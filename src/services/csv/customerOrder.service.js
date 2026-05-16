@@ -10,6 +10,7 @@ import { findCombinationsByProductId } from "../combination.service";
 import { findProductOptionValueByKeyValue } from "../productOptionValue.service";
 import { findTaxRulesByGroupId } from "../taxRule.service";
 import { findTaxByKeyValue } from "../tax.service";
+import { parseDate as parseCSVDate, parseNumber } from "../../utils/utils";
 
 // ─── Constantes ───────────────────────────────────────────────────────────────
 
@@ -25,32 +26,30 @@ const ORDER_STATE_MAP = {
 };
 
 const PAYMENT_INFO_MAP = {
-  2:  { payment: "Virement bancaire",       module: "ps_checkpayment"   },
-  8:  { payment: "Paiement à la livraison", module: "ps_cashondelivery" },
-  6:  { payment: "Virement bancaire",       module: "ps_checkpayment"   },
-  5:  { payment: "Virement bancaire",       module: "ps_checkpayment"   },
-  4:  { payment: "Virement bancaire",       module: "ps_checkpayment"   },
-  3:  { payment: "Virement bancaire",       module: "ps_checkpayment"   },
-  10: { payment: "Virement bancaire",       module: "ps_checkpayment"   },
+  2: { payment: "Virement bancaire", module: "ps_checkpayment" },
+  8: { payment: "Paiement à la livraison", module: "ps_cashondelivery" },
+  6: { payment: "Virement bancaire", module: "ps_checkpayment" },
+  5: { payment: "Virement bancaire", module: "ps_checkpayment" },
+  4: { payment: "Virement bancaire", module: "ps_checkpayment" },
+  3: { payment: "Virement bancaire", module: "ps_checkpayment" },
+  10: { payment: "Virement bancaire", module: "ps_checkpayment" },
 };
 
 const DEFAULTS = {
-  idCarrier:      2,
-  idCurrency:     1,
-  idLang:         1,
-  idCountry:      8,
-  idEmployee:     0,
+  idCarrier: 2,
+  idCurrency: 1,
+  idLang: 1,
+  idCountry: 8,
+  idEmployee: 0,
   conversionRate: 1,
-  idShop:         1,
+  idShop: 1,
 };
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
-const parseDate = (value) => {
-  if (!value?.trim()) return undefined;
-  const [day, month, year] = value.trim().split("/");
-  if (!day || !month || !year) return undefined;
-  return `${year}-${month.padStart(2, "0")}-${day.padStart(2, "0")} 00:00:00`;
+const parseDateTime = (value) => {
+  const date = parseCSVDate(value);
+  return date ? `${date} 00:00:00` : undefined;
 };
 
 const parseName = (nom) => {
@@ -64,15 +63,21 @@ const parseName = (nom) => {
 
 const parseAchatColumn = (raw) => {
   if (!raw?.trim()) return [];
-  const cleaned = raw.trim().slice(1, -1);
+
+  const cleaned = raw
+    .trim()
+    .slice(1, -1)
+    .replace(/""([^"]+)""/g, '"$1"'); // ← seulement ""valeur"", pas "" seul
+
   const items = [];
-  const tupleRegex = /\("([^"]*)";(\d+);"([^"]*)"\)/g;
+  const tupleRegex = /\("([^"]*)";"?([^";)]+)"?;"([^"]*)"\)/g;
+
   let match;
   while ((match = tupleRegex.exec(cleaned)) !== null) {
     items.push({
       reference: match[1],
-      quantity:  parseInt(match[2], 10),
-      karazany:  match[3] || null,
+      quantity: parseInt(parseNumber(match[2])),
+      karazany: match[3] || null,
     });
   }
   return items;
@@ -88,8 +93,10 @@ const resolveOrderStateId = (etat) => {
 };
 
 const getPaymentInfo = (idOrderState) =>
-  PAYMENT_INFO_MAP[idOrderState] ??
-  { payment: "Virement bancaire", module: "ps_wirepayment" };
+  PAYMENT_INFO_MAP[idOrderState] ?? {
+    payment: "Virement bancaire",
+    module: "ps_wirepayment",
+  };
 
 const generateSecureKey = () =>
   Array.from(crypto.getRandomValues(new Uint8Array(16)))
@@ -112,7 +119,10 @@ const getTaxRateByGroupId = async (groupId) => {
 
   const rules = await findTaxRulesByGroupId(groupId);
   const taxId = rules[0]?.taxId;
-  if (!taxId) { taxRateCache.set(key, 0); return 0; }
+  if (!taxId) {
+    taxRateCache.set(key, 0);
+    return 0;
+  }
 
   const taxes = await findTaxByKeyValue("id", taxId);
   const rate = Number(taxes[0]?.rate) || 0;
@@ -125,13 +135,16 @@ const getTaxRateByGroupId = async (groupId) => {
 const normalizeIds = (ids) => ids.map((id) => String(id)).sort();
 
 const findCombinationByValueName = async (productId, valueName) => {
-  const optionValues = await findProductOptionValueByKeyValue("name", valueName);
+  const optionValues = await findProductOptionValueByKeyValue(
+    "name",
+    valueName
+  );
   if (!optionValues.length)
     throw new Error(`Valeur d'attribut "${valueName}" introuvable`);
 
-  const targetId     = String(optionValues[0].id);
+  const targetId = String(optionValues[0].id);
   const combinations = await findCombinationsByProductId(productId);
-  const combination  = combinations.find((c) =>
+  const combination = combinations.find((c) =>
     normalizeIds(c?.associations?.productOptionValues ?? []).includes(targetId)
   );
 
@@ -151,10 +164,10 @@ const resolveAchatItems = async (items) => {
     if (!products.length)
       throw new Error(`Produit "${item.reference}" introuvable`);
 
-    const product     = products[0];
-    const taxRate     = await getTaxRateByGroupId(product.idTaxRulesGroup);
-    let   combination = null;
-    let   unitPriceHt = Number(product.price) || 0;
+    const product = products[0];
+    const taxRate = await getTaxRateByGroupId(product.idTaxRulesGroup);
+    let combination = null;
+    let unitPriceHt = Number(product.price) || 0;
 
     if (item.karazany) {
       combination = await findCombinationByValueName(product.id, item.karazany);
@@ -164,9 +177,12 @@ const resolveAchatItems = async (items) => {
     const unitPriceTtc = unitPriceHt * (1 + taxRate / 100);
 
     resolved.push({
-      product, combination,
+      product,
+      combination,
       quantity: item.quantity,
-      unitPriceHt, unitPriceTtc, taxRate,
+      unitPriceHt,
+      unitPriceTtc,
+      taxRate,
       reference: item.reference,
       karazany: item.karazany,
     });
@@ -176,20 +192,26 @@ const resolveAchatItems = async (items) => {
 };
 
 const computeOrderTotals = (resolvedItems) => {
-  const totalHt  = resolvedItems.reduce((s, i) => s + i.unitPriceHt  * i.quantity, 0);
-  const totalTtc = resolvedItems.reduce((s, i) => s + i.unitPriceTtc * i.quantity, 0);
+  const totalHt = resolvedItems.reduce(
+    (s, i) => s + i.unitPriceHt * i.quantity,
+    0
+  );
+  const totalTtc = resolvedItems.reduce(
+    (s, i) => s + i.unitPriceTtc * i.quantity,
+    0
+  );
 
   return {
-    totalProducts:         roundMoney(totalHt),
-    totalProductsWt:       roundMoney(totalTtc),
-    totalPaid:             roundMoney(totalTtc),
-    totalPaidTaxIncl:      roundMoney(totalTtc),
-    totalPaidTaxExcl:      roundMoney(totalHt),
-    totalPaidReal:         "0.000000", // Forcé à 0 pour la création
-    totalShipping:         "0.000000",
-    totalShippingTaxIncl:  "0.000000",
-    totalShippingTaxExcl:  "0.000000",
-    totalDiscounts:        "0.000000",
+    totalProducts: roundMoney(totalHt),
+    totalProductsWt: roundMoney(totalTtc),
+    totalPaid: roundMoney(totalTtc),
+    totalPaidTaxIncl: roundMoney(totalTtc),
+    totalPaidTaxExcl: roundMoney(totalHt),
+    totalPaidReal: "0.000000", // Forcé à 0 pour la création
+    totalShipping: "0.000000",
+    totalShippingTaxIncl: "0.000000",
+    totalShippingTaxExcl: "0.000000",
+    totalDiscounts: "0.000000",
     totalDiscountsTaxIncl: "0.000000",
     totalDiscountsTaxExcl: "0.000000",
   };
@@ -203,13 +225,16 @@ const ensureCustomer = async (row) => {
 
   const { firstname, lastname } = parseName(row.nom);
   const created = await postCustomer({
-    firstname, lastname,
-    email:  row.email,
+    firstname,
+    lastname,
+    email: row.email,
     passwd: row.pwd,
     active: true,
   });
   if (!created.success)
-    throw new Error(`Impossible de créer le client "${row.email}": ${created.error}`);
+    throw new Error(
+      `Impossible de créer le client "${row.email}": ${created.error}`
+    );
 
   let secureKey = created.secureKey;
   if (!secureKey && created.id) {
@@ -220,43 +245,47 @@ const ensureCustomer = async (row) => {
 };
 
 const ensureAddress = async (customerId, row) => {
-  const all      = await findAddressByKeyValue("id_customer", customerId);
+  const all = await findAddressByKeyValue("id_customer", customerId);
   const existing = all.find(
-    (a) => a.address1?.trim().toLowerCase() === row.adresse?.trim().toLowerCase()
+    (a) =>
+      a.address1?.trim().toLowerCase() === row.adresse?.trim().toLowerCase()
   );
   if (existing) return existing;
 
   const { firstname, lastname } = parseName(row.nom);
   const created = await postAddress({
     idCustomer: customerId,
-    idCountry:  DEFAULTS.idCountry,
-    idState:    1,
-    alias:      "import",
-    firstname,  lastname,
-    address1:   row.adresse,
-    city:       row.adresse,
+    idCountry: DEFAULTS.idCountry,
+    idState: 1,
+    alias: "import",
+    firstname,
+    lastname,
+    address1: row.adresse,
+    city: row.adresse,
   });
   if (!created.success)
-    throw new Error(`Impossible de créer l'adresse "${row.adresse}": ${created.error}`);
+    throw new Error(
+      `Impossible de créer l'adresse "${row.adresse}": ${created.error}`
+    );
   return { id: created.id };
 };
 
 const createCart = async (customerId, addressId, resolvedItems, dateAdd) => {
   const cartRows = resolvedItems.map((item) => ({
-    idProduct:          item.product.id,
+    idProduct: item.product.id,
     idProductAttribute: item.combination?.id ?? 0,
-    idAddressDelivery:  addressId,
-    quantity:           item.quantity,
+    idAddressDelivery: addressId,
+    quantity: item.quantity,
   }));
   const created = await postCart({
-    idCustomer:        customerId,
+    idCustomer: customerId,
     idAddressDelivery: addressId,
-    idAddressInvoice:  addressId,
-    idCurrency:        DEFAULTS.idCurrency,
-    idCarrier:         DEFAULTS.idCarrier,
-    idShop:            DEFAULTS.idShop,
-    dateAdd:            dateAdd,
-    associations:      { cartRows }
+    idAddressInvoice: addressId,
+    idCurrency: DEFAULTS.idCurrency,
+    idCarrier: DEFAULTS.idCarrier,
+    idShop: DEFAULTS.idShop,
+    dateAdd: dateAdd,
+    associations: { cartRows },
   });
   if (!created.success)
     throw new Error(`Impossible de créer le panier: ${created.error}`);
@@ -275,36 +304,36 @@ const createOrder = async ({
   secureKey,
 }) => {
   const orderRows = resolvedItems.map((item) => ({
-    productId:          item.product.id,
+    productId: item.product.id,
     productAttributeId: item.combination?.id ?? 0,
-    productQuantity:    item.quantity,
-    productName:        item.product.name ?? item.reference,
-    productReference:   item.reference,
-    unitPriceTaxIncl:   roundMoney(item.unitPriceTtc),
-    unitPriceTaxExcl:   roundMoney(item.unitPriceHt),
-    totalPriceTaxIncl:  roundMoney(item.unitPriceTtc * item.quantity),
-    totalPriceTaxExcl:  roundMoney(item.unitPriceHt  * item.quantity),
-    taxRate:            item.taxRate.toFixed(3),
+    productQuantity: item.quantity,
+    productName: item.product.name ?? item.reference,
+    productReference: item.reference,
+    unitPriceTaxIncl: roundMoney(item.unitPriceTtc),
+    unitPriceTaxExcl: roundMoney(item.unitPriceHt),
+    totalPriceTaxIncl: roundMoney(item.unitPriceTtc * item.quantity),
+    totalPriceTaxExcl: roundMoney(item.unitPriceHt * item.quantity),
+    taxRate: item.taxRate.toFixed(3),
   }));
 
   const orderPayload = {
     ...totals,
-    idCart:            cartId,
-    idCustomer:        customerId,
+    idCart: cartId,
+    idCustomer: customerId,
     idAddressDelivery: addressId,
-    idAddressInvoice:  addressId,
-    idCurrency:        DEFAULTS.idCurrency,
-    idCarrier:         DEFAULTS.idCarrier,
-    idShop:            DEFAULTS.idShop,
-    conversionRate:    DEFAULTS.conversionRate,
-    secureKey:         secureKey || generateSecureKey(),
-    payment:      paymentInfo.payment,
-    module:       paymentInfo.module,        // ← plus de hardcode
+    idAddressInvoice: addressId,
+    idCurrency: DEFAULTS.idCurrency,
+    idCarrier: DEFAULTS.idCarrier,
+    idShop: DEFAULTS.idShop,
+    conversionRate: DEFAULTS.conversionRate,
+    secureKey: secureKey || generateSecureKey(),
+    payment: paymentInfo.payment,
+    module: paymentInfo.module, // ← plus de hardcode
     dateAdd,
     // PS auto-crée order_payment au POST — ne pas appeler postOrderPayment manuellement
     // État final directement → pas de createOrderHistory → pas de hooks → pas de doublon
-    currentState: idOrderState,              // ← plus de hardcode à 10
-    valid:        idOrderState === 2,        // ← valid=1 seulement pour paiement accepté
+    currentState: idOrderState, // ← plus de hardcode à 10
+    valid: idOrderState === 2, // ← valid=1 seulement pour paiement accepté
     associations: { orderRows },
   };
 
@@ -320,14 +349,20 @@ const createOrder = async ({
   return { id: created.id, reference: created.reference };
 };
 
-const createOrderPayment = async ({ orderReference, amount, paymentMethod, dateAdd }) => {
-  if (!orderReference) throw new Error("Référence de commande manquante pour le paiement");
+const createOrderPayment = async ({
+  orderReference,
+  amount,
+  paymentMethod,
+  dateAdd,
+}) => {
+  if (!orderReference)
+    throw new Error("Référence de commande manquante pour le paiement");
 
   const created = await postOrderPayment({
     orderReference,
-    idCurrency:     DEFAULTS.idCurrency,
-    amount:         amount,
-    paymentMethod:  paymentMethod,
+    idCurrency: DEFAULTS.idCurrency,
+    amount: amount,
+    paymentMethod: paymentMethod,
     conversionRate: DEFAULTS.conversionRate,
     dateAdd,
   });
@@ -338,9 +373,9 @@ const createOrderPayment = async ({ orderReference, amount, paymentMethod, dateA
 
 const createOrderHistory = async (orderId, idOrderState, dateAdd) => {
   const created = await postOrderHistory({
-    idOrder:      orderId,
+    idOrder: orderId,
     idOrderState,
-    idEmployee:   DEFAULTS.idEmployee,
+    idEmployee: DEFAULTS.idEmployee,
     dateAdd,
   });
   if (!created.success)
@@ -349,11 +384,11 @@ const createOrderHistory = async (orderId, idOrderState, dateAdd) => {
 };
 
 export const importOrdersFromCSV = async (file, onProgress) => {
-  const rows          = await parseCSVFile(file);
-  const total         = rows.length;
-  const successes     = [];
-  const errors        = [];
-  let   processedCount = 0;
+  const rows = await parseCSVFile(file);
+  const total = rows.length;
+  const successes = [];
+  const errors = [];
+  let processedCount = 0;
 
   for (const row of rows) {
     const email = row.email?.trim();
@@ -367,23 +402,28 @@ export const importOrdersFromCSV = async (file, onProgress) => {
         throw new Error("Colonne achat vide ou format invalide");
 
       const idOrderStateFinal = resolveOrderStateId(row.etat);
-      const paymentInfo       = getPaymentInfo(idOrderStateFinal);
-      const dateAdd           = parseDate(row.date);
+      const paymentInfo = getPaymentInfo(idOrderStateFinal);
+      const dateAdd = parseDateTime(row.date);
 
       // 1. Résolution et Totaux
       const resolvedItems = await resolveAchatItems(achatItems);
-      const totals        = computeOrderTotals(resolvedItems);
+      const totals = computeOrderTotals(resolvedItems);
 
       // 2. Client & Adresse
       const customer = await ensureCustomer(row);
-      const address  = await ensureAddress(customer.id, row);
+      const address = await ensureAddress(customer.id, row);
 
       // 3. Panier
-      const cart = await createCart(customer.id, address.id, resolvedItems, dateAdd);
-      
+      const cart = await createCart(
+        customer.id,
+        address.id,
+        resolvedItems,
+        dateAdd
+      );
+
       const etatRaw = (row.etat || "").toLowerCase().trim();
       console.log(cart);
-      
+
       if (!etatRaw || etatRaw.includes("dans le panier")) {
         processResult = {
           success: true,
@@ -393,12 +433,13 @@ export const importOrdersFromCSV = async (file, onProgress) => {
           totals,
         };
         successes.push(processResult);
-        
+
         // TRÈS IMPORTANT : On s'arrête ici pour cette ligne
-        onProgress?.({ done: processedCount + 1, total, result: processResult });
+        processedCount++;
+        onProgress?.({ done: processedCount, total, result: processResult });
         continue;
       }
-      
+
       // 4. Commande
       const order = await createOrder({
         cartId: cart.id,
@@ -414,18 +455,18 @@ export const importOrdersFromCSV = async (file, onProgress) => {
 
       const fullOrder = await getOrderById(order.id);
       // console.log(fullOrder);
-      
-      // 5. Paiement manuel DÉSACTIVÉ : 
+
+      // 5. Paiement manuel DÉSACTIVÉ :
       // Le webservice génère tout seul le paiement lors du changement d'historique.
       // await createOrderPayment({ ... });
-      await createOrderHistory(order.id, idOrderStateFinal, dateAdd)
+      await createOrderHistory(order.id, idOrderStateFinal, dateAdd);
 
       processResult = {
-        success:        true,
+        success: true,
         email,
-        orderId:        order.id,
+        orderId: order.id,
         orderReference: order.reference,
-        idOrderState:   idOrderStateFinal,
+        idOrderState: idOrderStateFinal,
         totals,
       };
 
