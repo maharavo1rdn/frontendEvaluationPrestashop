@@ -1,9 +1,8 @@
 import { createContext, useContext, useState } from "react";
 import {
-  clearCustomerSession,
   clearGuestSession,
-  getCustomerSession,
   getGuestSession,
+  getCustomerSession,
   saveCustomerSession,
   saveGuestSession,
 } from "../../services/frontoffice/session.service";
@@ -35,10 +34,9 @@ export const AuthProvider = ({ children }) => {
   };
 
   const loginGuest = (data) => {
-    clearCustomerSession();
-    setCustomer(null);
+    clearGuestSession();
     saveGuestSession(data);
-    setGuest({ ...data, isGuest: true });
+    setGuest(data);
   };
 
   const logoutAll = () => {

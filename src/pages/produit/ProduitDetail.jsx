@@ -214,8 +214,6 @@ const ProduitDetail = () => {
     combinationPriceImpact: activeCombination?.price ?? 0,
     taxRate,
   });
-
-  console.log(comboStocks);
   
   const displayedStock =
     combinations.length > 0

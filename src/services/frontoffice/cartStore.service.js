@@ -17,9 +17,10 @@ let pendingCart = null;
 
 const syncCartWithServer = async (cart) => {
   const isGuest = isGuestSession();
-  const customer = isGuest ? getGuestSession() : getCustomerSession();
+  const customer = isGuest ? null : getCustomerSession();
+  const guest = isGuest ? getGuestSession() : null;
 
-  if (!customer?.id) return;
+  if (!customer?.id && !guest?.id) return;
 
   window.dispatchEvent(new CustomEvent("cart:syncing"));
 
@@ -42,7 +43,7 @@ const syncCartWithServer = async (cart) => {
 
     const cartPayload = {
       idCustomer: customer?.id ?? 0,
-      idGuest: 0,
+      idGuest: guest?.id ?? 0,
       idAddressDelivery: address?.id ?? 0,
       idAddressInvoice: address?.id ?? 0,
       idCarrier: 2,
@@ -161,8 +162,6 @@ const writeCart = (cart) => {
   return nextCart;
 };
 
-// ─── Helpers item ─────────────────────────────────────────────────────────
-
 const buildItem = (product, quantity) => {
   const idProduct = String(product.id ?? product.idProduct ?? "");
   const idProductAttribute = String(product.idProductAttribute ?? "0");
@@ -191,8 +190,7 @@ const buildItem = (product, quantity) => {
   };
 };
 
-// ─── API publique (inchangée) ─────────────────────────────────────────────
-
+// API publique
 export const getCart = () => readCart();
 
 export const getCartTotals = (cart = readCart()) => {
@@ -243,16 +241,12 @@ export const removeCartItem = (cartKey) => {
 };
 
 export const clearCart = async () => {
-  const current = readCart();
-
   window.localStorage.removeItem(STORAGE_KEY);
-
   window.dispatchEvent(
     new CustomEvent("cart:updated", {
       detail: { items: [], _version: 0 },
     })
   );
-
   return { items: [], _version: 0 };
 };
 
@@ -267,17 +261,16 @@ export const loadCartFromServer = async (serverCart) => {
     const attrId = row.idProductAttribute || 0;
     const quantity = Number(row.quantity ?? 1);
 
-    let name = null;
-    let reference = null;
-    let price = null;
-    let priceTaxIncl = null;
-    let taxRate = null;
-    let idTaxRulesGroup = null;
-    let combinationLabel = "";
-    let stockQuantity = null;
+    let name = null,
+      reference = null,
+      price = null,
+      priceTaxIncl = null,
+      taxRate = null,
+      idTaxRulesGroup = null,
+      combinationLabel = "",
+      stockQuantity = null;
 
     try {
-      // 1. Récupérer le produit complet
       const products = await findProductByKeyValue("id", productId);
       const product = products?.[0];
 
@@ -286,7 +279,6 @@ export const loadCartFromServer = async (serverCart) => {
         reference = product.reference ?? null;
         idTaxRulesGroup = product.idTaxRulesGroup ?? null;
 
-        // 2. Gérer la déclinaison si présente
         let combination = null;
         if (attrId && String(attrId) !== "0") {
           const combos = await findCombinationsByProductId(product.id).catch(
@@ -313,7 +305,6 @@ export const loadCartFromServer = async (serverCart) => {
           }
         }
 
-        // 3. Prix et TVA
         const taxRateValue = await getTaxRateForGroup(
           product.idTaxRulesGroup
         ).catch(() => 0);
@@ -327,7 +318,6 @@ export const loadCartFromServer = async (serverCart) => {
         price = Number(priceExcl);
         priceTaxIncl = Number(priceIncl);
 
-        // 4. Stock
         if (product.associations?.stockAvailables?.length) {
           const stockId = product.associations.stockAvailables[0].id;
           if (stockId) {

@@ -4,7 +4,6 @@ import { postOrder } from "../order.service";
 import { findProductByKeyValue } from "../product.service";
 import { findCombinationsByProductId } from "../combination.service";
 import { computeCombinationPrice, getTaxRateForGroup } from "./pricing.service";
-import { getGuestSession } from "./session.service";
 import { putCart, getCartById } from "../cart.service";
 
 const DEFAULT_CURRENCY_ID = 1;
@@ -95,8 +94,6 @@ const computeTotals = (resolvedItems) => {
   };
 };
 
-// ─── Checkout Customer ────────────────────────────────────────────────────
-
 const checkoutAsCustomer = async ({ items, customer }) => {
   const cart = getCart();
   if (!cart.psCartId) {
@@ -127,14 +124,14 @@ const checkoutAsCustomer = async ({ items, customer }) => {
     );
 
   if (mustUpdateCart) {
-    const updated = await putCart(cart.psCartId, {
+    const updatedCartPayload = {
       ...serverCart,
       idCustomer: customer.id,
       idGuest: 0,
       secureKey: customer.secureKey,
       idAddressDelivery: address.id,
       idAddressInvoice: address.id,
-      idCarrier: DEFAULT_CARRIER_ID,
+      idCarrier: serverCart.idCarrier || DEFAULT_CARRIER_ID,
       associations: {
         ...serverCart.associations,
         cartRows: cartRows.map((row) => ({
@@ -142,7 +139,8 @@ const checkoutAsCustomer = async ({ items, customer }) => {
           idAddressDelivery: address.id,
         })),
       },
-    });
+    };
+    const updated = await putCart(cart.psCartId, updatedCartPayload);
     if (!updated?.success) {
       throw new Error("Impossible de mettre à jour le panier.");
     }
@@ -185,7 +183,9 @@ const checkoutAsCustomer = async ({ items, customer }) => {
 
   const createdOrder = await postOrder(orderPayload);
   if (!createdOrder?.success || !createdOrder?.id) {
-    throw new Error(createdOrder?.error || "Création de la commande impossible.");
+    throw new Error(
+      createdOrder?.error || "Création de la commande impossible."
+    );
   }
 
   return {
@@ -196,23 +196,9 @@ const checkoutAsCustomer = async ({ items, customer }) => {
   };
 };
 
-export const checkoutGuest = async ({ items }) => {
-  const guest = getGuestSession();
-  if (!guest?.id) {
-    throw new Error("La session guest est introuvable.");
+export const checkoutCart = async ({ items, customer }) => {
+  if (!customer?.id) {
+    throw new Error("Vous devez être connecté pour passer commande.");
   }
-
-  return checkoutAsCustomer({ items, customer: guest });
-};
-
-export const checkoutCart = async ({ items, customer, isGuest = false }) => {
-  if (isGuest) {
-    return checkoutGuest({ items });
-  }
-
-  if (customer?.id) {
-    return checkoutAsCustomer({ items, customer });
-  }
-
-  throw new Error("Vous devez être connecté pour passer commande.");
+  return checkoutAsCustomer({ items, customer });
 };
