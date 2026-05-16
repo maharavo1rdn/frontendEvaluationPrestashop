@@ -15,7 +15,7 @@ export const AuthProvider = ({ children }) => {
   });
 
   const [customer, setCustomer] = useState(() => {
-    return null;
+    return getCustomerSession();
   });
 
   const [guest, setGuest] = useState(() => getGuestSession());
