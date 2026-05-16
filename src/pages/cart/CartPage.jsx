@@ -179,7 +179,7 @@ const CartPage = () => {
               <span>{totals.totalAmount.toFixed(2)} €</span>
             </div>
 
-            {(customer || guest) && (
+            {(customer || !guest) && (
               <button
                 type="button"
                 onClick={handleCheckout}

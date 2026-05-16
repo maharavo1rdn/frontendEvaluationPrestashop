@@ -11,6 +11,8 @@ export const getDashboardStats = async () => {
   orders.forEach((order) => {
     const dateKey = order.dateAdd ? order.dateAdd.split(" ")[0] : "Inconnue";
 
+    // if (!order.valid)
+    //   continue;
     const amount = parseFloat(order.totalPaid) || 0;
     globalTotalOrdered += amount;
 
