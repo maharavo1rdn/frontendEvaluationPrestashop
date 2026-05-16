@@ -15,7 +15,7 @@ import { parseDate as parseCSVDate, parseNumber } from "../../utils/utils";
 // ─── Constantes ───────────────────────────────────────────────────────────────
 
 const ORDER_STATE_MAP = {
-  "paiement accepté": 2,
+  "paiement accepté": 11,
   "en attente paiement à la livraison": 8,
   "erreur de paiement": 6,
   annulé: 6,
@@ -422,7 +422,6 @@ export const importOrdersFromCSV = async (file, onProgress) => {
       );
 
       const etatRaw = (row.etat || "").toLowerCase().trim();
-      console.log(cart);
 
       if (!etatRaw || etatRaw.includes("dans le panier")) {
         processResult = {

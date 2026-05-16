@@ -247,8 +247,6 @@ const parseAchatColumn = (raw) => {
       karazany: match[3] || null,
     });
   }
-  console.log(items);
-
   return items;
 };
 

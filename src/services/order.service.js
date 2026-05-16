@@ -111,8 +111,10 @@ export const postOrder = async (order) => {
     const createdId = created?.id;
 
     if (order.dateAdd && createdId) {
-      await putOrder(createdId, { ...order, id: createdId });
-    }    
+      const fullOrder = await getOrderById(createdId);
+      fullOrder.dateAdd = order.dateAdd;
+      await putOrder(createdId, { ...fullOrder, id: createdId });
+    }
 
     return {
       success: true,
