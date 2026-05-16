@@ -1,4 +1,5 @@
 import Papa from "papaparse";
+import { normalizeCSVHeader } from "../../utils/utils";
 /**
  * Lit un fichier CSV (File object) et retourne un tableau de lignes parsées.
  * @param {File} file
@@ -9,7 +10,7 @@ export const parseCSVFile = (file) =>
     Papa.parse(file, {
       header: true,
       skipEmptyLines: true,
-      transformHeader: (h) => h.trim(),
+      transformHeader: normalizeCSVHeader,
       transform: (v) => v.trim(),
       complete: (results) => resolve(results.data),
       error: (err) => reject(new Error(`CSV invalide : ${err.message}`)),
