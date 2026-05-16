@@ -2,6 +2,7 @@ import { createContext, useContext, useState } from "react";
 import {
   clearGuestSession,
   getGuestSession,
+  getCustomerSession,
   saveCustomerSession,
   saveGuestSession,
 } from "../../services/frontoffice/session.service";
