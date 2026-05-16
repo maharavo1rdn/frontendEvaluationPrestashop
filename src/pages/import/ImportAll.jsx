@@ -13,6 +13,7 @@ import importProductOptionsFromCSV from "../../services/csv/productOption.csv.se
 import importOrdersFromCSV from "../../services/csv/customerOrder.service";
 import importProductImagesFromZip from "../../services/zip/productImage.zip.service";
 import { validateAllFiles } from "../../services/csv/validator.service";
+import { resetAllTables } from "../../services/reset.service";
 
 const STEPS = [
   {
@@ -194,6 +195,10 @@ export default function ImportAll() {
                 rowResult.reference ||
                 rowResult.productReference ||
                 `ligne ${done}`;
+              // en cas de règle métier
+              // if (!rowResult.success) {
+              //     resetAllTables();
+              // }
               pushLog(
                 rowResult.success ? "success" : "error",
                 `[${step.label}] ${rowResult.success ? "✓" : "✗"} ${name}${
