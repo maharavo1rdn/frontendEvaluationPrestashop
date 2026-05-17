@@ -55,9 +55,9 @@ const StockEvolution = () => {
       groups[date].movements.push(mvt);
 
       if (mvt.sign === 1) {
-        groups[date].totalIn += mvt.quantity;
+        groups[date].totalIn += mvt.physicalQuantity;
       } else {
-        groups[date].totalOut += mvt.quantity;
+        groups[date].totalOut += mvt.physicalQuantity;
       }
     });
 
@@ -187,7 +187,7 @@ const StockEvolution = () => {
                             }`}
                           >
                             {mvt.sign === 1 ? "+" : "-"}
-                            {mvt.quantity}
+                            {mvt.physicalQuantity}
                           </span>
                         </td>
                       </tr>

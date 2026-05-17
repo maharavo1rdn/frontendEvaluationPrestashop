@@ -256,7 +256,6 @@ export const getStockByProductAndAttribute = async (
     if (!response.ok) return null;
     const xml = await response.text();
     const stock = parseStockAvailables(xml);
-    console.log(stock);
     return stock;
   } catch (err) {
     console.error("Erreur récupération stock combinaison", err);
