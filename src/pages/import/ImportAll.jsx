@@ -144,7 +144,10 @@ export default function ImportAll() {
 
           validation.errors.forEach((error) => {
             const line = error.line ? ` ligne ${error.line}` : "";
-            pushLog("error", `[Validation] ${error.file}${line} — ${error.message}`);
+            pushLog(
+              "error",
+              `[Validation] ${error.file}${line} — ${error.message}`
+            );
           });
           pushLog(
             "error",
@@ -196,9 +199,12 @@ export default function ImportAll() {
                 rowResult.productReference ||
                 `ligne ${done}`;
               // en cas de règle métier
-              // if (!rowResult.success) {
-              //     resetAllTables();
-              // }
+              if (!rowResult.success) {
+                pushLog("error", `Erreur lors de l'import: ${rowResult.error}`)
+                await resetAllTables();
+                pushLog("info", "═══════════ Base de données réinitialisé ═══════════")
+                return;
+              }
               pushLog(
                 rowResult.success ? "success" : "error",
                 `[${step.label}] ${rowResult.success ? "✓" : "✗"} ${name}${
