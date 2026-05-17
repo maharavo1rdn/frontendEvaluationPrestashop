@@ -459,29 +459,31 @@ export const importOrdersFromCSV = async (file, onProgress) => {
       // 5. Paiement manuel DÉSACTIVÉ :
       // Le webservice génère tout seul le paiement lors du changement d'historique.
       // await createOrderPayment({ ... });
-      await createOrderHistory(order.id, idOrderStateFinal, dateAdd);      
+      await createOrderHistory(order.id, idOrderStateFinal, dateAdd);
       // 6. Stock
-      for (const item of resolvedItems) {
-        try {
-          const stockEntries = await findStockAvailableByProductAttribute(
-            item.product.id,
-            item.combination?.id ?? 0
-          );
-          const stockId = stockEntries?.[0]?.id;
-          if (stockId) {
-            await createStockAdjustmentMovement({
-              idProduct: item.product.id,
-              idProductAttribute: item.combination?.id ?? 0,
-              idStock: stockId,
-              deltaQuantity: -item.quantity,
-              dateAdd,
-            });
+      if (idOrderStateFinal == 11) {
+        for (const item of resolvedItems) {
+          try {
+            const stockEntries = await findStockAvailableByProductAttribute(
+              item.product.id,
+              item.combination?.id ?? 0
+            );
+            const stockId = stockEntries?.[0]?.id;
+            if (stockId) {
+              await createStockAdjustmentMovement({
+                idProduct: item.product.id,
+                idProductAttribute: item.combination?.id ?? 0,
+                idStock: stockId,
+                deltaQuantity: -item.quantity,
+                dateAdd,
+              });
+            }
+          } catch (movementErr) {
+            console.warn(
+              `Échec mouvement stock pour produit ${item.product.id}:`,
+              movementErr
+            );
           }
-        } catch (movementErr) {
-          console.warn(
-            `Échec mouvement stock pour produit ${item.product.id}:`,
-            movementErr
-          );
         }
       }
       processResult = {

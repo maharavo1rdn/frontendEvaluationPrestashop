@@ -142,8 +142,6 @@ export const postStockMovement = async (mvt) => {
     if (mvt.dateAdd) {
       const fullMovement = await getStockMovementById(created.id);
       if (fullMovement) {
-        console.log(fullMovement);
-
         await updateStockMovement(created.id, {
           ...fullMovement,
           dateAdd: mvt.dateAdd

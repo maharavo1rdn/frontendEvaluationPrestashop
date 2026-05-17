@@ -13,7 +13,7 @@ import {
 import { getAllEnriched } from "../../services/product.service";
 import {
   findStockAvailableByProductAttribute,
-  updateStockAvailable, // ← utilisation de updateStockAvailable
+  updateStockAvailable,
 } from "../../services/stockAvailable.service";
 import { findCombinationsByProductId } from "../../services/combination.service";
 import { findProductOptionValueByKeyValue } from "../../services/productOptionValue.service";
@@ -89,7 +89,10 @@ const StockManagement = () => {
   const [modalProduct, setModalProduct] = useState(null);
   const [modalLoading, setModalLoading] = useState(false);
   const [combosData, setCombosData] = useState([]);
-  const [simpleDelta, setSimpleDelta] = useState(0); // différence saisie
+  const [simpleDelta, setSimpleDelta] = useState(0);
+  const [movementDate, setMovementDate] = useState(
+    new Date().toISOString().split("T")[0]
+  );
   const [saving, setSaving] = useState(false);
   const [saveError, setSaveError] = useState(null);
   const [saveSuccess, setSaveSuccess] = useState(false);
@@ -117,6 +120,7 @@ const StockManagement = () => {
     setSaveError(null);
     setSaveSuccess(false);
     setSimpleDelta(0);
+    setMovementDate(new Date().toISOString().split("T")[0]);
 
     try {
       const combos = await findCombinationsByProductId(product.id).catch(
@@ -151,7 +155,7 @@ const StockManagement = () => {
             combinationId: combo.id,
             label,
             currentQty: stockObj?.quantity ?? 0,
-            stockId: stockObj?.id ?? null, // ← id du stock_available
+            stockId: stockObj?.id ?? null,
             delta: 0,
           });
         }
@@ -181,6 +185,8 @@ const StockManagement = () => {
     setSaveError(null);
     setSaveSuccess(false);
 
+    const dateAdd = new Date(movementDate + "T00:00:00");
+
     try {
       if (combosData.length > 0) {
         for (const item of combosData) {
@@ -201,6 +207,7 @@ const StockManagement = () => {
                 idProductAttribute: item.combinationId,
                 idStock: item.stockId,
                 deltaQuantity: item.delta,
+                dateAdd, // ← date sélectionnée
               });
             } catch (movementErr) {
               console.warn(
@@ -228,6 +235,7 @@ const StockManagement = () => {
               idProductAttribute: 0,
               idStock: modalProduct.stockId,
               deltaQuantity: simpleDelta,
+              dateAdd, // ← date sélectionnée
             });
           } catch (movementErr) {
             console.warn("Échec de l'enregistrement du mouvement", movementErr);
@@ -251,6 +259,7 @@ const StockManagement = () => {
     setModalProduct(null);
     setCombosData([]);
     setSimpleDelta(0);
+    setMovementDate(new Date().toISOString().split("T")[0]);
   };
 
   if (loading) {
@@ -384,6 +393,20 @@ const StockManagement = () => {
                     Mouvement enregistré !
                   </div>
                 )}
+
+                {/* Champ Date du mouvement */}
+                <div className="mb-4">
+                  <label className="block text-sm font-medium text-slate-700 mb-1">
+                    Date du mouvement
+                  </label>
+                  <input
+                    type="date"
+                    value={movementDate}
+                    onChange={(e) => setMovementDate(e.target.value)}
+                    className="w-full h-10 rounded-lg border border-slate-200 px-3 text-sm"
+                  />
+                </div>
+
                 <div className="space-y-5">
                   {combosData.length === 0 ? (
                     <div>
