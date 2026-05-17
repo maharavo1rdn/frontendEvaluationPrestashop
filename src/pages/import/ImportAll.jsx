@@ -144,7 +144,10 @@ export default function ImportAll() {
 
           validation.errors.forEach((error) => {
             const line = error.line ? ` ligne ${error.line}` : "";
-            pushLog("error", `[Validation] ${error.file}${line} — ${error.message}`);
+            pushLog(
+              "error",
+              `[Validation] ${error.file}${line} — ${error.message}`
+            );
           });
           pushLog(
             "error",
@@ -168,6 +171,9 @@ export default function ImportAll() {
         return;
       }
     }
+
+    let resetPromise = null;
+    let importAborted = false;
 
     for (const step of STEPS) {
       const file = selectedFiles[step.key];
@@ -195,10 +201,22 @@ export default function ImportAll() {
                 rowResult.reference ||
                 rowResult.productReference ||
                 `ligne ${done}`;
-              // en cas de règle métier
-              // if (!rowResult.success) {
-              //     resetAllTables();
-              // }
+
+              if (!rowResult.success) {
+                pushLog("error", `Erreur lors de l'import: ${rowResult.error}`);
+                if (!resetPromise) {
+                  pushLog("info", "Réinitialisation en cours...");
+                  resetPromise = resetAllTables().then(() => {
+                    pushLog(
+                      "info",
+                      "═══════════ Base de données réinitialisée ═══════════"
+                    );
+                  });
+                }
+                importAborted = true;
+                throw new Error("AbortImport");
+              }
+
               pushLog(
                 rowResult.success ? "success" : "error",
                 `[${step.label}] ${rowResult.success ? "✓" : "✗"} ${name}${
@@ -215,8 +233,13 @@ export default function ImportAll() {
           `[${step.label}] Terminé — ${result.success.length} succès, ${result.errors.length} erreur(s).`
         );
       } catch (err) {
-        setStatus(step.key, { status: STATUS.error });
-        pushLog("error", `[${step.label}] Échec — ${err.message}`);
+        if (importAborted) {
+          if (resetPromise) await resetPromise;
+          break;
+        } else {
+          setStatus(step.key, { status: STATUS.error });
+          pushLog("error", `[${step.label}] Échec — ${err.message}`);
+        }
       }
     }
 

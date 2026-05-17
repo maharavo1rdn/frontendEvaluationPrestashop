@@ -9,6 +9,7 @@ import {
 import { findTaxRulesByGroupId, postTaxRule } from "../taxRule.service";
 import { parseCSVFile } from "./csv.service";
 import { parseDate, parseNumber, parsePercentage } from "../../utils/utils";
+import { findProductByKeyValue } from "../product.service";
 
 const parseOptionalNumber = (value) =>
   value === undefined || value === null || String(value).trim() === ""
@@ -113,6 +114,9 @@ export const mapRowToProduct = async (row) => {
   if (!name) {
     throw new Error("Nom de produit manquant");
   }
+  const existing = await findProductByKeyValue("reference", row.reference);
+  if (existing && existing.length > 0)
+    throw new Error("Produit avec le même référence existant");
 
   const categoryName = row.categorie?.trim();
   const categoryId = await ensureCategoryId(categoryName);
@@ -187,8 +191,8 @@ export const importProductsFromCSV = async (file, onProgress) => {
     let result = null;
     try {
       const product = await mapRowToProduct(row);
-        result = await postProduct(product);
-        result.success ? successes.push(result) : errors.push(result);
+      result = await postProduct(product);
+      result.success ? successes.push(result) : errors.push(result);
     } catch (error) {
       const fallbackName = row.nom?.trim() || `Ligne ${i + 1}`;
       result = { success: false, name: fallbackName, error: error.message };
