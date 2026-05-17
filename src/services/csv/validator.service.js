@@ -51,6 +51,13 @@ const REQUIRED_COLUMNS = {
   orders: FILE_SCHEMAS.orders.requiredColumns,
 };
 
+const REQUIRED_STATES = [
+  "",
+  "paiement accepté",
+  "dans le panier",
+  "erreur de paiement",
+];
+
 const validateColumns = (rows, requiredCols, fileLabel) => {
   const errors = [];
   if (!rows.length) {
