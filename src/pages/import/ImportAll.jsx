@@ -201,8 +201,8 @@ export default function ImportAll() {
               // en cas de règle métier
               if (!rowResult.success) {
                 pushLog("error", `Erreur lors de l'import: ${rowResult.error}`)
-                await resetAllTables();
-                pushLog("info", "═══════════ Base de données réinitialisé ═══════════")
+                resetAllTables();
+                pushLog("info", "═══════════ Base de données réinitialisée ═══════════")
                 return;
               }
               pushLog(

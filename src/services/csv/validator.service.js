@@ -252,6 +252,14 @@ const parseAchatColumn = (raw) => {
 
 const isValidAchatFormat = (raw) => ACHAT_FORMAT_REGEX.test(String(raw).trim());
 
+const validateEtatorder = (raw) => {
+  if (raw === undefined || raw === null) return false;
+  const normalized = String(raw).trim().toLowerCase();
+  return REQUIRED_STATES.some(
+    (state) => String(state).trim().toLowerCase() === normalized
+  );
+};
+
 const validateOrdersFile = (rows) => {
   const errors = [];
   const fileLabel = "Clients et achats";
@@ -272,6 +280,15 @@ const validateOrdersFile = (rows) => {
         file: fileLabel,
         line,
         message: `Date invalide (attendu DD/MM/YYYY) : "${row.date}".`,
+      });
+    }
+    if (!validateEtatorder(row.etat)) {
+      errors.push({
+        file: fileLabel,
+        line,
+        message: `État de commande invalide : "${
+          row.etat
+        }". États autorisés : ${REQUIRED_STATES.join(", ") || "(vide)"}.`,
       });
     }
     if (!row.achat?.trim()) {
