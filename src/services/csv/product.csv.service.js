@@ -31,6 +31,8 @@ const ensureCategoryId = async (categoryName) => {
   });
 
   if (!created.success) {
+    const retry = await findCategoryByKeyValue("name", categoryName);
+    if (retry.length > 0) return Number(retry[0].id);
     throw new Error(`Impossible de creer la categorie "${categoryName}"`);
   }
 
@@ -57,9 +59,14 @@ const ensureTaxRulesGroupId = async (taxRate) => {
       active: true,
     });
     if (!createdTax.success) {
-      throw new Error(`Impossible de creer la taxe "${taxName}"`);
+      const retryTaxes = await findTaxByKeyValue("rate", taxRate);
+      taxId = retryTaxes[0]?.id;
+      if (!taxId) {
+        throw new Error(`Impossible de creer la taxe "${taxName}"`);
+      }
+    } else {
+      taxId = createdTax.id;
     }
-    taxId = createdTax.id;
   }
 
   if (!taxId) {
@@ -74,9 +81,16 @@ const ensureTaxRulesGroupId = async (taxRate) => {
       active: true,
     });
     if (!createdGroup.success) {
-      throw new Error(`Impossible de creer le groupe de taxe "${taxName}"`);
+      const retryGroups = await findTaxRulesGroupByKeyValue("name", taxName);
+      groupId = retryGroups[0]?.id;
+      if (!groupId) {
+        throw new Error(
+          `Impossible de creer le groupe de taxe "${taxName}"`
+        );
+      }
+    } else {
+      groupId = createdGroup.id;
     }
-    groupId = createdGroup.id;
   }
 
   if (!groupId) {
@@ -98,7 +112,15 @@ const ensureTaxRulesGroupId = async (taxRate) => {
       description: taxName,
     });
     if (!createdRule.success) {
-      throw new Error(`Impossible de creer la regle de taxe "${taxName}"`);
+      const retryRules = await findTaxRulesByGroupId(groupId);
+      const retryHasRule = retryRules.some(
+        (rule) => String(rule.taxId) === String(taxId)
+      );
+      if (!retryHasRule) {
+        throw new Error(
+          `Impossible de creer la regle de taxe "${taxName}"`
+        );
+      }
     }
   }
 
@@ -109,17 +131,33 @@ const ensureTaxRulesGroupId = async (taxRate) => {
  * @param {Object} row - Ligne parsée par PapaParse
  * @returns {Object}
  */
-export const mapRowToProduct = async (row) => {
+export const mapRowToProduct = async (row, caches) => {
   const name = row.nom?.trim();
   if (!name) {
     throw new Error("Nom de produit manquant");
   }
-  const existing = await findProductByKeyValue("reference", row.reference);
-  if (existing && existing.length > 0)
-    throw new Error("Produit avec le même référence existant");
+  const reference = row.reference?.trim() || "";
+  if (reference) {
+    const cachedExists = caches?.productExistsByRef?.get(reference);
+    if (cachedExists === true) {
+      throw new Error("Produit avec le même référence existant");
+    }
+    if (cachedExists === undefined) {
+      const existing = await findProductByKeyValue("reference", reference);
+      const exists = Boolean(existing && existing.length > 0);
+      caches?.productExistsByRef?.set(reference, exists);
+      if (exists) {
+        throw new Error("Produit avec le même référence existant");
+      }
+    }
+  }
 
   const categoryName = row.categorie?.trim();
-  const categoryId = await ensureCategoryId(categoryName);
+  let categoryId = caches?.categoryIdByName?.get(categoryName || "");
+  if (!categoryId) {
+    categoryId = await ensureCategoryId(categoryName);
+    caches?.categoryIdByName?.set(categoryName || "", categoryId);
+  }
 
   const manufacturerName = row.manufacturer_name?.trim();
   const manufacturers = manufacturerName
@@ -130,7 +168,12 @@ export const mapRowToProduct = async (row) => {
 
   const rawTax = row.Taxe ?? row.taxe;
   const taxRate = rawTax === undefined ? undefined : parsePercentage(rawTax);
-  const taxRulesGroupId = await ensureTaxRulesGroupId(taxRate);
+  const taxKey = taxRate === undefined ? "__none__" : String(taxRate);
+  let taxRulesGroupId = caches?.taxGroupIdByRate?.get(taxKey);
+  if (!taxRulesGroupId) {
+    taxRulesGroupId = await ensureTaxRulesGroupId(taxRate);
+    caches?.taxGroupIdByRate?.set(taxKey, taxRulesGroupId);
+  }
 
   const priceTtcRaw = row.prix_ttc;
   const priceHtRaw = row.prix_ht;
@@ -149,7 +192,7 @@ export const mapRowToProduct = async (row) => {
 
   return {
     name,
-    reference: row.reference?.trim() || "",
+    reference,
     price: Number.isFinite(priceHt) ? priceHt : undefined,
     wholesalePrice: purchasePrice,
     active: row.active !== "0",
@@ -185,21 +228,40 @@ export const importProductsFromCSV = async (file, onProgress) => {
   const total = rows.length;
   const successes = [];
   const errors = [];
+  const batchSize = 10;
+  let processedCount = 0;
+  const caches = {
+    productExistsByRef: new Map(),
+    categoryIdByName: new Map(),
+    taxGroupIdByRate: new Map(),
+  };
 
-  for (let i = 0; i < rows.length; i++) {
-    const row = rows[i];
-    let result = null;
+  const handleRow = async (row, index) => {
     try {
-      const product = await mapRowToProduct(row);
-      result = await postProduct(product);
-      result.success ? successes.push(result) : errors.push(result);
+      const product = await mapRowToProduct(row, caches);
+      const result = await postProduct(product);
+      if (result?.success && product.reference) {
+        caches.productExistsByRef.set(product.reference, true);
+      }
+      return result;
     } catch (error) {
-      const fallbackName = row.nom?.trim() || `Ligne ${i + 1}`;
-      result = { success: false, name: fallbackName, error: error.message };
-      errors.push(result);
+      const fallbackName = row.nom?.trim() || `Ligne ${index + 1}`;
+      return { success: false, name: fallbackName, error: error.message };
     }
+  };
 
-    onProgress?.({ done: i + 1, total, result });
+  for (let i = 0; i < rows.length; i += batchSize) {
+    const batch = rows.slice(i, i + batchSize);
+    const batchPromises = batch.map((row, idx) =>
+      handleRow(row, i + idx).then((result) => {
+        result.success ? successes.push(result) : errors.push(result);
+        processedCount++;
+        onProgress?.({ done: processedCount, total, result });
+        return result;
+      })
+    );
+
+    await Promise.all(batchPromises);
   }
 
   return { success: successes, errors };

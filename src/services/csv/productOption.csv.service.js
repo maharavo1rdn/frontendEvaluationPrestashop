@@ -81,14 +81,21 @@ const computePriceImpact = (priceTtc, taxRate, basePriceHt) => {
  * @param {string} optionName - Nom de l'option (ex: "taille", "couleur")
  * @returns {Promise<{ id: string, name: string }>}
  */
-const ensureProductOption = async (optionName) => {
+const ensureProductOption = async (optionName, cache) => {
   if (!optionName) {
     throw new Error("Nom d'option manquant");
   }
 
+  const cached = cache?.get(optionName);
+  if (cached) {
+    return cached;
+  }
+
   const existing = await findProductOptionByKeyValue("name", optionName);
   if (existing.length > 0) {
-    return { id: existing[0].id, name: existing[0].name };
+    const found = { id: existing[0].id, name: existing[0].name };
+    cache?.set(optionName, found);
+    return found;
   }
 
   const created = await postProductOption({
@@ -100,12 +107,20 @@ const ensureProductOption = async (optionName) => {
   });
 
   if (!created.success) {
+    const retry = await findProductOptionByKeyValue("name", optionName);
+    if (retry.length > 0) {
+      const found = { id: retry[0].id, name: retry[0].name };
+      cache?.set(optionName, found);
+      return found;
+    }
     throw new Error(
       `Impossible de créer l'option "${optionName}": ${created.error}`
     );
   }
 
-  return { id: created.id, name: optionName };
+  const result = { id: created.id, name: optionName };
+  cache?.set(optionName, result);
+  return result;
 };
 
 /**
@@ -113,7 +128,7 @@ const ensureProductOption = async (optionName) => {
  * @param {string} valueName - Nom de la valeur (ex: "ngoza", "kely")
  * @returns {Promise<{ id: string, name: string }>}
  */
-const ensureProductOptionValue = async (valueName, idOption) => {
+const ensureProductOptionValue = async (valueName, idOption, cache) => {
   if (!valueName) {
     throw new Error("Nom de valeur d'option manquant");
   }
@@ -121,9 +136,17 @@ const ensureProductOptionValue = async (valueName, idOption) => {
     throw new Error("Id d'option manquant pour la valeur");
   }
 
+  const cacheKey = `${idOption}::${valueName}`;
+  const cached = cache?.get(cacheKey);
+  if (cached) {
+    return cached;
+  }
+
   const existing = await findProductOptionValueByKeyValue("name", valueName);
   if (existing.length > 0) {
-    return { id: existing[0].id, name: existing[0].name };
+    const found = { id: existing[0].id, name: existing[0].name };
+    cache?.set(cacheKey, found);
+    return found;
   }
 
   const created = await postProductOptionValue({
@@ -133,12 +156,20 @@ const ensureProductOptionValue = async (valueName, idOption) => {
   });
 
   if (!created.success) {
+    const retry = await findProductOptionValueByKeyValue("name", valueName);
+    if (retry.length > 0) {
+      const found = { id: retry[0].id, name: retry[0].name };
+      cache?.set(cacheKey, found);
+      return found;
+    }
     throw new Error(
       `Impossible de créer la valeur d'option "${valueName}": ${created.error}`
     );
   }
 
-  return { id: created.id, name: valueName };
+  const result = { id: created.id, name: valueName };
+  cache?.set(cacheKey, result);
+  return result;
 };
 
 /**
@@ -147,7 +178,7 @@ const ensureProductOptionValue = async (valueName, idOption) => {
  * @param {Object} product - Produit trouvé
  * @returns {Object} Données structurées
  */
-const mapRowToProductOptionData = async (row, product, taxRate) => {
+const mapRowToProductOptionData = async (row, product, taxRate, caches) => {
   const specificity = row.specificité?.trim();
   const value = row.karazany?.trim();
   const initialStock = parseOptionalNumber(row.stock_initial);
@@ -173,8 +204,15 @@ const mapRowToProductOptionData = async (row, product, taxRate) => {
   };
 
   if (result.hasOption) {
-    const option = await ensureProductOption(specificity);
-    const optionValue = await ensureProductOptionValue(value, option.id);
+    const option = await ensureProductOption(
+      specificity,
+      caches?.optionByName
+    );
+    const optionValue = await ensureProductOptionValue(
+      value,
+      option.id,
+      caches?.optionValueByKey
+    );
     result.option = option;
     result.optionValue = optionValue;
     result.attributeIds = [optionValue.id];
@@ -246,26 +284,39 @@ export const importProductOptionsFromCSV = async (file, onProgress) => {
   const total = rows.length;
   const successes = [];
   const errors = [];
-
+  const batchSize = 10;
   let processedCount = 0;
+  const caches = {
+    productByReference: new Map(),
+    optionByName: new Map(),
+    optionValueByKey: new Map(),
+  };
 
-  for (const row of rows) {
+  const handleRow = async (row) => {
     const reference = row.reference?.trim();
-    let processResult = null;
 
     try {
       if (!reference) {
         throw new Error("Référence produit manquante");
       }
 
-      const products = await findProductByKeyValue("reference", reference);
-      if (!products.length) {
-        throw new Error(`Produit avec référence "${reference}" non trouvé`);
+      let product = caches.productByReference.get(reference);
+      if (!product) {
+        const products = await findProductByKeyValue("reference", reference);
+        if (!products.length) {
+          throw new Error(`Produit avec référence "${reference}" non trouvé`);
+        }
+        product = products[0];
+        caches.productByReference.set(reference, product);
       }
-      const product = products[0];
       const taxRate = await getTaxRateByGroupId(product.idTaxRulesGroup);
 
-      const mappedData = await mapRowToProductOptionData(row, product, taxRate);
+      const mappedData = await mapRowToProductOptionData(
+        row,
+        product,
+        taxRate,
+        caches
+      );
 
       let combination = null;
       let stockAvailable = null;
@@ -283,7 +334,6 @@ export const importProductOptionsFromCSV = async (file, onProgress) => {
       const idProductAttribute = combination?.id ?? 0;
       let updatedStock = null;
       if (mappedData.stock !== undefined && mappedData.stock !== null) {
-
         let existingStocks = await findStockAvailableByProductAttribute(
           product.id,
           idProductAttribute
@@ -339,7 +389,7 @@ export const importProductOptionsFromCSV = async (file, onProgress) => {
         }
       }
 
-      processResult = {
+      return {
         success: true,
         productReference: reference,
         productId: product.id,
@@ -353,21 +403,31 @@ export const importProductOptionsFromCSV = async (file, onProgress) => {
         combination,
         stockAvailable,
       };
-
-      successes.push(processResult);
     } catch (error) {
-      processResult = {
+      return {
         success: false,
         productReference: row.reference?.trim(),
         optionName: row.specificité?.trim(),
         valueName: row.karazany?.trim(),
         error: error.message,
       };
-      errors.push(processResult);
     }
+  };
 
-    processedCount++;
-    onProgress?.({ done: processedCount, total, result: processResult });
+  for (let i = 0; i < rows.length; i += batchSize) {
+    const batch = rows.slice(i, i + batchSize);
+    const batchPromises = batch.map((row) =>
+      handleRow(row).then((processResult) => {
+        processResult.success
+          ? successes.push(processResult)
+          : errors.push(processResult);
+        processedCount++;
+        onProgress?.({ done: processedCount, total, result: processResult });
+        return processResult;
+      })
+    );
+
+    await Promise.all(batchPromises);
   }
 
   return { success: successes, errors };

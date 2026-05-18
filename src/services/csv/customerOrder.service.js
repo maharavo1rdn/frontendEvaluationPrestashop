@@ -137,16 +137,25 @@ const getTaxRateByGroupId = async (groupId) => {
 
 const normalizeIds = (ids) => ids.map((id) => String(id)).sort();
 
-const findCombinationByValueName = async (productId, valueName) => {
-  const optionValues = await findProductOptionValueByKeyValue(
-    "name",
-    valueName
-  );
-  if (!optionValues.length)
-    throw new Error(`Valeur d'attribut "${valueName}" introuvable`);
+const findCombinationByValueName = async (productId, valueName, caches) => {
+  let optionValue = caches?.optionValueByName?.get(valueName);
+  if (!optionValue) {
+    const optionValues = await findProductOptionValueByKeyValue(
+      "name",
+      valueName
+    );
+    if (!optionValues.length)
+      throw new Error(`Valeur d'attribut "${valueName}" introuvable`);
+    optionValue = optionValues[0];
+    caches?.optionValueByName?.set(valueName, optionValue);
+  }
 
-  const targetId = String(optionValues[0].id);
-  const combinations = await findCombinationsByProductId(productId);
+  const targetId = String(optionValue.id);
+  let combinations = caches?.combinationsByProductId?.get(productId);
+  if (!combinations) {
+    combinations = await findCombinationsByProductId(productId);
+    caches?.combinationsByProductId?.set(productId, combinations);
+  }
   const combination = combinations.find((c) =>
     normalizeIds(c?.associations?.productOptionValues ?? []).includes(targetId)
   );
@@ -159,21 +168,31 @@ const findCombinationByValueName = async (productId, valueName) => {
   return combination;
 };
 
-const resolveAchatItems = async (items) => {
+const resolveAchatItems = async (items, caches) => {
   const resolved = [];
 
   for (const item of items) {
-    const products = await findProductByKeyValue("reference", item.reference);
-    if (!products.length)
-      throw new Error(`Produit "${item.reference}" introuvable`);
-
-    const product = products[0];
+    let product = caches?.productByReference?.get(item.reference);
+    if (!product) {
+      const products = await findProductByKeyValue(
+        "reference",
+        item.reference
+      );
+      if (!products.length)
+        throw new Error(`Produit "${item.reference}" introuvable`);
+      product = products[0];
+      caches?.productByReference?.set(item.reference, product);
+    }
     const taxRate = await getTaxRateByGroupId(product.idTaxRulesGroup);
     let combination = null;
     let unitPriceHt = Number(product.price) || 0;
 
     if (item.karazany) {
-      combination = await findCombinationByValueName(product.id, item.karazany);
+      combination = await findCombinationByValueName(
+        product.id,
+        item.karazany,
+        caches
+      );
       unitPriceHt += Number(combination.price) || 0;
     }
 
@@ -222,9 +241,15 @@ const computeOrderTotals = (resolvedItems) => {
 
 // ─── Find or create ───────────────────────────────────────────────────────────
 
-const ensureCustomer = async (row) => {
+const ensureCustomer = async (row, caches) => {
+  const cached = caches?.customerByEmail?.get(row.email);
+  if (cached) return cached;
+
   const existing = await findCustomerByKeyValue("email", row.email);
-  if (existing.length > 0) return existing[0];
+  if (existing.length > 0) {
+    caches?.customerByEmail?.set(row.email, existing[0]);
+    return existing[0];
+  }
 
   const { firstname, lastname } = parseName(row.nom);
   const created = await postCustomer({
@@ -234,26 +259,47 @@ const ensureCustomer = async (row) => {
     passwd: row.pwd,
     active: true,
   });
-  if (!created.success)
+  if (!created.success) {
+    const retryExisting = await findCustomerByKeyValue("email", row.email);
+    if (retryExisting.length > 0) {
+      caches?.customerByEmail?.set(row.email, retryExisting[0]);
+      return retryExisting[0];
+    }
     throw new Error(
       `Impossible de créer le client "${row.email}": ${created.error}`
     );
+  }
 
   let secureKey = created.secureKey;
   if (!secureKey && created.id) {
     const retry = await findCustomerByKeyValue("id", created.id);
     secureKey = retry[0]?.secureKey;
   }
-  return { id: created.id, firstname, lastname, email: row.email, secureKey };
+  const customer = {
+    id: created.id,
+    firstname,
+    lastname,
+    email: row.email,
+    secureKey,
+  };
+  caches?.customerByEmail?.set(row.email, customer);
+  return customer;
 };
 
-const ensureAddress = async (customerId, row) => {
+const ensureAddress = async (customerId, row, caches) => {
+  const addressKey = `${customerId}::${row.adresse?.trim().toLowerCase()}`;
+  const cached = caches?.addressByKey?.get(addressKey);
+  if (cached) return cached;
+
   const all = await findAddressByKeyValue("id_customer", customerId);
   const existing = all.find(
     (a) =>
       a.address1?.trim().toLowerCase() === row.adresse?.trim().toLowerCase()
   );
-  if (existing) return existing;
+  if (existing) {
+    caches?.addressByKey?.set(addressKey, existing);
+    return existing;
+  }
 
   const { firstname, lastname } = parseName(row.nom);
   const created = await postAddress({
@@ -266,11 +312,23 @@ const ensureAddress = async (customerId, row) => {
     address1: row.adresse,
     city: row.adresse,
   });
-  if (!created.success)
+  if (!created.success) {
+    const retryAll = await findAddressByKeyValue("id_customer", customerId);
+    const retryExisting = retryAll.find(
+      (a) =>
+        a.address1?.trim().toLowerCase() === row.adresse?.trim().toLowerCase()
+    );
+    if (retryExisting) {
+      caches?.addressByKey?.set(addressKey, retryExisting);
+      return retryExisting;
+    }
     throw new Error(
       `Impossible de créer l'adresse "${row.adresse}": ${created.error}`
     );
-  return { id: created.id };
+  }
+  const address = { id: created.id };
+  caches?.addressByKey?.set(addressKey, address);
+  return address;
 };
 
 const createCart = async (customerId, addressId, resolvedItems, dateAdd) => {
@@ -391,11 +449,18 @@ export const importOrdersFromCSV = async (file, onProgress) => {
   const total = rows.length;
   const successes = [];
   const errors = [];
+  const batchSize = 10;
   let processedCount = 0;
+  const caches = {
+    customerByEmail: new Map(),
+    addressByKey: new Map(),
+    productByReference: new Map(),
+    optionValueByName: new Map(),
+    combinationsByProductId: new Map(),
+  };
 
-  for (const row of rows) {
+  const handleRow = async (row) => {
     const email = row.email?.trim();
-    let processResult = null;
 
     try {
       if (!email) throw new Error("Email manquant");
@@ -409,12 +474,12 @@ export const importOrdersFromCSV = async (file, onProgress) => {
       const dateAdd = parseDateTime(row.date);
 
       // 1. Résolution et Totaux
-      const resolvedItems = await resolveAchatItems(achatItems);
+      const resolvedItems = await resolveAchatItems(achatItems, caches);
       const totals = computeOrderTotals(resolvedItems);
 
       // 2. Client & Adresse
-      const customer = await ensureCustomer(row);
-      const address = await ensureAddress(customer.id, row);
+      const customer = await ensureCustomer(row, caches);
+      const address = await ensureAddress(customer.id, row, caches);
 
       // 3. Panier
       const cart = await createCart(
@@ -427,19 +492,13 @@ export const importOrdersFromCSV = async (file, onProgress) => {
       const etatRaw = (row.etat || "").toLowerCase().trim();
 
       if (!etatRaw || etatRaw.includes("dans le panier")) {
-        processResult = {
+        return {
           success: true,
           email,
           cartId: cart.id,
           status: "Panier créé (pas de commande)",
           totals,
         };
-        successes.push(processResult);
-
-        // TRÈS IMPORTANT : On s'arrête ici pour cette ligne
-        processedCount++;
-        onProgress?.({ done: processedCount, total, result: processResult });
-        continue;
       }
 
       // 4. Commande
@@ -469,7 +528,6 @@ export const importOrdersFromCSV = async (file, onProgress) => {
             idEmployee: 1,
             dateAdd,
           });
-          
         } catch (movementErr) {
           console.warn(
             `Échec du postOrderTransition (statut livré):`,
@@ -477,7 +535,8 @@ export const importOrdersFromCSV = async (file, onProgress) => {
           );
         }
       }
-      processResult = {
+
+      return {
         success: true,
         email,
         orderId: order.id,
@@ -485,19 +544,29 @@ export const importOrdersFromCSV = async (file, onProgress) => {
         idOrderState: idOrderStateFinal,
         totals,
       };
-
-      successes.push(processResult);
     } catch (error) {
-      processResult = {
+      return {
         success: false,
         email,
         error: error.message,
       };
-      errors.push(processResult);
     }
+  };
 
-    processedCount++;
-    onProgress?.({ done: processedCount, total, result: processResult });
+  for (let i = 0; i < rows.length; i += batchSize) {
+    const batch = rows.slice(i, i + batchSize);
+    const batchPromises = batch.map((row) =>
+      handleRow(row).then((processResult) => {
+        processResult.success
+          ? successes.push(processResult)
+          : errors.push(processResult);
+        processedCount++;
+        onProgress?.({ done: processedCount, total, result: processResult });
+        return processResult;
+      })
+    );
+
+    await Promise.all(batchPromises);
   }
 
   return { success: successes, errors };
