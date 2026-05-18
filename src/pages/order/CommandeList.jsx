@@ -8,7 +8,32 @@ import {
   getTaxRateForGroup,
   computeCombinationPrice,
 } from "../../services/frontoffice/pricing.service";
-import { Box, Loader2, Package, CalendarRange, Search, X } from "lucide-react";
+import {
+  Box,
+  Loader2,
+  Package,
+  CalendarRange,
+  Search,
+  X,
+  Check,
+} from "lucide-react";
+import { createStockAdjustmentMovement } from "../../services/stockMovement.service";
+import { postOrderTransition } from "../../services/stockTransition.service";
+
+// ─── Constantes pour les états ──────────────────────────────────────────────
+const STATE_LABELS = {
+  1: "En attente",
+  2: "Paiement accepté",
+  3: "En cours de préparation",
+  4: "Expédié",
+  5: "Livré",
+  6: "Annulé",
+  7: "Remboursé",
+  8: "Erreur de paiement",
+  9: "En attente de virement",
+  10: "En attente de virement",
+  11: "Paiement accepté",
+};
 
 const CommandeList = () => {
   const [allOrders, setAllOrders] = useState([]);
@@ -23,7 +48,49 @@ const CommandeList = () => {
   const [appliedFrom, setAppliedFrom] = useState("");
   const [appliedTo, setAppliedTo] = useState("");
 
-  // ── Chargement initial une seule fois ──
+  const [modalOpen, setModalOpen] = useState(false);
+  const [modalData, setModalData] = useState({
+    orderId: null,
+    targetState: null,
+    targetLabel: "",
+  });
+  const [transitionDate, setTransitionDate] = useState(
+    () => new Date().toISOString().slice(0, 16)
+  );
+  const [saving, setSaving] = useState(false);
+
+  const openTransitionModal = (orderId, targetState, targetLabel) => {
+    setModalData({ orderId, targetState, targetLabel });
+    setTransitionDate(new Date().toISOString().slice(0, 16));
+    setModalOpen(true);
+  };
+
+  const closeModal = () => {
+    setModalOpen(false);
+    setModalData({ orderId: null, targetState: null, targetLabel: "" });
+  };
+
+  const confirmTransition = async () => {
+    setSaving(true);
+    setStatus("");
+    try {
+      await postOrderTransition({
+        idOrder: modalData.orderId,
+        idOrderState: modalData.targetState,
+        idEmployee: 1,
+        dateAdd: transitionDate.replace("T", " ") + ":00",
+      });
+      setStatus("État mis à jour avec succès !");
+      await fetchOrders();
+    } catch (err) {
+      setStatus(err.message);
+    } finally {
+      setSaving(false);
+      closeModal();
+    }
+  };
+
+  // ── Chargement initial ─────────────────────────────────────────────────────
   const fetchOrders = async () => {
     setOrdersLoading(true);
     setError(null);
@@ -109,7 +176,7 @@ const CommandeList = () => {
     fetchUnorderedCarts();
   }, []);
 
-  // ── Filtrage purement JS, aucune requête ──
+  // ── Filtrage ──────────────────────────────────────────────────────────────
   const isInRange = (dateStr, from, to) => {
     if (!from && !to) return true;
     if (!dateStr) return true;
@@ -139,18 +206,6 @@ const CommandeList = () => {
     setDateTo("");
     setAppliedFrom("");
     setAppliedTo("");
-  };
-
-  const handleUpdateState = async (idOrder, idOrderState) => {
-    try {
-      setStatus("Mise à jour de l'état...");
-      await postOrderHistory({ idOrder, idOrderState });
-      setStatus("État mis à jour avec succès !");
-      // Juste un re-fetch des commandes, le filtre JS se ré-applique automatiquement
-      await fetchOrders();
-    } catch (err) {
-      setStatus(err.message);
-    }
   };
 
   const isFiltered = appliedFrom || appliedTo;
@@ -392,24 +447,57 @@ const CommandeList = () => {
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap">
                         <span className="px-3 py-1 inline-flex text-xs leading-5 font-semibold rounded-full bg-blue-100 text-blue-800">
-                          {order.current_state_label || order.currentState}
+                          {order.current_state_label ||
+                            STATE_LABELS[order.currentState] ||
+                            order.currentState}
                         </span>
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm font-medium space-x-2">
-                        {order.currentState != 11 && (
-                          <button
-                            onClick={() => handleUpdateState(order.id, 11)}
-                            className="inline-flex items-center px-3 py-1.5 border border-transparent text-xs font-medium rounded shadow-sm text-white bg-green-600 hover:bg-green-700"
-                          >
-                            Paiement effectué
-                          </button>
+                        {/* ── Actions conditionnelles ── */}
+                        {order.currentState == 11 ? (
+                          <>
+                            <button
+                              onClick={() =>
+                                openTransitionModal(order.id, 5, "Livrer")
+                              }
+                              className="inline-flex items-center px-3 py-1.5 border border-transparent text-xs font-medium rounded shadow-sm text-white bg-blue-600 hover:bg-blue-700"
+                            >
+                              Livrer
+                            </button>
+                            <button
+                              onClick={() =>
+                                openTransitionModal(order.id, 6, "Annuler")
+                              }
+                              className="inline-flex items-center px-3 py-1.5 border border-transparent text-xs font-medium rounded shadow-sm text-white bg-red-600 hover:bg-red-700"
+                            >
+                              Annuler
+                            </button>
+                          </>
+                        ) : order.currentState == 5 ||
+                          order.currentState == 6 ? null : (
+                          <>
+                            <button
+                              onClick={() =>
+                                openTransitionModal(
+                                  order.id,
+                                  11,
+                                  "Paiement accepté"
+                                )
+                              }
+                              className="inline-flex items-center px-3 py-1.5 border border-transparent text-xs font-medium rounded shadow-sm text-white bg-green-600 hover:bg-green-700"
+                            >
+                              Paiement accepté
+                            </button>
+                            <button
+                              onClick={() =>
+                                openTransitionModal(order.id, 6, "Annuler")
+                              }
+                              className="inline-flex items-center px-3 py-1.5 border border-transparent text-xs font-medium rounded shadow-sm text-white bg-red-600 hover:bg-red-700"
+                            >
+                              Annuler
+                            </button>
+                          </>
                         )}
-                        <button
-                          onClick={() => handleUpdateState(order.id, 6)}
-                          className="inline-flex items-center px-3 py-1.5 border border-transparent text-xs font-medium rounded shadow-sm text-white bg-red-600 hover:bg-red-700"
-                        >
-                          Annuler
-                        </button>
                       </td>
                     </tr>
                   ))
@@ -429,6 +517,58 @@ const CommandeList = () => {
             </table>
           </div>
         </section>
+      )}
+
+      {/* ── Modale de transition ── */}
+      {modalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
+          <div className="bg-white w-full max-w-md rounded-xl shadow-lg p-6">
+            <div className="flex items-center justify-between mb-4">
+              <h2 className="text-lg font-bold text-gray-800">
+                {modalData.targetLabel} — Commande #{modalData.orderId}
+              </h2>
+              <button
+                onClick={closeModal}
+                className="text-gray-400 hover:text-gray-600"
+              >
+                <X size={20} />
+              </button>
+            </div>
+
+            <p className="text-sm text-gray-500 mb-4">
+              Veuillez choisir la date effective de ce changement d'état.
+            </p>
+
+            <div className="mb-4">
+              <label className="block text-xs font-semibold text-gray-600 mb-1">
+                Date de la transition
+              </label>
+              <input
+                type="datetime-local"
+                value={transitionDate}
+                onChange={(e) => setTransitionDate(e.target.value)}
+                className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-sky-400 focus:outline-none"
+              />
+            </div>
+
+            <div className="flex justify-end gap-3 mt-6">
+              <button
+                onClick={closeModal}
+                className="px-4 py-2 text-sm font-medium text-gray-600 bg-gray-100 hover:bg-gray-200 rounded-lg transition-colors"
+              >
+                Annuler
+              </button>
+              <button
+                onClick={confirmTransition}
+                disabled={saving}
+                className="flex items-center gap-2 px-4 py-2 text-sm font-medium text-white bg-sky-600 hover:bg-sky-700 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                {saving && <Loader2 size={14} className="animate-spin" />}
+                {saving ? "Mise à jour..." : "Confirmer"}
+              </button>
+            </div>
+          </div>
+        </div>
       )}
     </div>
   );

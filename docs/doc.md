@@ -35,7 +35,7 @@ Chaque entrée indique la signature, une brève description et le fichier source
 | `getAll()` | `display = "full"` | Tous les stocks disponibles | `services/stockAvailable.service.js` |
 | `getStockAvailableById(id)` | `id: number` | Détail d'un stock par ID | `services/stockAvailable.service.js` |
 | `findStockAvailableByProductAttribute(productId, attributeId)` | `productId: number, attributeId: number` | Cherche le stock d'un produit + déclinaison | `services/stockAvailable.service.js` |
-| `getStockByProductAndAttribute(productId, attributeId)` | `productId: number, attributeId: number` | Récupère le(s) stock(s) parsé(s) pour un produit/attribut | `services/stockAvailable.service.js` |
+| `getStockByProductAndAttribute(productId, attributeId)` | `productId: number, attributeId: number` | Récupère le(s) stock(s) parsé(s) pour un produit/attribut(gestion du cas des URL params) | `services/stockAvailable.service.js` |
 | `postStockAvailable(stock)` | `stock: object` | Crée une entrée de stock | `services/stockAvailable.service.js` |
 | `updateStockAvailable(stock)` | `stock: object` (avec `id`) | Met à jour une entrée de stock | `services/stockAvailable.service.js` |
 | `deleteStockAvailable(id)` | `id: number` | Supprime une entrée de stock | `services/stockAvailable.service.js` |

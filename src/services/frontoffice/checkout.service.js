@@ -190,29 +190,29 @@ const checkoutAsCustomer = async ({ items, customer }) => {
     );
   }
 
-  for (const item of resolvedItems) {
-    try {
-      const stockEntries = await findStockAvailableByProductAttribute(
-        item.product.id,
-        item.combination?.id ?? 0
-      );
-      const stockId = stockEntries?.[0]?.id;
-      if (stockId) {
-        await createStockAdjustmentMovement({
-          idProduct: item.product.id,
-          idProductAttribute: item.combination?.id ?? 0,
-          idStock: stockId,
-          deltaQuantity: -item.quantity,
-          dateAdd: new Date(),
-        });
-      }
-    } catch (movementErr) {
-      console.warn(
-        `Échec mouvement de stock pour le produit ${item.product.id}:`,
-        movementErr
-      );
-    }
-  }
+  // for (const item of resolvedItems) {
+  //   try {
+  //     const stockEntries = await findStockAvailableByProductAttribute(
+  //       item.product.id,
+  //       item.combination?.id ?? 0
+  //     );
+  //     const stockId = stockEntries?.[0]?.id;
+  //     if (stockId) {
+  //       await createStockAdjustmentMovement({
+  //         idProduct: item.product.id,
+  //         idProductAttribute: item.combination?.id ?? 0,
+  //         idStock: stockId,
+  //         deltaQuantity: -item.quantity,
+  //         dateAdd: new Date(),
+  //       });
+  //     }
+  //   } catch (movementErr) {
+  //     console.warn(
+  //       `Échec mouvement de stock pour le produit ${item.product.id}:`,
+  //       movementErr
+  //     );
+  //   }
+  // }
 
   return {
     cartId: cart.psCartId,

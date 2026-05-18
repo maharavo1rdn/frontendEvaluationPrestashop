@@ -56,6 +56,9 @@ const REQUIRED_STATES = [
   "paiement accepté",
   "dans le panier",
   "erreur de paiement",
+  "livré",
+  "annulé",
+
 ];
 
 const validateColumns = (rows, requiredCols, fileLabel) => {

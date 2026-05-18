@@ -24,8 +24,16 @@ import { resetProductOptions } from "../../services/productOption.service";
 import { resetProductOptionValues } from "../../services/productOptionValue.service";
 import { resetStockAvailables } from "../../services/stockAvailable.service";
 import { resetAddresses } from "../../services/address.service";
+import { resetOrderHistories } from "../../services/orderHistory.service";
 
 const RESET_TABLES = [
+  {
+    id: "order-histories",
+    label: "order_history",
+    table: "ps_order_history",
+    description: "Historique paiements",
+    reset: resetOrderHistories,
+  },
   {
     id: "order-payments",
     label: "order_payments",

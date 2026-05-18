@@ -1,5 +1,6 @@
 import {
   Box,
+  ChartArea,
   LayoutDashboard,
   ListRestartIcon,
   LogOut,
@@ -31,17 +32,24 @@ const BACKOFFICE_ITEMS = [
   },
   {
     id: "orders",
-    label: "Orders",
+    label: "Commandes",
     icon: ShoppingCart,
-    children: [
-      { id: "orders-list", label: "Liste", path: "/backOffice/commandes" },
-    ],
+    path: "/backOffice/commandes",
+    // children: [
+    //   { id: "orders-list", label: "Liste", path: "/backOffice/commandes" },
+    // ],
   },
   {
     id: "stocks",
     label: "Stock",
     icon: Box,
     path: "/backOffice/stocks",
+  },
+  {
+    id: "stats-vente",
+    label: "Stats des ventes",
+    icon: ChartArea,
+    path: "/backOffice/stats/ventes",
   },
 ];
 

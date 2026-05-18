@@ -87,33 +87,36 @@ export const getDashboardStats = async () => {
   let globalTotalTTC = 0;
   let paidOrdersTTC = 0;
   let totalWholesaleCost = 0;
-
+  let countOrders = 0;
   for (const order of orders) {
-    const dateKey = order.dateAdd?.split(" ")[0] ?? "Inconnue";
-    const orderTTC = parseFloat(order.totalPaid) || 0;
-    const orderHT = parseFloat(order.totalProducts) || 0;
-    const isPaid = order.valid === true || order.valid === "1";
+    const isValid = order.valid === true || order.valid == 1;
+    if (isValid) {
+      const dateKey = order.dateAdd?.split(" ")[0] ?? "Inconnue";
+      const orderTTC = parseFloat(order.totalPaid) || 0;
+      const orderHT = parseFloat(order.totalProducts) || 0;
 
-    globalTotalOrdered += orderTTC;
-    globalTotalTTC += orderTTC;
-    globalTotalHT += orderHT;
-    if (isPaid) {
+      globalTotalOrdered += orderTTC;
+      globalTotalTTC += orderTTC;
+      globalTotalHT += orderHT;
       globalTotalReceived += orderTTC;
       paidOrdersTTC += orderTTC;
+      if (!dailyStats[dateKey]) {
+        dailyStats[dateKey] = {
+          date: dateKey,
+          count: 0,
+          ordered: 0,
+          received: 0,
+        };
+      }
+      dailyStats[dateKey].count += 1;
+      dailyStats[dateKey].ordered += orderTTC;
+      dailyStats[dateKey].received += isValid ? orderTTC : 0;
+      countOrders++;
     }
-
-    if (!dailyStats[dateKey]) {
-      dailyStats[dateKey] = { date: dateKey, count: 0, ordered: 0, received: 0 };
-    }
-    dailyStats[dateKey].count += 1;
-    dailyStats[dateKey].ordered += orderTTC;
-    dailyStats[dateKey].received += isPaid ? orderTTC : 0;
   }
 
   // 2. Récupérer TOUTES les commandes payées en parallèle
-  const paidOrders = orders.filter(
-    (o) => o.valid === true || o.valid === "1"
-  );
+  const paidOrders = orders.filter((o) => o.valid === true || o.valid == 1);
 
   const wholesaleCosts = await Promise.all(
     paidOrders.map(async (order) => {
@@ -152,7 +155,10 @@ export const getDashboardStats = async () => {
     unorderedCarts.map((cart) => computeCartTotals(cart, cache))
   );
 
-  const unorderedCartsTotalTTC = cartResults.reduce((s, r) => s + r.totalTTC, 0);
+  const unorderedCartsTotalTTC = cartResults.reduce(
+    (s, r) => s + r.totalTTC,
+    0
+  );
   const unorderedCartsTotalHT = cartResults.reduce((s, r) => s + r.totalHT, 0);
 
   const sortedDaily = Object.values(dailyStats).sort(
@@ -162,7 +168,7 @@ export const getDashboardStats = async () => {
   return {
     globalTotalOrdered,
     globalTotalReceived,
-    totalOrdersCount: orders.length,
+    totalOrdersCount: countOrders,
     globalTotalHT,
     globalTotalTTC,
     daily: sortedDaily,
