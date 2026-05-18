@@ -32,7 +32,7 @@ const BACKOFFICE_ITEMS = [
   },
   {
     id: "orders",
-    label: "Orders",
+    label: "Commandes",
     icon: ShoppingCart,
     path: "/backOffice/commandes",
     // children: [
