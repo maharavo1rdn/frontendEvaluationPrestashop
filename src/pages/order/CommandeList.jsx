@@ -146,7 +146,6 @@ const CommandeList = () => {
       setStatus("Mise à jour de l'état...");
       await postOrderHistory({ idOrder, idOrderState });
       setStatus("État mis à jour avec succès !");
-      // Juste un re-fetch des commandes, le filtre JS se ré-applique automatiquement
       await fetchOrders();
     } catch (err) {
       setStatus(err.message);
@@ -396,20 +395,39 @@ const CommandeList = () => {
                         </span>
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm font-medium space-x-2">
-                        {order.currentState != 11 && (
-                          <button
-                            onClick={() => handleUpdateState(order.id, 11)}
-                            className="inline-flex items-center px-3 py-1.5 border border-transparent text-xs font-medium rounded shadow-sm text-white bg-green-600 hover:bg-green-700"
-                          >
-                            Paiement effectué
-                          </button>
+                        {/* ── Actions conditionnelles ── */}
+                        {order.currentState == 11 ? (
+                          <>
+                            <button
+                              onClick={() => handleUpdateState(order.id, 5)}
+                              className="inline-flex items-center px-3 py-1.5 border border-transparent text-xs font-medium rounded shadow-sm text-white bg-blue-600 hover:bg-blue-700"
+                            >
+                              Livrer
+                            </button>
+                            <button
+                              onClick={() => handleUpdateState(order.id, 6)}
+                              className="inline-flex items-center px-3 py-1.5 border border-transparent text-xs font-medium rounded shadow-sm text-white bg-red-600 hover:bg-red-700"
+                            >
+                              Annuler
+                            </button>
+                          </>
+                        ) : order.currentState == 5 ||
+                          order.currentState == 6 ? null : (
+                          <>
+                            <button
+                              onClick={() => handleUpdateState(order.id, 11)}
+                              className="inline-flex items-center px-3 py-1.5 border border-transparent text-xs font-medium rounded shadow-sm text-white bg-green-600 hover:bg-green-700"
+                            >
+                              Paiement accepté
+                            </button>
+                            <button
+                              onClick={() => handleUpdateState(order.id, 6)}
+                              className="inline-flex items-center px-3 py-1.5 border border-transparent text-xs font-medium rounded shadow-sm text-white bg-red-600 hover:bg-red-700"
+                            >
+                              Annuler
+                            </button>
+                          </>
                         )}
-                        <button
-                          onClick={() => handleUpdateState(order.id, 6)}
-                          className="inline-flex items-center px-3 py-1.5 border border-transparent text-xs font-medium rounded shadow-sm text-white bg-red-600 hover:bg-red-700"
-                        >
-                          Annuler
-                        </button>
                       </td>
                     </tr>
                   ))

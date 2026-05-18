@@ -13,6 +13,8 @@ import { findTaxByKeyValue } from "../tax.service";
 import { parseDate as parseCSVDate, parseNumber } from "../../utils/utils";
 import { findStockAvailableByProductAttribute } from "../stockAvailable.service";
 import { createStockAdjustmentMovement } from "../stockMovement.service";
+import { postOrderTransition } from "../stockTransition.service";
+import { parseDate } from "../../utils/utils";
 // ─── Constantes ───────────────────────────────────────────────────────────────
 
 const ORDER_STATE_MAP = {
@@ -30,7 +32,7 @@ const PAYMENT_INFO_MAP = {
   2: { payment: "Virement bancaire", module: "ps_checkpayment" },
   8: { payment: "Paiement à la livraison", module: "ps_cashondelivery" },
   6: { payment: "Virement bancaire", module: "ps_checkpayment" },
-  5: { payment: "Virement bancaire", module: "ps_checkpayment" },
+  5: { payment: "Paiement à la livraison", module: "ps_cashondelivery" },
   4: { payment: "Virement bancaire", module: "ps_checkpayment" },
   3: { payment: "Virement bancaire", module: "ps_checkpayment" },
   10: { payment: "Virement bancaire", module: "ps_checkpayment" },
@@ -459,31 +461,20 @@ export const importOrdersFromCSV = async (file, onProgress) => {
       // 5. Paiement manuel DÉSACTIVÉ :
       // Le webservice génère tout seul le paiement lors du changement d'historique.
       // await createOrderPayment({ ... });
-      await createOrderHistory(order.id, idOrderStateFinal, dateAdd);
-      // 6. Stock
-      if (idOrderStateFinal == 11) {
-        for (const item of resolvedItems) {
-          try {
-            const stockEntries = await findStockAvailableByProductAttribute(
-              item.product.id,
-              item.combination?.id ?? 0
-            );
-            const stockId = stockEntries?.[0]?.id;
-            if (stockId) {
-              await createStockAdjustmentMovement({
-                idProduct: item.product.id,
-                idProductAttribute: item.combination?.id ?? 0,
-                idStock: stockId,
-                deltaQuantity: -item.quantity,
-                dateAdd,
-              });
-            }
-          } catch (movementErr) {
-            console.warn(
-              `Échec mouvement stock pour produit ${item.product.id}:`,
-              movementErr
-            );
-          }
+      if (idOrderStateFinal == 5) {
+        try {
+          await postOrderTransition({
+            idOrder: fullOrder.id || order.id,
+            idOrderState: idOrderStateFinal,
+            idEmployee: 1,
+            dateAdd,
+          });
+          
+        } catch (movementErr) {
+          console.warn(
+            `Échec du postOrderTransition (statut livré):`,
+            movementErr.message
+          );
         }
       }
       processResult = {

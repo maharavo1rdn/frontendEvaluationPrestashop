@@ -12,6 +12,7 @@ import Dashboard from "../pages/dashboard/Dashboard";
 import { EmployeeProtectedRoute } from "../pages/auth/EmployeeProtectedRoute";
 import { CustomerProtectedRoute } from "../pages/auth/CustomerProtectedRoute";
 import StockRoutes from "./stock/StockRoutes";
+import StatsRoutes from "./stats/StatsRoutes";
 
 export default function AppRoutes() {
   return (
@@ -50,6 +51,7 @@ export default function AppRoutes() {
       <CommandesRoutes />
       <ImportRoutes />
       <StockRoutes />
+      <StatsRoutes />
     </>
   );
 }
