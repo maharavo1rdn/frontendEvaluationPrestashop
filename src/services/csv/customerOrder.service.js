@@ -461,7 +461,7 @@ export const importOrdersFromCSV = async (file, onProgress) => {
       // 5. Paiement manuel DÉSACTIVÉ :
       // Le webservice génère tout seul le paiement lors du changement d'historique.
       // await createOrderPayment({ ... });
-      if (idOrderStateFinal == 5) {
+      if (idOrderStateFinal == 5 || idOrderStateFinal == 6) {
         try {
           await postOrderTransition({
             idOrder: fullOrder.id || order.id,
