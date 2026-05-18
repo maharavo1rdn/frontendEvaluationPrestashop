@@ -1,11 +1,7 @@
-import { useEffect, useState, useMemo } from "react";
+import { useEffect, useState } from "react";
 import { getAll as getAllOrders } from "../../services/order.service";
 import { getAll as getAllCategories } from "../../services/category.service";
-import {
-  getAllEnriched as getAllProducts,
-  getProductById,
-} from "../../services/product.service";
-import { getUnorderedCarts } from "../../services/cart.service";
+import { getAllEnriched as getAllProducts } from "../../services/product.service";
 import {
   Loader2,
   TrendingUp,
@@ -14,6 +10,8 @@ import {
   Package,
   AlertCircle,
 } from "lucide-react";
+import { findStockAvailableByProductAttribute } from "../../services/stockAvailable.service";
+import { findStockMovementsByStockAvailables } from "../../services/stockMovement.service";
 
 const StatsVentes = () => {
   const [loading, setLoading] = useState(true);
@@ -26,130 +24,156 @@ const StatsVentes = () => {
       setLoading(true);
       setError(null);
       try {
-        // 1. Charger toutes les catégories
+        // 1. Catégories
         const categories = await getAllCategories();
         const categoryMap = Object.fromEntries(
           categories.map((cat) => [cat.id, cat.name])
         );
 
-        // 2. Charger commandes avec lignes (pour ventes)
+        // 2. Commandes + tous les produits
         const orders = await getAllOrders();
-
-        // 3. Récupérer les IDs produits vendus
-        const productIdsSold = new Set();
-        for (const order of orders) {
-          for (const row of order.associations?.orderRows ?? []) {
-            if (row.productId) productIdsSold.add(String(row.productId));
-          }
-        }
-
-        // 4. Charger tous les produits
         const allProducts = await getAllProducts();
         const productMap = Object.fromEntries(
           allProducts.map((p) => [String(p.id), p])
         );
-        // console.log(productMap);
 
-        // 5. Calculer ventes/achats par catégorie (comme avant)
-        const catStats = {};
-        let totalVentes = 0;
-        let totalAchats = 0;
-        for (const order of orders) {
-          if (order.valid == 1) {
-            const rows = order.associations?.orderRows ?? [];
-            for (const row of rows) {
-              const productId = String(row.productId);
-              const product = productMap[productId];
-              if (!product) continue;
-              const qty = Number(row.productQuantity) || 0;
-              const venteUnitaire = parseFloat(row.unitPriceTaxExcl || 0);
-              const achatUnitaire = product.wholesalePrice || 0;
-              const venteHT = venteUnitaire * qty;
-              const achatTotal = achatUnitaire * qty;
-              const catId = product.idCategoryDefault;
-              if (!catId) continue;
-              if (!catStats[catId]) catStats[catId] = { ventes: 0, achats: 0 };
-              catStats[catId].ventes += venteHT;
-              catStats[catId].achats += achatTotal;
-              totalVentes += venteHT;
-              totalAchats += achatTotal;
-            }
-          }
-        }
+        const achatsByCategory = {};
 
-        // const unorderedCarts = await getUnorderedCarts();
-        const reservedByProduct = {};
-        // for (const cart of unorderedCarts) {
-        //   const rows = cart.associations?.cartRows ?? [];
-        //   for (const row of rows) {
-        //     const productId = String(row.idProduct);
-        //     const qty = Number(row.quantity) || 0;
-        //     reservedByProduct[productId] =
-        //       (reservedByProduct[productId] || 0) + qty;
-        //   }
-        // }
-
-        const physicalByCategory = {};
-        for (const order of orders) {
-          if ([5, 6].includes(Number(order.currentState))) continue;
-          const rows = order.associations?.orderRows ?? [];
-          for (const row of rows) {
-            const productId = String(row.productId);
-            const product = await getProductById(productId);
-            const qty = Number(row.productQuantity) || 0;
-            reservedByProduct[productId] =
-              (reservedByProduct[productId] || 0) + qty;
-            physicalByCategory[product.idCategoryDefault] =
-              (physicalByCategory[product.idCategoryDefault] || 0) + qty;
-          }
-        }
-
-        // 7. Calculer les quantités physiques par catégorie
+        const stockPairs = [];
         for (const product of allProducts) {
-          const catId = product.idCategoryDefault;
-          if (!catId) continue;
-
-          const stock = product.stockQuantity ?? 0;
-          physicalByCategory[catId] = (physicalByCategory[catId] || 0) + stock;
+          const productId = String(product.id);
+          const comboIds = product.associations?.combinations ?? [];
+          if (comboIds.length > 0) {
+            for (const comboId of comboIds) {
+              stockPairs.push({
+                productId,
+                productAttributeId: String(comboId),
+              });
+            }
+          } else {
+            stockPairs.push({ productId, productAttributeId: "0" });
+          }
         }
 
-        // 8. Calculer les réservations par catégorie
-        const reservedByCategory = {};
-        for (const [productId, qty] of Object.entries(reservedByProduct)) {
+        for (const { productId, productAttributeId } of stockPairs) {
           const product = productMap[productId];
           if (!product) continue;
           const catId = product.idCategoryDefault;
           if (!catId) continue;
-          reservedByCategory[catId] = (reservedByCategory[catId] || 0) + qty;
+          const wholesalePrice = Number(product.wholesalePrice ?? 0);
+
+          const stockAvailables = await findStockAvailableByProductAttribute(
+            productId,
+            productAttributeId
+          );
+          const movements = await findStockMovementsByStockAvailables(
+            stockAvailables
+          );
+
+          const supplyMovements = movements.filter(
+            (m) => Number(m.idStockMvtReason) === 1
+          );
+
+          const totalQtySupplied = supplyMovements.reduce(
+            (sum, m) => sum + (Number(m.physicalQuantity) || 0),
+            0
+          );
+
+          const montantAchat = wholesalePrice * totalQtySupplied;
+
+          achatsByCategory[catId] =
+            (achatsByCategory[catId] ?? 0) + montantAchat;
         }
 
-        // 9. Construire le tableau des catégories de stock
+        const ventesByCategory = {};
+        let totalVentes = 0;
+
+        for (const order of orders) {
+          if (Number(order.valid) !== 1) continue;
+          for (const row of order.associations?.orderRows ?? []) {
+            const productId = String(row.productId);
+            const product = productMap[productId];
+            if (!product) continue;
+            const catId = product.idCategoryDefault;
+            if (!catId) continue;
+
+            const qty = Number(row.productQuantity) || 0;
+            const venteUnitaireHT = Number(row.unitPriceTaxExcl ?? 0);
+            const venteHT = venteUnitaireHT * qty;
+
+            ventesByCategory[catId] = (ventesByCategory[catId] ?? 0) + venteHT;
+            totalVentes += venteHT;
+          }
+        }
+
+        // ── Totaux globaux ────────────────────────────────────────────────────
+        const totalAchats = Object.values(achatsByCategory).reduce(
+          (sum, v) => sum + v,
+          0
+        );
+
+        // ── Tableau par catégorie (ventes + achats) ───────────────────────────
+        const allCatIds = new Set([
+          ...Object.keys(ventesByCategory),
+          ...Object.keys(achatsByCategory),
+        ]);
+
+        const catArray = Array.from(allCatIds)
+          .map((catId) => {
+            const ventes = ventesByCategory[catId] ?? 0;
+            const achats = achatsByCategory[catId] ?? 0;
+            const benefice = ventes - achats;
+            return {
+              id: catId,
+              name: categoryMap[catId] ?? `Catégorie ${catId}`,
+              ventes,
+              achats,
+              benefice,
+              marge: ventes > 0 ? (benefice / ventes) * 100 : 0,
+            };
+          })
+          .sort((a, b) => b.benefice - a.benefice);
+
+        // ── Stock par catégorie ───────────────────────────────────────────────
+
+        // Stock physique = stockQuantity remontée directement par l'API produit.
+        // C'est déjà le stock réel en entrepôt, on ne touche à rien d'autre.
+        const physicalByCategory = {};
+        for (const product of allProducts) {
+          const catId = product.idCategoryDefault;
+          if (!catId) continue;
+          physicalByCategory[catId] =
+            (physicalByCategory[catId] ?? 0) + (product.stockQuantity ?? 0);
+        }
+
+        // Stock réservé = commandes en cours (hors états livrée=5 et annulée=6).
+        // Ces quantités sont "bloquées" : commandées mais pas encore expédiées.
+        const ETATS_TERMINES = new Set([5, 6]);
+        const reservedByCategory = {};
+        for (const order of orders) {
+          if (ETATS_TERMINES.has(Number(order.currentState))) continue;
+          for (const row of order.associations?.orderRows ?? []) {
+            const product = productMap[String(row.productId)];
+            if (!product) continue;
+            const catId = product.idCategoryDefault;
+            if (!catId) continue;
+            const qty = Number(row.productQuantity) || 0;
+            reservedByCategory[catId] = (reservedByCategory[catId] ?? 0) + qty;
+            physicalByCategory[catId] += qty;
+          }
+        }
+
         const stockCatArray = Object.keys(physicalByCategory)
           .map((catId) => ({
             id: catId,
-            name: categoryMap[catId] || `Catégorie ${catId}`,
-            qtePhysique: physicalByCategory[catId] || 0,
-            qteReservee: reservedByCategory[catId] || 0,
+            name: categoryMap[catId] ?? `Catégorie ${catId}`,
+            qtePhysique: physicalByCategory[catId] ?? 0,
+            qteReservee: reservedByCategory[catId] ?? 0,
             qteDisponible:
-              (physicalByCategory[catId] || 0) -
-              (reservedByCategory[catId] || 0),
+              (physicalByCategory[catId] ?? 0) -
+              (reservedByCategory[catId] ?? 0),
           }))
           .sort((a, b) => a.name.localeCompare(b.name));
-
-        // 10. Finaliser les stats de ventes
-        const catArray = Object.entries(catStats)
-          .map(([id, values]) => ({
-            id,
-            name: categoryMap[id] || `Catégorie ${id}`,
-            ventes: values.ventes,
-            achats: values.achats,
-            benefice: values.ventes - values.achats,
-            marge:
-              values.ventes > 0
-                ? ((values.ventes - values.achats) / values.ventes) * 100
-                : 0,
-          }))
-          .sort((a, b) => b.benefice - a.benefice);
 
         setStats({
           global: {
