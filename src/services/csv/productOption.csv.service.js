@@ -20,6 +20,7 @@ import {
 import { findTaxRulesByGroupId } from "../taxRule.service";
 import { findTaxByKeyValue } from "../tax.service";
 import { parseNumber } from "../../utils/utils";
+import { postStockMovement } from "../stockMovement.service";
 
 const parseOptionalNumber = (value) => {
   if (value === undefined || value === null) return undefined;
@@ -279,8 +280,9 @@ export const importProductOptionsFromCSV = async (file, onProgress) => {
         });
       }
 
+      const idProductAttribute = combination?.id ?? 0;
+      let updatedStock = null;
       if (mappedData.stock !== undefined && mappedData.stock !== null) {
-        const idProductAttribute = combination?.id ?? 0;
 
         let existingStocks = await findStockAvailableByProductAttribute(
           product.id,
@@ -301,7 +303,7 @@ export const importProductOptionsFromCSV = async (file, onProgress) => {
           );
         }
 
-        const updatedStock = await updateStockAvailable({
+        updatedStock = await updateStockAvailable({
           id: existingStocks[0].id,
           idProduct: product.id,
           idShop: 1,
@@ -318,6 +320,23 @@ export const importProductOptionsFromCSV = async (file, onProgress) => {
           idProductAttribute,
           updated: true,
         };
+
+        const stockMovement = await postStockMovement({
+          idProduct: product.id,
+          idProductAttribute,
+          idStock: stockAvailable.id,
+          idStockMvtReason: 1,
+          physicalQuantity: mappedData.stock,
+          sign: 1,
+          priceTe: 0,
+          dateAdd: new Date(),
+        });
+
+        if (!stockMovement.success) {
+          throw new Error(
+            stockMovement.error || "Creation du mouvement de stock impossible"
+          );
+        }
       }
 
       processResult = {

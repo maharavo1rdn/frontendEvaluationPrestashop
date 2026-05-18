@@ -1,7 +1,10 @@
 import { useEffect, useState, useMemo } from "react";
 import { getAll as getAllOrders } from "../../services/order.service";
 import { getAll as getAllCategories } from "../../services/category.service";
-import { getAllEnriched as getAllProducts, getProductById } from "../../services/product.service";
+import {
+  getAllEnriched as getAllProducts,
+  getProductById,
+} from "../../services/product.service";
 import { getUnorderedCarts } from "../../services/cart.service";
 import {
   Loader2,
@@ -45,28 +48,32 @@ const StatsVentes = () => {
         const productMap = Object.fromEntries(
           allProducts.map((p) => [String(p.id), p])
         );
+        // console.log(productMap);
 
         // 5. Calculer ventes/achats par catégorie (comme avant)
         const catStats = {};
         let totalVentes = 0;
         let totalAchats = 0;
         for (const order of orders) {
-          const rows = order.associations?.orderRows ?? [];
-          for (const row of rows) {
-            const productId = String(row.productId);
-            const product = productMap[productId];
-            if (!product) continue;
-            const qty = Number(row.productQuantity) || 0;
-            const venteHT = parseFloat(row.unitPriceTaxExcl || 0);
-            const achatUnitaire = product.wholesalePrice || 0;
-            const achatTotal = achatUnitaire * qty;
-            const catId = product.idCategoryDefault;
-            if (!catId) continue;
-            if (!catStats[catId]) catStats[catId] = { ventes: 0, achats: 0 };
-            catStats[catId].ventes += venteHT;
-            catStats[catId].achats += achatTotal;
-            totalVentes += venteHT;
-            totalAchats += achatTotal;
+          if (order.valid == 1) {
+            const rows = order.associations?.orderRows ?? [];
+            for (const row of rows) {
+              const productId = String(row.productId);
+              const product = productMap[productId];
+              if (!product) continue;
+              const qty = Number(row.productQuantity) || 0;
+              const venteUnitaire = parseFloat(row.unitPriceTaxExcl || 0);
+              const achatUnitaire = product.wholesalePrice || 0;
+              const venteHT = venteUnitaire * qty;
+              const achatTotal = achatUnitaire * qty;
+              const catId = product.idCategoryDefault;
+              if (!catId) continue;
+              if (!catStats[catId]) catStats[catId] = { ventes: 0, achats: 0 };
+              catStats[catId].ventes += venteHT;
+              catStats[catId].achats += achatTotal;
+              totalVentes += venteHT;
+              totalAchats += achatTotal;
+            }
           }
         }
 
@@ -92,7 +99,8 @@ const StatsVentes = () => {
             const qty = Number(row.productQuantity) || 0;
             reservedByProduct[productId] =
               (reservedByProduct[productId] || 0) + qty;
-            physicalByCategory[product.idCategoryDefault] = (physicalByCategory[product.idCategoryDefault] || 0) + qty; 
+            physicalByCategory[product.idCategoryDefault] =
+              (physicalByCategory[product.idCategoryDefault] || 0) + qty;
           }
         }
 
