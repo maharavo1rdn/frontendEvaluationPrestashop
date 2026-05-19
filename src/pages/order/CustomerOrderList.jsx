@@ -1,17 +1,31 @@
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
-import { Loader2, AlertCircle, ShoppingCart, ArrowLeft } from "lucide-react";
+import {
+  Loader2,
+  AlertCircle,
+  ShoppingCart,
+  ArrowLeft,
+  Package,
+} from "lucide-react";
 import { findOrderByKeyValue } from "../../services/order.service";
 import { findOrderStateByKeyValue } from "../../services/orderState.service";
 import { getCustomerSession } from "../../services/frontoffice/session.service";
+import { getUnorderedCartsByCustomer } from "../../services/cart.service";
+import { findProductByKeyValue } from "../../services/product.service";
+import { findCombinationsByProductId } from "../../services/combination.service";
+import {
+  getTaxRateForGroup,
+  computeCombinationPrice,
+} from "../../services/frontoffice/pricing.service";
 
 const CustomerOrderList = () => {
   const [orders, setOrders] = useState([]);
+  const [unorderedCarts, setUnorderedCarts] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
   useEffect(() => {
-    const loadOrders = async () => {
+    const loadData = async () => {
       setLoading(true);
       setError(null);
       try {
@@ -26,7 +40,6 @@ const CustomerOrderList = () => {
           "id_customer",
           customer.id
         );
-
         const enrichedOrders = await Promise.all(
           fetchedOrders.map(async (order) => {
             let stateName = order.currentState;
@@ -42,8 +55,76 @@ const CustomerOrderList = () => {
             return { ...order, stateName };
           })
         );
-
         setOrders(enrichedOrders);
+
+        try {
+          const rawCarts = await getUnorderedCartsByCustomer(customer.id);
+          const enrichedCarts = await Promise.all(
+            rawCarts.map(async (cart) => {
+              const rows = cart.associations?.cartRows ?? [];
+              const items = [];
+              let total = 0;
+
+              for (const row of rows) {
+                try {
+                  const products = await findProductByKeyValue(
+                    "id",
+                    row.idProduct
+                  );
+                  const product = products?.[0];
+                  if (!product) continue;
+
+                  let combination = null;
+                  if (
+                    row.idProductAttribute &&
+                    String(row.idProductAttribute) !== "0"
+                  ) {
+                    const combos = await findCombinationsByProductId(
+                      product.id
+                    ).catch(() => []);
+                    combination = combos.find(
+                      (c) => String(c.id) === String(row.idProductAttribute)
+                    );
+                  }
+
+                  const taxRate = await getTaxRateForGroup(
+                    product.idTaxRulesGroup
+                  ).catch(() => 0);
+                  const { priceIncl } = computeCombinationPrice({
+                    basePrice: product.price ?? 0,
+                    combinationPriceImpact: combination?.price ?? 0,
+                    taxRate,
+                  });
+
+                  items.push({
+                    name: product.name || "Inconnu",
+                    reference: product.reference || "-",
+                    quantity: row.quantity,
+                    unitPriceTtc: Number(priceIncl),
+                  });
+                  total += Number(priceIncl) * row.quantity;
+                } catch (err) {
+                  console.warn(
+                    "Erreur enrichissement produit",
+                    row.idProduct,
+                    err
+                  );
+                  items.push({
+                    name: `Produit #${row.idProduct}`,
+                    reference: "-",
+                    quantity: row.quantity,
+                    unitPriceTtc: 0,
+                  });
+                }
+              }
+
+              return { ...cart, items, total };
+            })
+          );
+          setUnorderedCarts(enrichedCarts);
+        } catch (err) {
+          console.warn("Impossible de charger les paniers non commandés", err);
+        }
       } catch (err) {
         setError(err.message);
       } finally {
@@ -51,7 +132,7 @@ const CustomerOrderList = () => {
       }
     };
 
-    loadOrders();
+    loadData();
   }, []);
 
   if (loading) {
@@ -99,7 +180,74 @@ const CustomerOrderList = () => {
         </Link>
       </div>
 
-      {/* Liste des commandes */}
+      {/* Paniers non commandés (enrichis) */}
+      {unorderedCarts.length > 0 && (
+        <section className="mb-10">
+          <h2 className="text-lg font-semibold text-slate-800 mb-4 flex items-center gap-2">
+            <Package size={20} />
+            Paniers en cours
+          </h2>
+          <div className="bg-white border border-slate-200 rounded-xl shadow-sm overflow-hidden">
+            <table className="min-w-full divide-y divide-slate-200">
+              <thead className="bg-slate-50">
+                <tr>
+                  <th className="px-6 py-3 text-left text-xs font-bold text-slate-500 uppercase">
+                    Panier
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-bold text-slate-500 uppercase">
+                    Date
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-bold text-slate-500 uppercase">
+                    Articles
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-bold text-slate-500 uppercase">
+                    Total estimé
+                  </th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-slate-100">
+                {unorderedCarts.map((cart) => (
+                  <tr key={cart.id} className="hover:bg-slate-50">
+                    <td className="px-6 py-4 whitespace-nowrap text-sm font-mono text-slate-600">
+                      #{cart.id}
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-500">
+                      {cart.dateAdd
+                        ? new Date(cart.dateAdd).toLocaleDateString("fr-FR")
+                        : "—"}
+                    </td>
+                    <td className="px-6 py-4 text-sm text-slate-700">
+                      <ul className="list-disc list-inside space-y-1">
+                        {cart.items.map((item, idx) => (
+                          <li key={idx}>
+                            <span className="font-medium">{item.name}</span>
+                            {item.reference !== "-" && (
+                              <span className="text-gray-400 ml-1">
+                                ({item.reference})
+                              </span>
+                            )}
+                            <span className="text-slate-500 ml-2">
+                              x{item.quantity}
+                            </span>
+                            <span className="text-slate-600 ml-2 font-medium">
+                              {item.unitPriceTtc.toFixed(2)} € / u
+                            </span>
+                          </li>
+                        ))}
+                      </ul>
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm font-bold text-slate-900">
+                      {cart.total.toFixed(2)} €
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </section>
+      )}
+
+      {/* Liste des commandes (inchangée) */}
       {orders.length === 0 ? (
         <div className="py-20 text-center bg-white border border-slate-200 rounded-xl">
           <ShoppingCart size={30} className="mx-auto mb-3 text-slate-300" />

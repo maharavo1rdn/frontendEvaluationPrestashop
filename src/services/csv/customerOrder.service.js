@@ -410,6 +410,20 @@ export const importOrdersFromCSV = async (file, onProgress) => {
 
       // 1. Résolution et Totaux
       const resolvedItems = await resolveAchatItems(achatItems);
+      // resolvedItems.forEach(achat => {
+      //   const product = achat.product;
+      //   const productId = product.id;
+      //   const productAttributeId = achat.combination.id
+      //   const stockAvailable = await findStockAvailableByProductAttribute(productId, productAttributeId);
+      //   let qteStock = 0;
+      //   if (stockAvailable && stockAvailable.length > 0) {
+      //     qteStock = stockAvailable[0].quantity;
+      //   }
+      //   if (qteStock < achat.quantity) {
+      //     throw new Error(`Stock insuffisant pour le produit ${product.name}-${product.reference}, quantité disponible en stock: ${enrichProduct.stockQuantity}`);
+      //   }
+      // });
+
       const totals = computeOrderTotals(resolvedItems);
 
       // 2. Client & Adresse
