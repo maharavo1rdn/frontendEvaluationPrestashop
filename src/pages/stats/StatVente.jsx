@@ -55,6 +55,7 @@ const StatsVentes = () => {
           }
         }
 
+        // ── Achats basés sur les mouvements de stock (reason = 1) ─────
         for (const { productId, productAttributeId } of stockPairs) {
           const product = productMap[productId];
           if (!product) continue;
@@ -85,8 +86,11 @@ const StatsVentes = () => {
             (achatsByCategory[catId] ?? 0) + montantAchat;
         }
 
+        // ── Ventes et achats réels (depuis les commandes) ────────────
         const ventesByCategory = {};
+        const achatReelByCategory = {};
         let totalVentes = 0;
+        let totalAchatsReel = 0;
 
         for (const order of orders) {
           if (Number(order.valid) !== 1) continue;
@@ -100,19 +104,23 @@ const StatsVentes = () => {
             const qty = Number(row.productQuantity) || 0;
             const venteUnitaireHT = Number(row.unitPriceTaxExcl ?? 0);
             const venteHT = venteUnitaireHT * qty;
+            const achatReel = Number(product.wholesalePrice ?? 0) * qty;
 
             ventesByCategory[catId] = (ventesByCategory[catId] ?? 0) + venteHT;
+            achatReelByCategory[catId] =
+              (achatReelByCategory[catId] ?? 0) + achatReel;
             totalVentes += venteHT;
+            totalAchatsReel += achatReel;
           }
         }
 
-        // ── Totaux globaux ────────────────────────────────────────────────────
+        // ── Totaux globaux ──────────────────────────────────────────
         const totalAchats = Object.values(achatsByCategory).reduce(
           (sum, v) => sum + v,
           0
         );
 
-        // ── Tableau par catégorie (ventes + achats) ───────────────────────────
+        // ── Tableau par catégorie ──────────────────────────────────
         const allCatIds = new Set([
           ...Object.keys(ventesByCategory),
           ...Object.keys(achatsByCategory),
@@ -121,24 +129,28 @@ const StatsVentes = () => {
         const catArray = Array.from(allCatIds)
           .map((catId) => {
             const ventes = ventesByCategory[catId] ?? 0;
+            const achatOrder = achatReelByCategory[catId] ?? 0;
             const achats = achatsByCategory[catId] ?? 0;
-            const benefice = ventes - achats;
+            const beneficeMvt = ventes - achats;
+            const beneficeCmd = ventes - achatOrder;
             return {
               id: catId,
               name: categoryMap[catId] ?? `Catégorie ${catId}`,
               ventes,
               achats,
-              benefice,
-              marge: ventes > 0 ? (benefice / ventes) * 100 : 0,
+              achatOrder,
+              beneficeMvt,
+              beneficeCmd,
+              marge: ventes > 0 ? (beneficeMvt / ventes) * 100 : 0,
             };
           })
-          .sort((a, b) => b.benefice - a.benefice);
+          .sort((a, b) => b.beneficeMvt - a.beneficeMvt);
 
-        // ── Stock par catégorie ───────────────────────────────────────────────
-
-        // Stock physique = stockQuantity remontée directement par l'API produit.
-        // C'est déjà le stock réel en entrepôt, on ne touche à rien d'autre.
+        // ── Stock par catégorie ────────────────────────────────────
+        const ETATS_TERMINES = new Set([5, 6]);
+        const reservedByCategory = {};
         const physicalByCategory = {};
+
         for (const product of allProducts) {
           const catId = product.idCategoryDefault;
           if (!catId) continue;
@@ -146,10 +158,6 @@ const StatsVentes = () => {
             (physicalByCategory[catId] ?? 0) + (product.stockQuantity ?? 0);
         }
 
-        // Stock réservé = commandes en cours (hors états livrée=5 et annulée=6).
-        // Ces quantités sont "bloquées" : commandées mais pas encore expédiées.
-        const ETATS_TERMINES = new Set([5, 6]);
-        const reservedByCategory = {};
         for (const order of orders) {
           if (ETATS_TERMINES.has(Number(order.currentState))) continue;
           for (const row of order.associations?.orderRows ?? []) {
@@ -179,7 +187,9 @@ const StatsVentes = () => {
           global: {
             ventes: totalVentes,
             achats: totalAchats,
+            achatReel: totalAchatsReel,
             benefice: totalVentes - totalAchats,
+            beneficeCmd: totalVentes - totalAchatsReel,
           },
           categories: catArray,
         });
@@ -225,7 +235,7 @@ const StatsVentes = () => {
       <h1 className="text-3xl font-bold mb-6 text-gray-800">Statistiques</h1>
 
       {/* Résumé global */}
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-6 mb-10">
+      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-6 mb-10">
         <div className="bg-white rounded-xl shadow p-6 flex items-center gap-4">
           <div className="bg-blue-100 p-3 rounded-full">
             <DollarSign size={24} className="text-blue-600" />
@@ -242,9 +252,20 @@ const StatsVentes = () => {
             <ShoppingBag size={24} className="text-orange-600" />
           </div>
           <div>
-            <p className="text-sm text-gray-500">Total Achats</p>
+            <p className="text-sm text-gray-500">Total Achats (mvt)</p>
             <p className="text-2xl font-bold text-gray-900">
               {global.achats.toFixed(2)} €
+            </p>
+          </div>
+        </div>
+        <div className="bg-white rounded-xl shadow p-6 flex items-center gap-4">
+          <div className="bg-yellow-100 p-3 rounded-full">
+            <ShoppingBag size={24} className="text-yellow-600" />
+          </div>
+          <div>
+            <p className="text-sm text-gray-500">Achats commandes</p>
+            <p className="text-2xl font-bold text-gray-900">
+              {global.achatReel.toFixed(2)} €
             </p>
           </div>
         </div>
@@ -253,37 +274,54 @@ const StatsVentes = () => {
             <TrendingUp size={24} className="text-green-600" />
           </div>
           <div>
-            <p className="text-sm text-gray-500">Bénéfice</p>
+            <p className="text-sm text-gray-500">Bénéfice (mvt)</p>
             <p className="text-2xl font-bold text-gray-900">
               {global.benefice.toFixed(2)} €
+            </p>
+          </div>
+        </div>
+        <div className="bg-white rounded-xl shadow p-6 flex items-center gap-4">
+          <div className="bg-emerald-100 p-3 rounded-full">
+            <TrendingUp size={24} className="text-emerald-600" />
+          </div>
+          <div>
+            <p className="text-sm text-gray-500">Bénéfice (cmd)</p>
+            <p className="text-2xl font-bold text-gray-900">
+              {global.beneficeCmd.toFixed(2)} €
             </p>
           </div>
         </div>
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-10">
-        {/* Bénéfice par catégorie */}
+        {/* Bénéfice par catégorie – tableau responsive */}
         <section>
           <h2 className="text-xl font-semibold text-gray-700 mb-4">
             Bénéfice par catégorie
           </h2>
-          <div className="bg-white rounded-lg shadow overflow-hidden">
-            <table className="min-w-full divide-y divide-gray-200">
+          <div className="bg-white rounded-lg shadow overflow-hidden overflow-x-auto">
+            <table className="min-w-[700px] w-full divide-y divide-gray-200">
               <thead className="bg-gray-50">
                 <tr>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
+                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">
                     Catégorie
                   </th>
-                  <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase">
+                  <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase">
                     Ventes (HT)
                   </th>
-                  <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase">
-                    Achats
+                  <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase">
+                    Achats (mvt)
                   </th>
-                  <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase">
-                    Bénéfice
+                  <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase">
+                    Achats (cmd)
                   </th>
-                  <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase">
+                  <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase">
+                    Bénéfice (mvt)
+                  </th>
+                  <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase">
+                    Bénéfice (cmd)
+                  </th>
+                  <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase">
                     Marge
                   </th>
                 </tr>
@@ -292,27 +330,41 @@ const StatsVentes = () => {
                 {categories.length > 0 ? (
                   categories.map((cat) => (
                     <tr key={cat.id} className="hover:bg-gray-50">
-                      <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
+                      <td className="px-4 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
                         {cat.name}
                       </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-right text-gray-700">
+                      <td className="px-4 py-4 whitespace-nowrap text-sm text-right text-gray-700">
                         {cat.ventes.toFixed(2)} €
                       </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-right text-gray-700">
+                      <td className="px-4 py-4 whitespace-nowrap text-sm text-right text-gray-700">
                         {cat.achats.toFixed(2)} €
                       </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-right font-semibold">
+                      <td className="px-4 py-4 whitespace-nowrap text-sm text-right text-gray-700">
+                        {cat.achatOrder.toFixed(2)} €
+                      </td>
+                      <td className="px-4 py-4 whitespace-nowrap text-sm text-right font-semibold">
                         <span
                           className={
-                            cat.benefice >= 0
+                            cat.beneficeMvt >= 0
                               ? "text-green-600"
                               : "text-red-600"
                           }
                         >
-                          {cat.benefice.toFixed(2)} €
+                          {cat.beneficeMvt.toFixed(2)} €
                         </span>
                       </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-right text-gray-500">
+                      <td className="px-4 py-4 whitespace-nowrap text-sm text-right font-semibold">
+                        <span
+                          className={
+                            cat.beneficeCmd >= 0
+                              ? "text-emerald-600"
+                              : "text-red-600"
+                          }
+                        >
+                          {cat.beneficeCmd.toFixed(2)} €
+                        </span>
+                      </td>
+                      <td className="px-4 py-4 whitespace-nowrap text-sm text-right text-gray-500">
                         {cat.marge.toFixed(1)} %
                       </td>
                     </tr>
@@ -320,7 +372,7 @@ const StatsVentes = () => {
                 ) : (
                   <tr>
                     <td
-                      colSpan={5}
+                      colSpan={7}
                       className="px-6 py-8 text-center text-gray-500"
                     >
                       Aucune donnée disponible.
