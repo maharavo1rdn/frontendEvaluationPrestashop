@@ -163,6 +163,17 @@ const resolveAchatItems = async (items) => {
   const resolved = [];
 
   for (const item of items) {
+    const existing = resolved.find(
+      (r) =>
+        String(r.reference) === String(item.reference) &&
+        String(r.karazany) === String(item.karazany)
+    );
+
+    if (existing) {
+      existing.quantity += parseInt(item.quantity);
+      continue;
+    }
+
     const products = await findProductByKeyValue("reference", item.reference);
     if (!products.length)
       throw new Error(`Produit "${item.reference}" introuvable`);
@@ -483,7 +494,6 @@ export const importOrdersFromCSV = async (file, onProgress) => {
             idEmployee: 1,
             dateAdd,
           });
-          
         } catch (movementErr) {
           console.warn(
             `Échec du postOrderTransition (statut livré):`,

@@ -82,10 +82,9 @@ export default function ImportAll() {
       ])
     )
   );
-  const [importImage, setImport] = useState(false);
-  const handleImportImageChange = () => {
-    setImport(!importImage);
-    console.log(importImage);
+  const [skipImages, setSkipImages] = useState(false);
+  const handleSkipImagesChange = () => {
+    setSkipImages(!skipImages);
   };
   const [logs, setLogs] = useState([]);
   const [running, setRunning] = useState(false);
@@ -196,8 +195,12 @@ export default function ImportAll() {
       });
 
       try {
-        if (importImage && step.key == "images") {
-          pushLog("info", "Images non pris en compte");
+        if (skipImages && step.key === "images") {
+          pushLog(
+            "info",
+            `[${step.label}] Ignoré volontairement (case cochée).`
+          );
+          setStatus(step.key, { status: STATUS.skipped });
           continue;
         }
         const result = await step.service(
@@ -223,6 +226,7 @@ export default function ImportAll() {
                   });
                 }
                 importAborted = true;
+                setStatus(step.key, { status: STATUS.error });
                 throw new Error("AbortImport");
               }
 
@@ -275,18 +279,20 @@ export default function ImportAll() {
         </p>
       </div>
 
-      <div className="flex items-center gap-3 text-sm text-slate-500">
+      <div className="flex items-center gap-3 text-sm text-slate-500 mb-4">
         <input
           type="checkbox"
-          className="h-4 w-4 accent-sky-500"
-          onChange={() => {
-            handleImportImageChange();
-          }}
-          aria-label="Ne pas importer les images"
+          checked={skipImages}
+          onChange={handleSkipImagesChange}
+          className="h-4 w-4 rounded border-slate-300 text-sky-500 focus:ring-sky-500"
+          id="skip-images"
         />
-        <span className="font-semibold text-slate-700">
+        <label
+          htmlFor="skip-images"
+          className="font-medium text-slate-700 cursor-pointer select-none"
+        >
           Ne pas importer les images
-        </span>
+        </label>
       </div>
       {/* Steps card */}
       <div className="bg-white border border-slate-200 rounded-xl shadow-sm overflow-hidden mb-6">
