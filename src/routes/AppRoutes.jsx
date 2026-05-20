@@ -8,6 +8,7 @@ import FrontOfficeLogin from "../pages/auth/FrontOfficeLogin";
 import BackOfficeLogin from "../pages/auth/BackOfficeLogin";
 import CommandesRoutes from "./commande/CommandesRoutes";
 import UserSelector from "../pages/auth/UserSelector";
+import DuplicateOrder from "../pages/order/DuplicateOrder";
 import Dashboard from "../pages/dashboard/Dashboard";
 import { EmployeeProtectedRoute } from "../pages/auth/EmployeeProtectedRoute";
 import { CustomerProtectedRoute } from "../pages/auth/CustomerProtectedRoute";
@@ -44,6 +45,14 @@ export default function AppRoutes() {
             </CustomerProtectedRoute>
           }
         />
+        <Route path="/frontOffice/duplicateOrder"
+        element={<CustomerProtectedRoute> 
+
+          <DuplicateOrder></DuplicateOrder>
+        </CustomerProtectedRoute>}
+        >
+          
+        </Route>
       </Routes>
       <ClientsRoutes />
       <ProduitsRoutes />

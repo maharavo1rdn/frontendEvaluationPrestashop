@@ -82,6 +82,11 @@ export default function ImportAll() {
       ])
     )
   );
+  const [importImage, setImport] = useState(false);
+  const handleImportImageChange = () => {
+    setImport(!importImage);
+    console.log(importImage);
+  };
   const [logs, setLogs] = useState([]);
   const [running, setRunning] = useState(false);
   const [globalDone, setGlobalDone] = useState(false);
@@ -191,6 +196,10 @@ export default function ImportAll() {
       });
 
       try {
+        if (importImage && step.key == "images") {
+          pushLog("info", "Images non pris en compte");
+          continue;
+        }
         const result = await step.service(
           file,
           ({ done, total, result: rowResult }) => {
@@ -266,6 +275,19 @@ export default function ImportAll() {
         </p>
       </div>
 
+      <div className="flex items-center gap-3 text-sm text-slate-500">
+        <input
+          type="checkbox"
+          className="h-4 w-4 accent-sky-500"
+          onChange={() => {
+            handleImportImageChange();
+          }}
+          aria-label="Ne pas importer les images"
+        />
+        <span className="font-semibold text-slate-700">
+          Ne pas importer les images
+        </span>
+      </div>
       {/* Steps card */}
       <div className="bg-white border border-slate-200 rounded-xl shadow-sm overflow-hidden mb-6">
         {STEPS.map((step, i) => {

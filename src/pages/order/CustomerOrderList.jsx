@@ -1,13 +1,17 @@
 import { useEffect, useState } from "react";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import {
   Loader2,
   AlertCircle,
   ShoppingCart,
   ArrowLeft,
   Package,
+  Copy,
 } from "lucide-react";
-import { findOrderByKeyValue } from "../../services/order.service";
+import {
+  findOrderByKeyValue,
+  getOrderById,
+} from "../../services/order.service";
 import { findOrderStateByKeyValue } from "../../services/orderState.service";
 import { getCustomerSession } from "../../services/frontoffice/session.service";
 import { getUnorderedCartsByCustomer } from "../../services/cart.service";
@@ -19,10 +23,22 @@ import {
 } from "../../services/frontoffice/pricing.service";
 
 const CustomerOrderList = () => {
+  const navigate = useNavigate();
   const [orders, setOrders] = useState([]);
   const [unorderedCarts, setUnorderedCarts] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [quantity, setQuantities] = useState([]);
+
+  const handleQuantityChange = (orderId, quantity) => {
+    setQuantities((prev) => ({ ...prev, [orderId]: quantity }));
+  };
+
+  const handleDuplicateOrder = (orderId) => {
+    navigate(
+      `/frontOffice/duplicateOrder?orderId=${orderId}&quantity=${quantity[orderId]}`
+    );
+  };
 
   useEffect(() => {
     const loadData = async () => {
@@ -134,6 +150,14 @@ const CustomerOrderList = () => {
 
     loadData();
   }, []);
+
+  useEffect(() => {
+    const initial = {};
+    orders.forEach((order) => {
+      initial[order.id] = 1;
+    });
+    setQuantities(initial);
+  }, [orders]);
 
   if (loading) {
     return (
@@ -277,6 +301,10 @@ const CustomerOrderList = () => {
                   <th className="px-6 py-4 text-xs font-bold text-slate-500 uppercase">
                     Paiement
                   </th>
+                  {/* Nouvelle colonne pour la duplication */}
+                  <th className="px-6 py-4 text-center text-xs font-bold text-slate-500 uppercase">
+                    Dupliquer
+                  </th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100">
@@ -303,6 +331,31 @@ const CustomerOrderList = () => {
                     </td>
                     <td className="px-6 py-4 text-sm text-slate-700">
                       {order.payment || "—"}
+                    </td>
+                    <td className="px-6 py-4">
+                      <div className="flex items-center gap-3 justify-end">
+                        <div className="flex flex-col gap-1">
+                          <label className="text-xs font-medium text-slate-500">
+                            Quantité
+                          </label>
+                          <input
+                            type="number"
+                            min="1"
+                            value={quantity[order.id]}
+                            onChange={(e) =>
+                              handleQuantityChange(order.id, e.target.value)
+                            }
+                            className="w-20 h-9 rounded-lg border border-slate-200 px-3 text-sm text-center focus:ring-2 focus:ring-sky-500/20 focus:border-sky-500"
+                          />
+                        </div>
+                        <button
+                          onClick={() => handleDuplicateOrder(order.id)}
+                          className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-sky-600 hover:bg-sky-700 text-white text-xs font-semibold rounded-lg transition-colors shadow-sm "
+                        >
+                          <Copy size={14} />
+                          Dupliquer
+                        </button>
+                      </div>
                     </td>
                   </tr>
                 ))}

@@ -3,6 +3,14 @@ import parseErrors from "../XMLUtil/parser/Error.parser";
 import { buildOrderXML } from "../XMLUtil/builder/Order.builder";
 import { API_URL, WS_KEY, authHeaders } from "../config/config.service";
 import { findOrderStateByKeyValue } from "./orderState.service";
+import { deleteCart, findCartByKeyValue, postCart } from "./cart.service";
+import { findAddressByKeyValue } from "./address.service";
+import { formatDate } from "../utils/utils";
+import {
+  computeTotals,
+  resolveCartItems,
+} from "./frontoffice/checkout.service";
+import { findCustomerByKeyValue } from "./customer.service";
 
 const DEFAULT_DISPLAY = "full";
 
@@ -195,5 +203,120 @@ export const resetOrders = async () => {
     return { success: true, deleted: totalDeleted };
   } catch (error) {
     throw error;
+  }
+};
+
+export const duplicateCartFromOrder = async (orderId, quantity) => {
+  const order = await getOrderById(orderId);
+  if (!order) throw new Error("Commande introuvable");
+
+  const carts = await findCartByKeyValue("id", order.idCart);
+  if (!carts || carts.length == 0)
+    throw new Error("Panier associée à la commande introuvable");
+
+  const cart = carts[0];
+  const rows = cart.associations.cartRows;
+  const newCartsRows = rows.map((row) => ({
+    ...row,
+    quantity: Number(row.quantity) * Number(quantity),
+  }));
+
+  const customers = await findCustomerByKeyValue("id", order.idCustomer);
+  if (!customers || customers.length == 0)
+    throw new Error("Client associée au client introuvable");
+
+  const customer = customers[0];
+  const addresses = await findAddressByKeyValue(
+    "id_customer",
+    order.idCustomer
+  );
+  if (!addresses || addresses.length == 0)
+    throw new Error("Addresse associée au client introuvable");
+
+  const address = addresses[0];
+  const newCart = {
+    idCustomer: order.idCustomer,
+    idAddressDelivery: address.id,
+    secureKey: customer.secureKey,
+    idAddressInvoice: address.id,
+    idCurrency: 1,
+    idCarrier: 2,
+    idShop: 1,
+    dateAdd: formatDate(new Date()),
+    associations: { cartRows: newCartsRows },
+  };
+  return newCart;
+};
+
+export const createOrderFromCart = async (
+  cartId,
+  cart,
+  payment = "Virement bancaire",
+  module = "ps_checkpayment"
+) => {
+  const resolvedItems = await resolveCartItems(cart.associations.cartRows);
+  const orderRows = resolvedItems.map((item) => ({
+    productId: item.product.id,
+    productAttributeId: item.combination?.id ?? 0,
+    productQuantity: item.quantity,
+    productName: item.product.name,
+    productReference: item.product.reference,
+    unitPriceTaxIncl: item.unitPriceTtc,
+    unitPriceTaxExcl: item.unitPriceHt,
+    totalPriceTaxIncl: item.unitPriceTtc * item.quantity,
+    totalPriceTaxExcl: item.unitPriceHt * item.quantity,
+    taxRate: item.taxRate,
+  }));
+
+  const { totals } = await computeTotals(resolvedItems);
+
+  return {
+    ...totals,
+    idCart: cartId,
+    idCustomer: cart.idCustomer,
+    idAddressInvoice: cart.idAddressInvoice,
+    idCurrency: 1,
+    idLang: 1,
+    idShop: 1,
+    idCarrier: 1,
+    currentState: 11,
+    conversionRate: 1,
+    secureKey: cart.secureKey,
+    payment,
+    module,
+    dateAdd: formatDate(new Date()),
+    valid: false,
+    associations: { orderRows },
+  };
+};
+
+export const duplicateOrder = async (idOrder, quantity) => {
+  try {
+    const newCart = await duplicateCartFromOrder(idOrder, quantity);
+    const createdCart = await postCart(newCart);
+    if (!createdCart.success)
+      throw new Error(
+        `Impossible de créer le panier dupliqué: ${createdCart.error}`
+      );
+
+    if (createdCart && createdCart.id) {
+      const newOrder = await createOrderFromCart(createdCart.id, newCart);
+
+      const createdOrder = await postOrder(newOrder);
+      if (!createdOrder.success || !createdOrder.id) {
+        await deleteCart(createdCart.id);
+        throw new Error(
+          `Impossible de créer la commande dupliqué: ${createdOrder.error}`
+        );
+      }
+      return {
+        success: true,
+        orderId: createdOrder.id,
+        reference: createdOrder.reference,
+        cartId: createdCart.id,
+      };
+    }
+  } catch (error) {
+    throw new Error(`Erreur:${error.message}`);
   }
 };
