@@ -94,7 +94,7 @@ const CartPage = () => {
   return (
     <div className="p-8 max-w-5xl mx-auto">
       {/* En-tête */}
-      <div className="flex items-center justify-between mb-8 border-b border-slate-200 pb-6">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-8 border-b border-slate-200 pb-6">
         <div>
           <h1 className="text-2xl font-bold text-slate-900">Votre panier</h1>
           <p className="text-slate-500 text-sm">
@@ -137,7 +137,7 @@ const CartPage = () => {
               {cart.items.map((item) => (
                 <div
                   key={item.cartKey}
-                  className="flex items-center justify-between gap-6 px-6 py-5"
+                  className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 sm:gap-6 px-6 py-5"
                 >
                   <div>
                     <p className="text-sm font-bold text-slate-900">
@@ -167,7 +167,7 @@ const CartPage = () => {
                     ) : null}
                   </div>
 
-                  <div className="flex items-center gap-3">
+                  <div className="flex items-center gap-3 self-start sm:self-auto">
                     <input
                       type="number"
                       min="1"

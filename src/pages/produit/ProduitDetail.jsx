@@ -250,7 +250,7 @@ const ProduitDetail = () => {
 
   return (
     <div className="p-8 max-w-5xl mx-auto">
-      <div className="flex items-center justify-between mb-6">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-6">
         <Link
           to="/frontOffice/products"
           className="flex items-center gap-2 text-sm font-medium text-slate-500 hover:text-sky-500"

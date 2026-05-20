@@ -230,6 +230,21 @@ const StatsVentes = () => {
 
   const { global, categories } = stats;
 
+  const formatCurrency = (val) =>
+    new Intl.NumberFormat("fr-FR", {
+      style: "currency",
+      currency: "EUR",
+    }).format(val ?? 0);
+
+  const formatNumber = (val) =>
+    new Intl.NumberFormat("fr-FR").format(val ?? 0);
+
+  const formatPercent = (val) =>
+    `${new Intl.NumberFormat("fr-FR", {
+      minimumFractionDigits: 1,
+      maximumFractionDigits: 1,
+    }).format(val ?? 0)} %`;
+
   return (
     <div className="p-6 max-w-7xl mx-auto">
       <h1 className="text-3xl font-bold mb-6 text-gray-800">Statistiques</h1>
@@ -243,7 +258,7 @@ const StatsVentes = () => {
           <div>
             <p className="text-sm text-gray-500">Total Ventes (HT)</p>
             <p className="text-2xl font-bold text-gray-900">
-              {global.ventes.toFixed(2)} €
+              {formatCurrency(global.ventes)}
             </p>
           </div>
         </div>
@@ -254,7 +269,7 @@ const StatsVentes = () => {
           <div>
             <p className="text-sm text-gray-500">Total Achats (mvt)</p>
             <p className="text-2xl font-bold text-gray-900">
-              {global.achats.toFixed(2)} €
+              {formatCurrency(global.achats)}
             </p>
           </div>
         </div>
@@ -265,7 +280,7 @@ const StatsVentes = () => {
           <div>
             <p className="text-sm text-gray-500">Achats commandes</p>
             <p className="text-2xl font-bold text-gray-900">
-              {global.achatReel.toFixed(2)} €
+              {formatCurrency(global.achatReel)}
             </p>
           </div>
         </div>
@@ -276,7 +291,7 @@ const StatsVentes = () => {
           <div>
             <p className="text-sm text-gray-500">Bénéfice (mvt)</p>
             <p className="text-2xl font-bold text-gray-900">
-              {global.benefice.toFixed(2)} €
+              {formatCurrency(global.benefice)}
             </p>
           </div>
         </div>
@@ -287,7 +302,7 @@ const StatsVentes = () => {
           <div>
             <p className="text-sm text-gray-500">Bénéfice (cmd)</p>
             <p className="text-2xl font-bold text-gray-900">
-              {global.beneficeCmd.toFixed(2)} €
+              {formatCurrency(global.beneficeCmd)}
             </p>
           </div>
         </div>
@@ -334,13 +349,13 @@ const StatsVentes = () => {
                         {cat.name}
                       </td>
                       <td className="px-4 py-4 whitespace-nowrap text-sm text-right text-gray-700">
-                        {cat.ventes.toFixed(2)} €
+                        {formatCurrency(cat.ventes)}
                       </td>
                       <td className="px-4 py-4 whitespace-nowrap text-sm text-right text-gray-700">
-                        {cat.achats.toFixed(2)} €
+                        {formatCurrency(cat.achats)}
                       </td>
                       <td className="px-4 py-4 whitespace-nowrap text-sm text-right text-gray-700">
-                        {cat.achatOrder.toFixed(2)} €
+                        {formatCurrency(cat.achatOrder)}
                       </td>
                       <td className="px-4 py-4 whitespace-nowrap text-sm text-right font-semibold">
                         <span
@@ -350,7 +365,7 @@ const StatsVentes = () => {
                               : "text-red-600"
                           }
                         >
-                          {cat.beneficeMvt.toFixed(2)} €
+                          {formatCurrency(cat.beneficeMvt)}
                         </span>
                       </td>
                       <td className="px-4 py-4 whitespace-nowrap text-sm text-right font-semibold">
@@ -361,11 +376,11 @@ const StatsVentes = () => {
                               : "text-red-600"
                           }
                         >
-                          {cat.beneficeCmd.toFixed(2)} €
+                          {formatCurrency(cat.beneficeCmd)}
                         </span>
                       </td>
                       <td className="px-4 py-4 whitespace-nowrap text-sm text-right text-gray-500">
-                        {cat.marge.toFixed(1)} %
+                        {formatPercent(cat.marge)}
                       </td>
                     </tr>
                   ))
@@ -391,61 +406,63 @@ const StatsVentes = () => {
             Stock par catégorie
           </h2>
           <div className="bg-white rounded-lg shadow overflow-hidden">
-            <table className="min-w-full divide-y divide-gray-200">
-              <thead className="bg-gray-50">
-                <tr>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
-                    Catégorie
-                  </th>
-                  <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase">
-                    Qté physique
-                  </th>
-                  <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase">
-                    Qté réservée
-                  </th>
-                  <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase">
-                    Qté disponible
-                  </th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-gray-200">
-                {stockCategories.length > 0 ? (
-                  stockCategories.map((cat) => (
-                    <tr key={cat.id} className="hover:bg-gray-50">
-                      <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
-                        {cat.name}
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-right text-gray-700">
-                        {cat.qtePhysique}
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-right text-gray-700">
-                        {cat.qteReservee}
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-right font-semibold">
-                        <span
-                          className={
-                            cat.qteDisponible >= 0
-                              ? "text-emerald-600"
-                              : "text-red-600"
-                          }
-                        >
-                          {cat.qteDisponible}
-                        </span>
+            <div className="overflow-x-auto">
+              <table className="min-w-[520px] w-full divide-y divide-gray-200">
+                <thead className="bg-gray-50">
+                  <tr>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
+                      Catégorie
+                    </th>
+                    <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase">
+                      Qté physique
+                    </th>
+                    <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase">
+                      Qté réservée
+                    </th>
+                    <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase">
+                      Qté disponible
+                    </th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-gray-200">
+                  {stockCategories.length > 0 ? (
+                    stockCategories.map((cat) => (
+                      <tr key={cat.id} className="hover:bg-gray-50">
+                        <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
+                          {cat.name}
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-right text-gray-700">
+                          {formatNumber(cat.qtePhysique)}
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-right text-gray-700">
+                          {formatNumber(cat.qteReservee)}
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-right font-semibold">
+                          <span
+                            className={
+                              cat.qteDisponible >= 0
+                                ? "text-emerald-600"
+                                : "text-red-600"
+                            }
+                          >
+                            {formatNumber(cat.qteDisponible)}
+                          </span>
+                        </td>
+                      </tr>
+                    ))
+                  ) : (
+                    <tr>
+                      <td
+                        colSpan={4}
+                        className="px-6 py-8 text-center text-gray-500"
+                      >
+                        Aucune donnée de stock disponible.
                       </td>
                     </tr>
-                  ))
-                ) : (
-                  <tr>
-                    <td
-                      colSpan={4}
-                      className="px-6 py-8 text-center text-gray-500"
-                    >
-                      Aucune donnée de stock disponible.
-                    </td>
-                  </tr>
-                )}
-              </tbody>
-            </table>
+                  )}
+                </tbody>
+              </table>
+            </div>
           </div>
         </section>
       </div>

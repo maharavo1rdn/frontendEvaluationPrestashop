@@ -132,7 +132,7 @@ const ProduitList = () => {
   return (
     <div className="p-8 max-w-7xl mx-auto">
       {/* En-tête */}
-      <div className="flex items-center justify-between mb-6 border-b border-slate-200 pb-6">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-6 border-b border-slate-200 pb-6">
         <div>
           <h1 className="text-2xl font-bold text-slate-900">Catalogue</h1>
           <p className="text-slate-500 text-sm">

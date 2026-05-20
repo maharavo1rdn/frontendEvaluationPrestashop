@@ -314,74 +314,76 @@ const CommandeList = () => {
             Paniers en cours (non commandés)
           </h2>
           <div className="bg-white rounded-lg shadow overflow-hidden">
-            <table className="min-w-full divide-y divide-gray-200">
-              <thead className="bg-gray-50">
-                <tr>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
-                    Panier
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
-                    Date
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
-                    Articles
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
-                    Total estimé
-                  </th>
-                </tr>
-              </thead>
-              <tbody className="bg-white divide-y divide-gray-200">
-                {unorderedCarts.length > 0 ? (
-                  unorderedCarts.map((cart) => (
-                    <tr key={cart.id} className="hover:bg-gray-50">
-                      <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
-                        #{cart.id}
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                        {cart.dateAdd
-                          ? new Date(cart.dateAdd).toLocaleDateString("fr-FR")
-                          : "—"}
-                      </td>
-                      <td className="px-6 py-4 text-sm text-gray-700">
-                        <ul className="list-disc list-inside space-y-1">
-                          {cart.items.map((item, idx) => (
-                            <li key={idx}>
-                              <span className="font-medium">{item.name}</span>
-                              {item.reference !== "-" && (
-                                <span className="text-gray-400 ml-1">
-                                  ({item.reference})
+            <div className="overflow-x-auto">
+              <table className="min-w-[720px] w-full divide-y divide-gray-200">
+                <thead className="bg-gray-50">
+                  <tr>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
+                      Panier
+                    </th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
+                      Date
+                    </th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
+                      Articles
+                    </th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
+                      Total estimé
+                    </th>
+                  </tr>
+                </thead>
+                <tbody className="bg-white divide-y divide-gray-200">
+                  {unorderedCarts.length > 0 ? (
+                    unorderedCarts.map((cart) => (
+                      <tr key={cart.id} className="hover:bg-gray-50">
+                        <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
+                          #{cart.id}
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                          {cart.dateAdd
+                            ? new Date(cart.dateAdd).toLocaleDateString("fr-FR")
+                            : "—"}
+                        </td>
+                        <td className="px-6 py-4 text-sm text-gray-700">
+                          <ul className="list-disc list-inside space-y-1">
+                            {cart.items.map((item, idx) => (
+                              <li key={idx}>
+                                <span className="font-medium">{item.name}</span>
+                                {item.reference !== "-" && (
+                                  <span className="text-gray-400 ml-1">
+                                    ({item.reference})
+                                  </span>
+                                )}
+                                <span className="text-gray-500 ml-2">
+                                  x{item.quantity}
                                 </span>
-                              )}
-                              <span className="text-gray-500 ml-2">
-                                x{item.quantity}
-                              </span>
-                              <span className="text-gray-600 ml-2 font-medium">
-                                {item.unitPriceTtc.toFixed(2)} € / unité
-                              </span>
-                            </li>
-                          ))}
-                        </ul>
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm font-bold text-gray-900">
-                        {cart.total.toFixed(2)} €
+                                <span className="text-gray-600 ml-2 font-medium">
+                                  {item.unitPriceTtc.toFixed(2)} € / unité
+                                </span>
+                              </li>
+                            ))}
+                          </ul>
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm font-bold text-gray-900">
+                          {cart.total.toFixed(2)} €
+                        </td>
+                      </tr>
+                    ))
+                  ) : (
+                    <tr>
+                      <td
+                        colSpan={4}
+                        className="px-6 py-8 text-center text-sm text-gray-500"
+                      >
+                        {isFiltered
+                          ? "Aucun panier sur cette période."
+                          : "Aucun panier non commandé."}
                       </td>
                     </tr>
-                  ))
-                ) : (
-                  <tr>
-                    <td
-                      colSpan={4}
-                      className="px-6 py-8 text-center text-sm text-gray-500"
-                    >
-                      {isFiltered
-                        ? "Aucun panier sur cette période."
-                        : "Aucun panier non commandé."}
-                    </td>
-                  </tr>
-                )}
-              </tbody>
-            </table>
+                  )}
+                </tbody>
+              </table>
+            </div>
           </div>
         </section>
       )}
@@ -398,123 +400,125 @@ const CommandeList = () => {
             Commandes reçues
           </h2>
           <div className="bg-white rounded-lg shadow overflow-hidden">
-            <table className="min-w-full divide-y divide-gray-200">
-              <thead className="bg-gray-50">
-                <tr>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
-                    ID
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
-                    Date
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
-                    Référence
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
-                    Client (ID)
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
-                    Total payé
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
-                    État Actuel
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
-                    Actions
-                  </th>
-                </tr>
-              </thead>
-              <tbody className="bg-white divide-y divide-gray-200">
-                {orders.length > 0 ? (
-                  orders.map((order) => (
-                    <tr key={order.id} className="hover:bg-gray-50">
-                      <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
-                        #{order.id}
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                        {order.dateAdd
-                          ? new Date(order.dateAdd).toLocaleDateString("fr-FR")
-                          : "—"}
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                        {order.reference}
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                        {order.idCustomer}
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                        {parseFloat(order.totalPaidTaxIncl).toFixed(2)} €
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap">
-                        <span className="px-3 py-1 inline-flex text-xs leading-5 font-semibold rounded-full bg-blue-100 text-blue-800">
-                          {order.current_state_label ||
-                            STATE_LABELS[order.currentState] ||
-                            order.currentState}
-                        </span>
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm font-medium space-x-2">
-                        {/* ── Actions conditionnelles ── */}
-                        {order.currentState == 11 ? (
-                          <>
-                            <button
-                              onClick={() =>
-                                openTransitionModal(order.id, 5, "Livrer")
-                              }
-                              className="inline-flex items-center px-3 py-1.5 border border-transparent text-xs font-medium rounded shadow-sm text-white bg-blue-600 hover:bg-blue-700"
-                            >
-                              Livrer
-                            </button>
-                            <button
-                              onClick={() =>
-                                openTransitionModal(order.id, 6, "Annuler")
-                              }
-                              className="inline-flex items-center px-3 py-1.5 border border-transparent text-xs font-medium rounded shadow-sm text-white bg-red-600 hover:bg-red-700"
-                            >
-                              Annuler
-                            </button>
-                          </>
-                        ) : order.currentState == 5 ||
-                          order.currentState == 6 ? null : (
-                          <>
-                            <button
-                              onClick={() =>
-                                openTransitionModal(
-                                  order.id,
-                                  11,
-                                  "Paiement accepté"
-                                )
-                              }
-                              className="inline-flex items-center px-3 py-1.5 border border-transparent text-xs font-medium rounded shadow-sm text-white bg-green-600 hover:bg-green-700"
-                            >
-                              Paiement accepté
-                            </button>
-                            <button
-                              onClick={() =>
-                                openTransitionModal(order.id, 6, "Annuler")
-                              }
-                              className="inline-flex items-center px-3 py-1.5 border border-transparent text-xs font-medium rounded shadow-sm text-white bg-red-600 hover:bg-red-700"
-                            >
-                              Annuler
-                            </button>
-                          </>
-                        )}
+            <div className="overflow-x-auto">
+              <table className="min-w-[980px] w-full divide-y divide-gray-200">
+                <thead className="bg-gray-50">
+                  <tr>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
+                      ID
+                    </th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
+                      Date
+                    </th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
+                      Référence
+                    </th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
+                      Client (ID)
+                    </th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
+                      Total payé
+                    </th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
+                      État Actuel
+                    </th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
+                      Actions
+                    </th>
+                  </tr>
+                </thead>
+                <tbody className="bg-white divide-y divide-gray-200">
+                  {orders.length > 0 ? (
+                    orders.map((order) => (
+                      <tr key={order.id} className="hover:bg-gray-50">
+                        <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
+                          #{order.id}
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                          {order.dateAdd
+                            ? new Date(order.dateAdd).toLocaleDateString("fr-FR")
+                            : "—"}
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                          {order.reference}
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                          {order.idCustomer}
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                          {parseFloat(order.totalPaidTaxIncl).toFixed(2)} €
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap">
+                          <span className="px-3 py-1 inline-flex text-xs leading-5 font-semibold rounded-full bg-blue-100 text-blue-800">
+                            {order.current_state_label ||
+                              STATE_LABELS[order.currentState] ||
+                              order.currentState}
+                          </span>
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm font-medium space-x-2">
+                          {/* ── Actions conditionnelles ── */}
+                          {order.currentState == 11 ? (
+                            <>
+                              <button
+                                onClick={() =>
+                                  openTransitionModal(order.id, 5, "Livrer")
+                                }
+                                className="inline-flex items-center px-3 py-1.5 border border-transparent text-xs font-medium rounded shadow-sm text-white bg-blue-600 hover:bg-blue-700"
+                              >
+                                Livrer
+                              </button>
+                              <button
+                                onClick={() =>
+                                  openTransitionModal(order.id, 6, "Annuler")
+                                }
+                                className="inline-flex items-center px-3 py-1.5 border border-transparent text-xs font-medium rounded shadow-sm text-white bg-red-600 hover:bg-red-700"
+                              >
+                                Annuler
+                              </button>
+                            </>
+                          ) : order.currentState == 5 ||
+                            order.currentState == 6 ? null : (
+                            <>
+                              <button
+                                onClick={() =>
+                                  openTransitionModal(
+                                    order.id,
+                                    11,
+                                    "Paiement accepté"
+                                  )
+                                }
+                                className="inline-flex items-center px-3 py-1.5 border border-transparent text-xs font-medium rounded shadow-sm text-white bg-green-600 hover:bg-green-700"
+                              >
+                                Paiement accepté
+                              </button>
+                              <button
+                                onClick={() =>
+                                  openTransitionModal(order.id, 6, "Annuler")
+                                }
+                                className="inline-flex items-center px-3 py-1.5 border border-transparent text-xs font-medium rounded shadow-sm text-white bg-red-600 hover:bg-red-700"
+                              >
+                                Annuler
+                              </button>
+                            </>
+                          )}
+                        </td>
+                      </tr>
+                    ))
+                  ) : (
+                    <tr>
+                      <td
+                        colSpan={7}
+                        className="px-6 py-8 text-center text-sm text-gray-500"
+                      >
+                        {isFiltered
+                          ? "Aucune commande sur cette période."
+                          : "Aucune commande trouvée."}
                       </td>
                     </tr>
-                  ))
-                ) : (
-                  <tr>
-                    <td
-                      colSpan={7}
-                      className="px-6 py-8 text-center text-sm text-gray-500"
-                    >
-                      {isFiltered
-                        ? "Aucune commande sur cette période."
-                        : "Aucune commande trouvée."}
-                    </td>
-                  </tr>
-                )}
-              </tbody>
-            </table>
+                  )}
+                </tbody>
+              </table>
+            </div>
           </div>
         </section>
       )}

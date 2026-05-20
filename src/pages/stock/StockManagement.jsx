@@ -283,7 +283,7 @@ const StockManagement = () => {
 
   return (
     <div className="p-8 max-w-7xl mx-auto">
-      <div className="flex items-center justify-between mb-6 border-b border-slate-200 pb-6">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-6 border-b border-slate-200 pb-6">
         <div>
           <h1 className="text-2xl font-bold text-slate-900">
             Gestion des stocks
@@ -293,71 +293,73 @@ const StockManagement = () => {
       </div>
 
       <div className="bg-white border border-slate-200 rounded-xl shadow-sm overflow-hidden">
-        <table className="min-w-full divide-y divide-slate-200">
-          <thead className="bg-slate-50">
-            <tr>
-              <th className="px-6 py-3 text-left text-xs font-semibold text-slate-500 uppercase">
-                Produit
-              </th>
-              <th className="px-6 py-3 text-left text-xs font-semibold text-slate-500 uppercase">
-                Référence
-              </th>
-              <th className="px-6 py-3 text-left text-xs font-semibold text-slate-500 uppercase">
-                Stock total
-              </th>
-              <th className="px-6 py-3 text-right text-xs font-semibold text-slate-500 uppercase">
-                Actions
-              </th>
-            </tr>
-          </thead>
-          <tbody className="divide-y divide-slate-100">
-            {products.map((product) => (
-              <tr key={product.id} className="hover:bg-slate-50">
-                <td className="px-6 py-4 whitespace-nowrap">
-                  <div className="flex items-center gap-3">
-                    <ProductThumbnail
-                      productId={product.id}
-                      imageId={getFirstImageId(product)}
-                    />
-                    <span className="font-medium text-slate-900 text-sm">
-                      {product.name}
-                    </span>
-                  </div>
-                </td>
-                <td className="px-6 py-4 text-sm text-slate-500 font-mono">
-                  {product.reference || "—"}
-                </td>
-                <td className="px-6 py-4 text-sm">
-                  <span
-                    className={`inline-block px-2 py-1 text-xs font-semibold rounded-full ${
-                      (product.stockQuantity ?? 0) > 0
-                        ? "bg-emerald-100 text-emerald-700"
-                        : "bg-red-100 text-red-700"
-                    }`}
-                  >
-                    {product.stockQuantity ?? 0}
-                  </span>
-                </td>
-                <td className="px-6 py-4 text-right flex justify-end gap-2">
-                  <Link
-                    to={`/backOffice/stock/evolution/${product.id}`}
-                    className="p-2 text-slate-400 hover:text-sky-500 transition-colors"
-                    title="Voir l'historique"
-                  >
-                    <HistoryIcon size={18} />
-                  </Link>
-                  <button
-                    onClick={() => handleAdjustStock(product)}
-                    className="p-2 text-slate-400 hover:text-emerald-500 transition-colors"
-                    title="Ajuster le stock"
-                  >
-                    <PlusCircle size={18} />
-                  </button>
-                </td>
+        <div className="overflow-x-auto">
+          <table className="min-w-[720px] w-full divide-y divide-slate-200">
+            <thead className="bg-slate-50">
+              <tr>
+                <th className="px-6 py-3 text-left text-xs font-semibold text-slate-500 uppercase">
+                  Produit
+                </th>
+                <th className="px-6 py-3 text-left text-xs font-semibold text-slate-500 uppercase">
+                  Référence
+                </th>
+                <th className="px-6 py-3 text-left text-xs font-semibold text-slate-500 uppercase">
+                  Stock total
+                </th>
+                <th className="px-6 py-3 text-right text-xs font-semibold text-slate-500 uppercase">
+                  Actions
+                </th>
               </tr>
-            ))}
-          </tbody>
-        </table>
+            </thead>
+            <tbody className="divide-y divide-slate-100">
+              {products.map((product) => (
+                <tr key={product.id} className="hover:bg-slate-50">
+                  <td className="px-6 py-4 whitespace-nowrap">
+                    <div className="flex items-center gap-3">
+                      <ProductThumbnail
+                        productId={product.id}
+                        imageId={getFirstImageId(product)}
+                      />
+                      <span className="font-medium text-slate-900 text-sm">
+                        {product.name}
+                      </span>
+                    </div>
+                  </td>
+                  <td className="px-6 py-4 text-sm text-slate-500 font-mono">
+                    {product.reference || "—"}
+                  </td>
+                  <td className="px-6 py-4 text-sm">
+                    <span
+                      className={`inline-block px-2 py-1 text-xs font-semibold rounded-full ${
+                        (product.stockQuantity ?? 0) > 0
+                          ? "bg-emerald-100 text-emerald-700"
+                          : "bg-red-100 text-red-700"
+                      }`}
+                    >
+                      {product.stockQuantity ?? 0}
+                    </span>
+                  </td>
+                  <td className="px-6 py-4 text-right flex justify-end gap-2">
+                    <Link
+                      to={`/backOffice/stock/evolution/${product.id}`}
+                      className="p-2 text-slate-400 hover:text-sky-500 transition-colors"
+                      title="Voir l'historique"
+                    >
+                      <HistoryIcon size={18} />
+                    </Link>
+                    <button
+                      onClick={() => handleAdjustStock(product)}
+                      className="p-2 text-slate-400 hover:text-emerald-500 transition-colors"
+                      title="Ajuster le stock"
+                    >
+                      <PlusCircle size={18} />
+                    </button>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
       </div>
 
       {modalProduct && (

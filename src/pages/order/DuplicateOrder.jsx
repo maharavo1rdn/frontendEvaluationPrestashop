@@ -69,7 +69,7 @@ const DuplicateOrder = () => {
     setStockTab(tab);
     const hasStockIssue =
       Object.keys(tab).length > 0 &&
-      Object.values(tab).some((info) => stock < requested);
+      Object.values(tab).some((info) => info.stock < info.requested);
     setIsOutOfStock(hasStockIssue);
   };
 
@@ -126,7 +126,7 @@ const DuplicateOrder = () => {
 
   return (
     <div className="p-8 max-w-5xl mx-auto">
-      <div className="flex items-center justify-between mb-6">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-6">
         <div>
           <h1 className="text-2xl font-bold text-slate-900">
             Dupliquer la commande
@@ -262,62 +262,64 @@ const DuplicateOrder = () => {
           </h2>
         </div>
         {rows.length > 0 ? (
-          <table className="min-w-full divide-y divide-slate-200">
-            <thead className="bg-slate-50">
-              <tr>
-                <th className="px-6 py-3 text-left text-xs font-bold text-slate-500 uppercase">
-                  Produit
-                </th>
-                <th className="px-6 py-3 text-right text-xs font-bold text-slate-500 uppercase">
-                  Prix unitaire
-                </th>
-                <th className="px-6 py-3 text-center text-xs font-bold text-slate-500 uppercase">
-                  Qté originale
-                </th>
-                <th className="px-6 py-3 text-center text-xs font-bold text-slate-500 uppercase">
-                  Nouvelle qté
-                </th>
-                <th className="px-6 py-3 text-right text-xs font-bold text-slate-500 uppercase">
-                  Total ligne
-                </th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-slate-100">
-              {rows.map((row) => {
-                const originalQty = parseInt(row.productQuantity, 10) || 1;
-                const newQty = Math.round(originalQty * factor);
-                const unitPrice = parseFloat(row.unitPriceTaxIncl || 0);
-                const lineTotal = unitPrice * newQty;
+          <div className="overflow-x-auto">
+            <table className="min-w-[760px] w-full divide-y divide-slate-200">
+              <thead className="bg-slate-50">
+                <tr>
+                  <th className="px-6 py-3 text-left text-xs font-bold text-slate-500 uppercase">
+                    Produit
+                  </th>
+                  <th className="px-6 py-3 text-right text-xs font-bold text-slate-500 uppercase">
+                    Prix unitaire
+                  </th>
+                  <th className="px-6 py-3 text-center text-xs font-bold text-slate-500 uppercase">
+                    Qté originale
+                  </th>
+                  <th className="px-6 py-3 text-center text-xs font-bold text-slate-500 uppercase">
+                    Nouvelle qté
+                  </th>
+                  <th className="px-6 py-3 text-right text-xs font-bold text-slate-500 uppercase">
+                    Total ligne
+                  </th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-slate-100">
+                {rows.map((row) => {
+                  const originalQty = parseInt(row.productQuantity, 10) || 1;
+                  const newQty = Math.round(originalQty * factor);
+                  const unitPrice = parseFloat(row.unitPriceTaxIncl || 0);
+                  const lineTotal = unitPrice * newQty;
 
-                return (
-                  <tr key={row.id} className="hover:bg-slate-50">
-                    <td className="px-6 py-4">
-                      <div className="font-medium text-sm text-slate-900">
-                        {row.productName}
-                      </div>
-                      <div className="text-xs text-slate-400">
-                        {row.productReference}
-                      </div>
-                    </td>
-                    <td className="px-6 py-4 text-sm text-right text-slate-700">
-                      {unitPrice.toFixed(2)} €
-                    </td>
-                    <td className="px-6 py-4 text-sm text-center text-slate-600">
-                      {originalQty}
-                    </td>
-                    <td className="px-6 py-4 text-center">
-                      <span className="inline-flex items-center justify-center w-8 h-8 rounded-full bg-sky-100 text-sky-700 font-semibold text-sm">
-                        {newQty}
-                      </span>
-                    </td>
-                    <td className="px-6 py-4 text-sm text-right font-semibold text-slate-900">
-                      {lineTotal.toFixed(2)} €
-                    </td>
-                  </tr>
-                );
-              })}
-            </tbody>
-          </table>
+                  return (
+                    <tr key={row.id} className="hover:bg-slate-50">
+                      <td className="px-6 py-4">
+                        <div className="font-medium text-sm text-slate-900">
+                          {row.productName}
+                        </div>
+                        <div className="text-xs text-slate-400">
+                          {row.productReference}
+                        </div>
+                      </td>
+                      <td className="px-6 py-4 text-sm text-right text-slate-700">
+                        {unitPrice.toFixed(2)} €
+                      </td>
+                      <td className="px-6 py-4 text-sm text-center text-slate-600">
+                        {originalQty}
+                      </td>
+                      <td className="px-6 py-4 text-center">
+                        <span className="inline-flex items-center justify-center w-8 h-8 rounded-full bg-sky-100 text-sky-700 font-semibold text-sm">
+                          {newQty}
+                        </span>
+                      </td>
+                      <td className="px-6 py-4 text-sm text-right font-semibold text-slate-900">
+                        {lineTotal.toFixed(2)} €
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
         ) : (
           <div className="px-6 py-8 text-center text-sm text-slate-500">
             Aucune ligne de commande trouvée.

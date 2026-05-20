@@ -73,6 +73,9 @@ const Dashboard = () => {
       currency: "EUR",
     }).format(val ?? 0);
 
+  const formatNumber = (val) =>
+    new Intl.NumberFormat("fr-FR").format(val ?? 0);
+
   return (
     <div className="p-6 max-w-7xl mx-auto space-y-8 bg-slate-50/30 min-h-screen">
       {/* En-tête */}
@@ -96,7 +99,7 @@ const Dashboard = () => {
             Commandes
           </h3>
           <p className="text-2xl font-bold text-slate-900 mt-1">
-            {stats.totalOrdersCount}
+            {formatNumber(stats.totalOrdersCount)}
           </p>
         </div>
         {/* CA Commandé HT */}
@@ -162,7 +165,7 @@ const Dashboard = () => {
             Paniers non commandés
           </h3>
           <p className="text-2xl font-bold text-slate-900 mt-1">
-            {stats.unorderedCartsCount}
+            {formatNumber(stats.unorderedCartsCount)}
           </p>
           <div className="mt-2 flex items-center text-xs text-slate-400">
             En attente de validation
@@ -283,7 +286,7 @@ const Dashboard = () => {
                     </td>
                     <td className="px-6 py-4">
                       <span className="bg-slate-100 text-slate-600 px-2.5 py-1 rounded-md text-xs font-bold">
-                        {day.count}
+                        {formatNumber(day.count)}
                       </span>
                     </td>
                     <td className="px-6 py-4 text-sm font-medium text-slate-900 text-right">
