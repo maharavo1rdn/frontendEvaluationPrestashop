@@ -71,7 +71,7 @@ const ProduitCreate = () => {
   return (
     <div className="p-8 max-w-3xl animate-in fade-in duration-500">
       {/* ── En-tête ── */}
-      <div className="flex items-center justify-between mb-8">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-8">
         <div className="flex items-center gap-3">
           <div className="p-2 bg-sky-500 rounded-lg text-white">
             <PackagePlus size={24} />

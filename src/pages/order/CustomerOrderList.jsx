@@ -188,7 +188,7 @@ const CustomerOrderList = () => {
   return (
     <div className="p-8 max-w-7xl mx-auto">
       {/* En-tête */}
-      <div className="flex items-center justify-between mb-8 border-b border-slate-200 pb-6">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-8 border-b border-slate-200 pb-6">
         <div>
           <h1 className="text-2xl font-bold text-slate-900">Mes commandes</h1>
           <p className="text-slate-500 text-sm">
@@ -212,61 +212,63 @@ const CustomerOrderList = () => {
             Paniers en cours
           </h2>
           <div className="bg-white border border-slate-200 rounded-xl shadow-sm overflow-hidden">
-            <table className="min-w-full divide-y divide-slate-200">
-              <thead className="bg-slate-50">
-                <tr>
-                  <th className="px-6 py-3 text-left text-xs font-bold text-slate-500 uppercase">
-                    Panier
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-bold text-slate-500 uppercase">
-                    Date
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-bold text-slate-500 uppercase">
-                    Articles
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-bold text-slate-500 uppercase">
-                    Total estimé
-                  </th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-slate-100">
-                {unorderedCarts.map((cart) => (
-                  <tr key={cart.id} className="hover:bg-slate-50">
-                    <td className="px-6 py-4 whitespace-nowrap text-sm font-mono text-slate-600">
-                      #{cart.id}
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-500">
-                      {cart.dateAdd
-                        ? new Date(cart.dateAdd).toLocaleDateString("fr-FR")
-                        : "—"}
-                    </td>
-                    <td className="px-6 py-4 text-sm text-slate-700">
-                      <ul className="list-disc list-inside space-y-1">
-                        {cart.items.map((item, idx) => (
-                          <li key={idx}>
-                            <span className="font-medium">{item.name}</span>
-                            {item.reference !== "-" && (
-                              <span className="text-gray-400 ml-1">
-                                ({item.reference})
-                              </span>
-                            )}
-                            <span className="text-slate-500 ml-2">
-                              x{item.quantity}
-                            </span>
-                            <span className="text-slate-600 ml-2 font-medium">
-                              {item.unitPriceTtc.toFixed(2)} € / u
-                            </span>
-                          </li>
-                        ))}
-                      </ul>
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm font-bold text-slate-900">
-                      {cart.total.toFixed(2)} €
-                    </td>
+            <div className="overflow-x-auto">
+              <table className="min-w-[720px] w-full divide-y divide-slate-200">
+                <thead className="bg-slate-50">
+                  <tr>
+                    <th className="px-6 py-3 text-left text-xs font-bold text-slate-500 uppercase">
+                      Panier
+                    </th>
+                    <th className="px-6 py-3 text-left text-xs font-bold text-slate-500 uppercase">
+                      Date
+                    </th>
+                    <th className="px-6 py-3 text-left text-xs font-bold text-slate-500 uppercase">
+                      Articles
+                    </th>
+                    <th className="px-6 py-3 text-left text-xs font-bold text-slate-500 uppercase">
+                      Total estimé
+                    </th>
                   </tr>
-                ))}
-              </tbody>
-            </table>
+                </thead>
+                <tbody className="divide-y divide-slate-100">
+                  {unorderedCarts.map((cart) => (
+                    <tr key={cart.id} className="hover:bg-slate-50">
+                      <td className="px-6 py-4 whitespace-nowrap text-sm font-mono text-slate-600">
+                        #{cart.id}
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-500">
+                        {cart.dateAdd
+                          ? new Date(cart.dateAdd).toLocaleDateString("fr-FR")
+                          : "—"}
+                      </td>
+                      <td className="px-6 py-4 text-sm text-slate-700">
+                        <ul className="list-disc list-inside space-y-1">
+                          {cart.items.map((item, idx) => (
+                            <li key={idx}>
+                              <span className="font-medium">{item.name}</span>
+                              {item.reference !== "-" && (
+                                <span className="text-gray-400 ml-1">
+                                  ({item.reference})
+                                </span>
+                              )}
+                              <span className="text-slate-500 ml-2">
+                                x{item.quantity}
+                              </span>
+                              <span className="text-slate-600 ml-2 font-medium">
+                                {item.unitPriceTtc.toFixed(2)} € / u
+                              </span>
+                            </li>
+                          ))}
+                        </ul>
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm font-bold text-slate-900">
+                        {cart.total.toFixed(2)} €
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
           </div>
         </section>
       )}

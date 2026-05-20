@@ -11,6 +11,23 @@
   transition: margin-left 220ms cubic-bezier(0.4, 0, 0.2, 1);
 }
 
+@media (max-width: 1024px) {
+  .app-main {
+    padding: 28px 24px;
+  }
+}
+
+@media (max-width: 768px) {
+  .app-layout {
+    flex-direction: column;
+  }
+
+  .app-main {
+    margin-left: 0 !important;
+    padding: 20px 16px;
+  }
+}
+
 .app-main__inner {
   max-width: 800px;
 }

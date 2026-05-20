@@ -304,7 +304,7 @@ export default function ImportAll() {
           return (
             <div
               key={step.key}
-              className={`grid grid-cols-[2rem_1fr_auto] items-center gap-4 p-4 ${
+              className={`grid grid-cols-1 sm:grid-cols-[2rem_1fr_auto] items-start sm:items-center gap-3 sm:gap-4 p-4 ${
                 isLast ? "" : "border-b border-slate-100"
               }`}
             >
@@ -366,7 +366,7 @@ export default function ImportAll() {
 
               {/* Status badge */}
               <div
-                className={`text-xs font-medium whitespace-nowrap min-w-[60px] text-right ${styles.text}`}
+                className={`text-xs font-medium whitespace-nowrap min-w-[60px] sm:text-right ${styles.text}`}
               >
                 {s.result
                   ? `${s.result.success.length}✓ ${s.result.errors.length}✗`
