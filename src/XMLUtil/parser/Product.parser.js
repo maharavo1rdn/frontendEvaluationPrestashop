@@ -12,7 +12,7 @@ const toIdArray = (nodes) => toArray(nodes).map((node) => getValue(node.id));
 
 export const mapProduct = (productNode) => ({
   id: getValue(productNode.id),
-  type: getValue(productNode.type),
+  type: getValue(productNode.product_type) ?? getValue(productNode.type),
   reference: getValue(productNode.reference),
   supplierReference: getValue(productNode.supplier_reference),
   idManufacturer: getValue(productNode.id_manufacturer),

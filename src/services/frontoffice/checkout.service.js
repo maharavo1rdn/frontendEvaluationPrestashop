@@ -24,7 +24,7 @@ const formatDecimal = (value, decimals = 6) => {
   return value.toFixed(decimals);
 };
 
-const resolveCartItems = async (items) => {
+export const resolveCartItems = async (items) => {
   const resolved = [];
   for (const item of items) {
     const products = await findProductByKeyValue("id", item.idProduct);
@@ -64,7 +64,7 @@ const resolveCartItems = async (items) => {
   return resolved;
 };
 
-const computeTotals = (resolvedItems) => {
+export const computeTotals = (resolvedItems) => {
   const totalProductsHt = resolvedItems.reduce(
     (sum, item) => sum + item.unitPriceHt * item.quantity,
     0

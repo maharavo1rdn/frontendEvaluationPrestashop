@@ -48,12 +48,8 @@ export const parseNumber = (value) => {
     return isNegative ? -numeric : numeric;
   }
 
-  const integerPart = cleaned
-    .slice(0, decimalIndex)
-    .replace(/[^0-9]/g, "");
-  const fractionalPart = cleaned
-    .slice(decimalIndex + 1)
-    .replace(/[^0-9]/g, "");
+  const integerPart = cleaned.slice(0, decimalIndex).replace(/[^0-9]/g, "");
+  const fractionalPart = cleaned.slice(decimalIndex + 1).replace(/[^0-9]/g, "");
 
   const normalized = `${integerPart}.${fractionalPart}`;
   const numeric = parseFloat(normalized);
@@ -123,4 +119,13 @@ export const parseDate = (dateStr) => {
 
   const year = third.length === 2 ? `20${third}` : third;
   return `${year}-${pad2(second)}-${pad2(first)}`;
+};
+
+export const formatDate = (date) => {
+  if (!date) return "";
+  const d = date instanceof Date ? date : new Date(date);
+  const pad = (n) => String(n).padStart(2, "0");
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())} ${pad(
+    d.getHours()
+  )}:${pad(d.getMinutes())}:${pad(d.getSeconds())}`;
 };

@@ -18,9 +18,9 @@ const CommandesRoutes = () => {
         <Route
           path="/frontOffice/commandes/customers"
           element={
-            <EmployeeProtectedRoute>
+            <CustomerProtectedRoute>
               <CustomerOrderList />
-            </EmployeeProtectedRoute>
+            </CustomerProtectedRoute>
           }
         />
       </Routes>

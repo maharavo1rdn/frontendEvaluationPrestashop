@@ -61,6 +61,14 @@ const REQUIRED_STATES = [
 
 ];
 
+const isTaxRateInRange = (value) => {
+  if (value === null || value === undefined || String(value).trim() === "") {
+    return true;
+  }
+  const numeric = parseNumber(value);
+  return Number.isFinite(numeric) && numeric >= 0 && numeric <= 100;
+};
+
 const validateColumns = (rows, requiredCols, fileLabel) => {
   const errors = [];
   if (!rows.length) {
@@ -143,7 +151,7 @@ const validateProductsFile = (rows) => {
         message: `Prix d'achat invalide ou négatif : "${row.prix_achat}".`,
       });
     }
-    if (!isPositivePercentageValue(row.Taxe)) {
+    if (!isPositivePercentageValue(row.Taxe) || !isTaxRateInRange(row.Taxe)) {
       errors.push({
         file: fileLabel,
         line,

@@ -82,6 +82,10 @@ export default function ImportAll() {
       ])
     )
   );
+  const [skipImages, setSkipImages] = useState(false);
+  const handleSkipImagesChange = () => {
+    setSkipImages(!skipImages);
+  };
   const [logs, setLogs] = useState([]);
   const [running, setRunning] = useState(false);
   const [globalDone, setGlobalDone] = useState(false);
@@ -191,6 +195,14 @@ export default function ImportAll() {
       });
 
       try {
+        if (skipImages && step.key === "images") {
+          pushLog(
+            "info",
+            `[${step.label}] Ignoré volontairement (case cochée).`
+          );
+          setStatus(step.key, { status: STATUS.skipped });
+          continue;
+        }
         const result = await step.service(
           file,
           ({ done, total, result: rowResult }) => {
@@ -214,6 +226,7 @@ export default function ImportAll() {
                   });
                 }
                 importAborted = true;
+                setStatus(step.key, { status: STATUS.error });
                 throw new Error("AbortImport");
               }
 
@@ -266,6 +279,21 @@ export default function ImportAll() {
         </p>
       </div>
 
+      <div className="flex items-center gap-3 text-sm text-slate-500 mb-4">
+        <input
+          type="checkbox"
+          checked={skipImages}
+          onChange={handleSkipImagesChange}
+          className="h-4 w-4 rounded border-slate-300 text-sky-500 focus:ring-sky-500"
+          id="skip-images"
+        />
+        <label
+          htmlFor="skip-images"
+          className="font-medium text-slate-700 cursor-pointer select-none"
+        >
+          Ne pas importer les images
+        </label>
+      </div>
       {/* Steps card */}
       <div className="bg-white border border-slate-200 rounded-xl shadow-sm overflow-hidden mb-6">
         {STEPS.map((step, i) => {

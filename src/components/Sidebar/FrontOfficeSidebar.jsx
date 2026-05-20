@@ -8,9 +8,7 @@ const FRONTOFFICE_ITEMS = [
     id: "products",
     label: "Products",
     icon: Box,
-    children: [
-      { id: "products-list", label: "Liste", path: "/frontOffice/products" },
-    ],
+    path: "/frontOffice/products",
   },
   {
     id: "cart",
