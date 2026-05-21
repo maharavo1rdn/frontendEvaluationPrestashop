@@ -111,9 +111,43 @@ const roundMoney = (value) => {
   return value.toFixed(6);
 };
 
-// ─── Cache TVA ────────────────────────────────────────────────────────────────
+// ─── Caches ──────────────────────────────────────────────────────────────────
+
+const makeLookupCache = (fetcher) => {
+  const map = new Map();
+  const getter = async (key) => {
+    const cacheKey = String(key ?? "").toLowerCase();
+    if (map.has(cacheKey)) return map.get(cacheKey);
+    const value = await fetcher(key);
+    map.set(cacheKey, value);
+    return value;
+  };
+  getter.set = (key, value) => {
+    const cacheKey = String(key ?? "").toLowerCase();
+    map.set(cacheKey, value);
+  };
+  return getter;
+};
 
 const taxRateCache = new Map();
+const productByRefCache = makeLookupCache((reference) =>
+  findProductByKeyValue("reference", reference)
+);
+const optionValueByNameCache = makeLookupCache((name) =>
+  findProductOptionValueByKeyValue("name", name)
+);
+const combinationsByProductIdCache = makeLookupCache((productId) =>
+  findCombinationsByProductId(productId)
+);
+const customerByEmailCache = makeLookupCache((email) =>
+  findCustomerByKeyValue("email", email)
+);
+const customerByIdCache = makeLookupCache((id) =>
+  findCustomerByKeyValue("id", id)
+);
+const addressesByCustomerIdCache = makeLookupCache((customerId) =>
+  findAddressByKeyValue("id_customer", customerId)
+);
 
 const getTaxRateByGroupId = async (groupId) => {
   if (!groupId) return 0;
@@ -138,15 +172,12 @@ const getTaxRateByGroupId = async (groupId) => {
 const normalizeIds = (ids) => ids.map((id) => String(id)).sort();
 
 const findCombinationByValueName = async (productId, valueName) => {
-  const optionValues = await findProductOptionValueByKeyValue(
-    "name",
-    valueName
-  );
+  const optionValues = await optionValueByNameCache(valueName);
   if (!optionValues.length)
     throw new Error(`Valeur d'attribut "${valueName}" introuvable`);
 
   const targetId = String(optionValues[0].id);
-  const combinations = await findCombinationsByProductId(productId);
+  const combinations = await combinationsByProductIdCache(productId);
   const combination = combinations.find((c) =>
     normalizeIds(c?.associations?.productOptionValues ?? []).includes(targetId)
   );
@@ -174,7 +205,7 @@ const resolveAchatItems = async (items) => {
       continue;
     }
 
-    const products = await findProductByKeyValue("reference", item.reference);
+    const products = await productByRefCache(item.reference);
     if (!products.length)
       throw new Error(`Produit "${item.reference}" introuvable`);
 
@@ -234,7 +265,7 @@ const computeOrderTotals = (resolvedItems) => {
 // ─── Find or create ───────────────────────────────────────────────────────────
 
 const ensureCustomer = async (row) => {
-  const existing = await findCustomerByKeyValue("email", row.email);
+  const existing = await customerByEmailCache(row.email);
   if (existing.length > 0) return existing[0];
 
   const { firstname, lastname } = parseName(row.nom);
@@ -252,14 +283,25 @@ const ensureCustomer = async (row) => {
 
   let secureKey = created.secureKey;
   if (!secureKey && created.id) {
-    const retry = await findCustomerByKeyValue("id", created.id);
+    const retry = await customerByIdCache(created.id);
     secureKey = retry[0]?.secureKey;
   }
-  return { id: created.id, firstname, lastname, email: row.email, secureKey };
+  const newCustomer = {
+    id: created.id,
+    firstname,
+    lastname,
+    email: row.email,
+    secureKey,
+  };
+  customerByEmailCache.set(row.email, [newCustomer]);
+  if (created.id) {
+    customerByIdCache.set(created.id, [newCustomer]);
+  }
+  return newCustomer;
 };
 
 const ensureAddress = async (customerId, row) => {
-  const all = await findAddressByKeyValue("id_customer", customerId);
+  const all = await addressesByCustomerIdCache(customerId);
   const existing = all.find(
     (a) =>
       a.address1?.trim().toLowerCase() === row.adresse?.trim().toLowerCase()
@@ -281,6 +323,16 @@ const ensureAddress = async (customerId, row) => {
     throw new Error(
       `Impossible de créer l'adresse "${row.adresse}": ${created.error}`
     );
+  const existingCached = await addressesByCustomerIdCache(customerId);
+  const nextCached = Array.isArray(existingCached)
+    ? existingCached.concat([
+        {
+          id: created.id,
+          address1: row.adresse,
+        },
+      ])
+    : [{ id: created.id, address1: row.adresse }];
+  addressesByCustomerIdCache.set(customerId, nextCached);
   return { id: created.id };
 };
 

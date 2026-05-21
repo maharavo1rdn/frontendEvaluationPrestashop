@@ -16,11 +16,44 @@ const parseOptionalNumber = (value) =>
     ? undefined
     : parseNumber(value);
 
+// Lightweight lookup caches to avoid repeated API calls during import
+const makeLookupCache = (fetcher) => {
+  const map = new Map();
+  const getter = async (key) => {
+    const cacheKey = String(key ?? "").toLowerCase();
+    if (map.has(cacheKey)) return map.get(cacheKey);
+    const value = await fetcher(key);
+    map.set(cacheKey, value);
+    return value;
+  };
+  getter.set = (key, value) => {
+    const cacheKey = String(key ?? "").toLowerCase();
+    map.set(cacheKey, value);
+  };
+  return getter;
+};
+
+const categoryByNameCache = makeLookupCache((name) =>
+  findCategoryByKeyValue("name", name)
+);
+const manufacturerByNameCache = makeLookupCache((name) =>
+  findManufacturerByKeyValue("name", name)
+);
+const productByReferenceCache = makeLookupCache((reference) =>
+  findProductByKeyValue("reference", reference)
+);
+const taxByRateCache = makeLookupCache((rate) =>
+  findTaxByKeyValue("rate", rate)
+);
+const taxRulesGroupByNameCache = makeLookupCache((name) =>
+  findTaxRulesGroupByKeyValue("name", name)
+);
+
 const roundPrice = (value) => Number(Number(value).toFixed(6));
 
 const ensureCategoryId = async (categoryName) => {
   if (!categoryName) return 2;
-  const categories = await findCategoryByKeyValue("name", categoryName);
+  const categories = await categoryByNameCache(categoryName);
   if (categories.length > 0) return Number(categories[0].id);
 
   const created = await postCategory({
@@ -36,7 +69,16 @@ const ensureCategoryId = async (categoryName) => {
 
   if (!created.id) {
     const retry = await findCategoryByKeyValue("name", categoryName);
-    if (retry.length > 0) return Number(retry[0].id);
+    if (retry.length > 0) {
+      categoryByNameCache.set(categoryName, retry);
+      return Number(retry[0].id);
+    }
+  }
+
+  if (created.id) {
+    categoryByNameCache.set(categoryName, [
+      { id: created.id, name: categoryName },
+    ]);
   }
 
   return Number(created.id);
@@ -48,7 +90,7 @@ const ensureTaxRulesGroupId = async (taxRate) => {
   const rateLabel = Number(taxRate).toFixed(2).replace(/\.00$/, "");
   const taxName = `TVA ${rateLabel}%`;
 
-  let taxes = await findTaxByKeyValue("rate", taxRate);
+  let taxes = await taxByRateCache(taxRate);
   let taxId = taxes[0]?.id;
   if (!taxId) {
     const createdTax = await postTax({
@@ -60,13 +102,16 @@ const ensureTaxRulesGroupId = async (taxRate) => {
       throw new Error(`Impossible de creer la taxe "${taxName}"`);
     }
     taxId = createdTax.id;
+    if (taxId) {
+      taxByRateCache.set(taxRate, [{ id: taxId, rate: taxRate }]);
+    }
   }
 
   if (!taxId) {
     throw new Error(`Taxe introuvable pour ${taxName}`);
   }
 
-  let groups = await findTaxRulesGroupByKeyValue("name", taxName);
+  let groups = await taxRulesGroupByNameCache(taxName);
   let groupId = groups[0]?.id;
   if (!groupId) {
     const createdGroup = await postTaxRulesGroup({
@@ -77,6 +122,9 @@ const ensureTaxRulesGroupId = async (taxRate) => {
       throw new Error(`Impossible de creer le groupe de taxe "${taxName}"`);
     }
     groupId = createdGroup.id;
+    if (groupId) {
+      taxRulesGroupByNameCache.set(taxName, [{ id: groupId, name: taxName }]);
+    }
   }
 
   if (!groupId) {
@@ -114,7 +162,7 @@ export const mapRowToProduct = async (row) => {
   if (!name) {
     throw new Error("Nom de produit manquant");
   }
-  const existing = await findProductByKeyValue("reference", row.reference);
+  const existing = await productByReferenceCache(row.reference);
   if (existing && existing.length > 0)
     throw new Error("Produit avec le même référence existant");
 
@@ -123,7 +171,7 @@ export const mapRowToProduct = async (row) => {
 
   const manufacturerName = row.manufacturer_name?.trim();
   const manufacturers = manufacturerName
-    ? await findManufacturerByKeyValue("name", manufacturerName)
+    ? await manufacturerByNameCache(manufacturerName)
     : [];
   const manufacturerId =
     manufacturers.length > 0 ? Number(manufacturers[0].id) : undefined;
