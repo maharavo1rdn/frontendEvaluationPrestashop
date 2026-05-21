@@ -45,14 +45,14 @@ export default function AppRoutes() {
             </CustomerProtectedRoute>
           }
         />
-        <Route path="/frontOffice/duplicateOrder"
-        element={<CustomerProtectedRoute> 
-
-          <DuplicateOrder></DuplicateOrder>
-        </CustomerProtectedRoute>}
-        >
-          
-        </Route>
+        <Route
+          path="/frontOffice/duplicateOrder"
+          element={
+            <CustomerProtectedRoute>
+              <DuplicateOrder></DuplicateOrder>
+            </CustomerProtectedRoute>
+          }
+        ></Route>
       </Routes>
       <ClientsRoutes />
       <ProduitsRoutes />
