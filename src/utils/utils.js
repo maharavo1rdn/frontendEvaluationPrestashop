@@ -129,3 +129,13 @@ export const formatDate = (date) => {
     d.getHours()
   )}:${pad(d.getMinutes())}:${pad(d.getSeconds())}`;
 };
+
+export const parseDateWithSeparator = (date, separator = "/") => {
+  if (!date) return "";
+  const d = new Date(date);
+  if (isNaN(d.getTime())) return date;
+  const day = String(d.getDate()).padStart(2, "0");
+  const month = String(d.getMonth() + 1).padStart(2, "0");
+  const year = d.getFullYear();
+  return `${day}${separator}${month}${separator}${year}`;
+};
