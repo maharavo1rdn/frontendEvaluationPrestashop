@@ -78,7 +78,7 @@ const DuplicateOrder = () => {
     setDuplicateError(null);
     setDuplicateResult(null);
     try {
-      const result = await duplicateOrder(orderId, factor);
+      const result = await duplicateOrder(orderId, factor, 5);
       if (result && result.success) {
         setDuplicateResult(result);
       } else {

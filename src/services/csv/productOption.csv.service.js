@@ -38,7 +38,54 @@ const parseOptionalBoolean = (value) => {
   return undefined;
 };
 
+const makeLookupCache = (fetcher) => {
+  const map = new Map();
+  const getter = async (key) => {
+    const cacheKey = String(key ?? "").toLowerCase();
+    if (map.has(cacheKey)) return map.get(cacheKey);
+    const value = await fetcher(key);
+    map.set(cacheKey, value);
+    return value;
+  };
+  getter.set = (key, value) => {
+    const cacheKey = String(key ?? "").toLowerCase();
+    map.set(cacheKey, value);
+  };
+  return getter;
+};
+
 const taxRateCache = new Map();
+const productByReferenceCache = makeLookupCache((reference) =>
+  findProductByKeyValue("reference", reference)
+);
+const productOptionByNameCache = makeLookupCache((name) =>
+  findProductOptionByKeyValue("name", name)
+);
+const productOptionValueByNameCache = makeLookupCache((name) =>
+  findProductOptionValueByKeyValue("name", name)
+);
+const combinationsByProductIdCache = makeLookupCache((productId) =>
+  findCombinationsByProductId(productId)
+);
+const stockByProductAttrCache = (() => {
+  const map = new Map();
+  const makeKey = (productId, attrId) => `${productId}:${attrId}`;
+  const getter = async ({ productId, attrId }) => {
+    const key = makeKey(productId, attrId);
+    if (map.has(key)) return map.get(key);
+    const value = await findStockAvailableByProductAttribute(
+      productId,
+      attrId
+    );
+    map.set(key, value);
+    return value;
+  };
+  getter.set = ({ productId, attrId }, value) => {
+    const key = makeKey(productId, attrId);
+    map.set(key, value);
+  };
+  return getter;
+})();
 
 const getTaxRateByGroupId = async (groupId) => {
   if (!groupId) return 0;
@@ -86,7 +133,7 @@ const ensureProductOption = async (optionName) => {
     throw new Error("Nom d'option manquant");
   }
 
-  const existing = await findProductOptionByKeyValue("name", optionName);
+  const existing = await productOptionByNameCache(optionName);
   if (existing.length > 0) {
     return { id: existing[0].id, name: existing[0].name };
   }
@@ -104,7 +151,11 @@ const ensureProductOption = async (optionName) => {
       `Impossible de créer l'option "${optionName}": ${created.error}`
     );
   }
-
+  if (created.id) {
+    productOptionByNameCache.set(optionName, [
+      { id: created.id, name: optionName },
+    ]);
+  }
   return { id: created.id, name: optionName };
 };
 
@@ -121,7 +172,7 @@ const ensureProductOptionValue = async (valueName, idOption) => {
     throw new Error("Id d'option manquant pour la valeur");
   }
 
-  const existing = await findProductOptionValueByKeyValue("name", valueName);
+  const existing = await productOptionValueByNameCache(valueName);
   if (existing.length > 0) {
     return { id: existing[0].id, name: existing[0].name };
   }
@@ -137,7 +188,11 @@ const ensureProductOptionValue = async (valueName, idOption) => {
       `Impossible de créer la valeur d'option "${valueName}": ${created.error}`
     );
   }
-
+  if (created.id) {
+    productOptionValueByNameCache.set(valueName, [
+      { id: created.id, name: valueName },
+    ]);
+  }
   return { id: created.id, name: valueName };
 };
 
@@ -205,7 +260,7 @@ const findOrCreateCombination = async ({
   reference,
   defaultOn,
 }) => {
-  const combinations = await findCombinationsByProductId(productId);
+  const combinations = await combinationsByProductIdCache(productId);
   const existing = findMatchingCombination(combinations, attributeIds);
   if (existing) {
     return { id: existing.id, reused: true };
@@ -227,6 +282,20 @@ const findOrCreateCombination = async ({
   if (!created.success) {
     throw new Error(created.error || "Creation de combinaison impossible");
   }
+  const nextCombinations = Array.isArray(combinations)
+    ? combinations.concat([
+        {
+          id: created.id,
+          associations: { productOptionValues: attributeIds },
+        },
+      ])
+    : [
+        {
+          id: created.id,
+          associations: { productOptionValues: attributeIds },
+        },
+      ];
+  combinationsByProductIdCache.set(productId, nextCombinations);
 
   return { id: created.id, reused: false };
 };
@@ -258,7 +327,7 @@ export const importProductOptionsFromCSV = async (file, onProgress) => {
         throw new Error("Référence produit manquante");
       }
 
-      const products = await findProductByKeyValue("reference", reference);
+      const products = await productByReferenceCache(reference);
       if (!products.length) {
         throw new Error(`Produit avec référence "${reference}" non trouvé`);
       }
@@ -284,17 +353,17 @@ export const importProductOptionsFromCSV = async (file, onProgress) => {
       let updatedStock = null;
       if (mappedData.stock !== undefined && mappedData.stock !== null) {
 
-        let existingStocks = await findStockAvailableByProductAttribute(
-          product.id,
-          idProductAttribute
-        );
+        let existingStocks = await stockByProductAttrCache({
+          productId: product.id,
+          attrId: idProductAttribute,
+        });
 
         if (!existingStocks.length) {
           await new Promise((r) => setTimeout(r, 300));
-          existingStocks = await findStockAvailableByProductAttribute(
-            product.id,
-            idProductAttribute
-          );
+          existingStocks = await stockByProductAttrCache({
+            productId: product.id,
+            attrId: idProductAttribute,
+          });
         }
 
         if (!existingStocks.length) {
@@ -314,6 +383,16 @@ export const importProductOptionsFromCSV = async (file, onProgress) => {
         if (!updatedStock.success) {
           throw new Error(updatedStock.error || "Mise à jour stock impossible");
         }
+
+        stockByProductAttrCache.set(
+          { productId: product.id, attrId: idProductAttribute },
+          [
+            {
+              id: updatedStock.id,
+              quantity: mappedData.stock,
+            },
+          ]
+        );
 
         stockAvailable = {
           id: updatedStock.id,

@@ -216,18 +216,18 @@ export const getUnorderedCartsByCustomer = async (customerId) => {
 
 export const getUnorderedCarts = async () => {
   try {
-    const orders = await getAllOrders();
+    const [orders, carts] = await Promise.all([getAllOrders(), getAll()]);
     const orderedCartIds = new Set(orders.map((order) => String(order.idCart)));
-
-    const carts = await getAll();
-
     const unorderedCarts = carts
       .filter((cart) => !orderedCartIds.has(String(cart.id)))
       .sort((a, b) => new Date(b.dateAdd) - new Date(a.dateAdd));
 
     return unorderedCarts;
   } catch (error) {
-    console.error("Erreur lors de la récupération des paniers non commandés:", error);
+    console.error(
+      "Erreur lors de la récupération des paniers non commandés:",
+      error
+    );
     throw error;
   }
 };

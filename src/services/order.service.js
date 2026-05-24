@@ -5,6 +5,7 @@ import { API_URL, WS_KEY, authHeaders } from "../config/config.service";
 import { findOrderStateByKeyValue } from "./orderState.service";
 import { deleteCart, findCartByKeyValue, postCart } from "./cart.service";
 import { findAddressByKeyValue } from "./address.service";
+import { postOrderTransition } from "./stockTransition.service";
 import { formatDate } from "../utils/utils";
 import {
   computeTotals,
@@ -290,7 +291,7 @@ export const createOrderFromCart = async (
   };
 };
 
-export const duplicateOrder = async (idOrder, quantity) => {
+export const duplicateOrder = async (idOrder, quantity, orderStateId = 11) => {
   try {
     const newCart = await duplicateCartFromOrder(idOrder, quantity);
     const createdCart = await postCart(newCart);
@@ -308,6 +309,21 @@ export const duplicateOrder = async (idOrder, quantity) => {
         throw new Error(
           `Impossible de créer la commande dupliqué: ${createdOrder.error}`
         );
+      }
+      if (orderStateId == 5) {
+        try {
+          await postOrderTransition({
+            idOrder: createdOrder.id,
+            idOrderState: orderStateId,
+            idEmployee: 1,
+            dateAdd: formatDate(new Date()),
+          });
+        } catch (movementErr) {
+          await deleteOrder(createdOrder.id);
+          throw new Error(
+            `Impossible de livrer la commande: #${createdOrder.id}`
+          );
+        }
       }
       return {
         success: true,
