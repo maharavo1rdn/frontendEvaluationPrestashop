@@ -6,12 +6,16 @@ import { findOrderStateByKeyValue } from "./orderState.service";
 import { deleteCart, findCartByKeyValue, postCart } from "./cart.service";
 import { findAddressByKeyValue } from "./address.service";
 import { postOrderTransition } from "./stockTransition.service";
-import { formatDate } from "../utils/utils";
+import { formatDate, parseDateWithSeparator } from "../utils/utils";
 import {
   computeTotals,
   resolveCartItems,
 } from "./frontoffice/checkout.service";
+import { getCombinationById } from "./combination.service";
+import { findProductOptionValueByKeyValue } from "./productOptionValue.service";
+import { getAll as getAllCarts } from "./cart.service";
 import { findCustomerByKeyValue } from "./customer.service";
+import { getProductById } from "./product.service";
 
 const DEFAULT_DISPLAY = "full";
 
@@ -335,4 +339,77 @@ export const duplicateOrder = async (idOrder, quantity, orderStateId = 11) => {
   } catch (error) {
     throw new Error(`Erreur:${error.message}`);
   }
+};
+
+const parseAchatFromCartOrder = async (cart) => {
+  const carts = cart?.associations?.cartRows;
+  const enriched = await Promise.all(
+    carts.map(async (cart) => {
+      const product = await getProductById(cart.idProduct);
+
+      let karazany = "";
+      if (cart.idProductAttribute != 0) {
+        const combination = await getCombinationById(cart.idProductAttribute);
+        const productOptionValue = await findProductOptionValueByKeyValue(
+          "id",
+          combination.associations.productOptionValues[0]
+        );
+        karazany = productOptionValue[0].name;
+      }
+      return {
+        reference: product.reference,
+        quantity: cart.quantity,
+        productOptionValue: karazany,
+      };
+    })
+  );
+  return enriched;
+};
+
+const parseCustomerFromCartOrder = async (cart) => {
+  const customer = await findCustomerByKeyValue("id", cart.idCustomer);
+  const customerAddress = await findAddressByKeyValue(
+    "id_customer",
+    customer[0].id
+  );
+  return {
+    nom: `${customer[0].firstname} ${customer[0].lastname}`,
+    email: customer[0].email,
+    address: `"${customerAddress[0].address1}"`,
+  };
+};
+
+export const tranformOrdersToCSV = async () => {
+  const data = await getAllCarts();
+  const csv = await Promise.all(
+    data.map(async (cart) => {
+      const [achats, customer, order] = await Promise.all([
+        parseAchatFromCartOrder(cart),
+        parseCustomerFromCartOrder(cart),
+        findOrderByKeyValue("id_cart", cart.id),
+      ]);
+      let etat = "";
+      if (order && order.length > 0) {
+        if (order[0].currentState == 11) etat = "paiement accepté";
+        else if (order[0].currentState == 5) etat = "livré";
+        else if (order[0].currentState == 6) etat = "annulé";
+      }
+      const achatString =
+        "[" +
+        achats
+          .map(
+            (achat) =>
+              `("${achat.reference}";${achat.quantity};"${achat.productOptionValue}")`
+          )
+          .join(",") +
+        "]";
+      return {
+        date: parseDateWithSeparator(cart.dateAdd.split(" ")[0]),
+        ...customer,
+        achatString,
+        etat,
+      };
+    })
+  );
+  return csv;
 };

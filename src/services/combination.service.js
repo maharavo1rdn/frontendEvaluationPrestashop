@@ -58,6 +58,20 @@ export const findCombinationsByProductId = async (productId) => {
   }
 };
 
+export const getCombinationById = async (id) => {
+  try {
+    const response = await fetch(
+      `${API_URL()}/combinations/${id}?output_format=XML`,
+      { headers: authHeaders() }
+    );
+    const xmlText = await response.text();
+    if (!response.ok) throw new Error(`HTTP ${response.status} — ${xmlText}`);
+    return parseCombination(xmlText);
+  } catch (error) {
+    throw error;
+  }
+};
+
 export const postCombination = async (combination) => {
   const xml = buildCombinationXML(combination);
   try {
