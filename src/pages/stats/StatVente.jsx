@@ -31,8 +31,10 @@ const StatsVentes = () => {
         );
 
         // 2. Commandes + tous les produits
-        const orders = await getAllOrders();
-        const allProducts = await getAllProducts();
+        const [orders, allProducts] = await Promise.all([
+          getAllOrders(),
+          getAllProducts(),
+        ]);
         const productMap = Object.fromEntries(
           allProducts.map((p) => [String(p.id), p])
         );
@@ -236,8 +238,7 @@ const StatsVentes = () => {
       currency: "EUR",
     }).format(val ?? 0);
 
-  const formatNumber = (val) =>
-    new Intl.NumberFormat("fr-FR").format(val ?? 0);
+  const formatNumber = (val) => new Intl.NumberFormat("fr-FR").format(val ?? 0);
 
   const formatPercent = (val) =>
     `${new Intl.NumberFormat("fr-FR", {
