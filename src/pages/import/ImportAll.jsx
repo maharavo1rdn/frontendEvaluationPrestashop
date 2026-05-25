@@ -14,6 +14,7 @@ import importOrdersFromCSV from "../../services/csv/customerOrder.service";
 import importProductImagesFromZip from "../../services/zip/productImage.zip.service";
 import { validateAllFiles } from "../../services/csv/validator.service";
 import { resetAllTables } from "../../services/reset.service";
+import { getTopCustomer } from "../../services/customer.service";
 
 const STEPS = [
   {
@@ -105,6 +106,9 @@ export default function ImportAll() {
     setStepStatus((prev) => ({ ...prev, [key]: { ...prev[key], ...patch } }));
   }, []);
 
+  const handleCheckout = async () => {
+    await getTopCustomer(10);
+  };
   const handleImport = async () => {
     setRunning(true);
     setGlobalDone(false);
@@ -278,7 +282,13 @@ export default function ImportAll() {
           fois. Les étapes sans fichier sont ignorées automatiquement.
         </p>
       </div>
-
+      <button
+        type="button"
+        onClick={() => handleCheckout()}
+        className="mt-6 w-full rounded-lg bg-sky-500 hover:bg-sky-600 text-white font-semibold py-2.5 transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+      >
+        Action
+      </button>
       <div className="flex items-center gap-3 text-sm text-slate-500 mb-4">
         <input
           type="checkbox"
@@ -376,7 +386,6 @@ export default function ImportAll() {
           );
         })}
       </div>
-
       {/* Launch button */}
       <button
         onClick={handleImport}
@@ -402,7 +411,6 @@ export default function ImportAll() {
           </>
         )}
       </button>
-
       {/* Log console */}
       {logs.length > 0 && (
         <div className="mt-8">

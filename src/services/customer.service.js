@@ -3,6 +3,7 @@ import parseCustomers, {
 } from "../XMLUtil/parser/Customer.parser";
 import parseErrors from "../XMLUtil/parser/Error.parser";
 import { buildCustomerXML } from "../XMLUtil/builder/Customer.builder";
+import { getAll as getAllOrders } from "./order.service";
 import { API_URL, WS_KEY, authHeaders } from "../config/config.service";
 
 const DEFAULT_DISPLAY = "full";
@@ -80,7 +81,7 @@ export const postCustomer = async (customer) => {
     };
   } catch (err) {
     console.error(err.message);
-  
+
     return { success: false, id: customer.id, error: err.message };
   }
 };
@@ -131,4 +132,48 @@ export const resetCustomers = async () => {
   } catch (error) {
     throw error;
   }
+};
+
+export const getCustomerById = async (id) => {
+  try {
+    const response = await fetch(
+      `${API_URL()}/customers/${id}?output_format=XML`,
+      { headers: authHeaders() }
+    );
+    const xmlText = await response.text();
+    if (!response.ok) throw new Error(`HTTP ${response.status} — ${xmlText}`);
+    return parseCustomer(xmlText);
+  } catch (error) {
+    throw error;
+  }
+};
+export const getTopCustomer = async (limit = null) => {
+  const orders = await getAllOrders();
+  const result = {};
+  await Promise.all(
+    orders.map(async (order) => {
+      if (!result[order.idCustomer]) {
+        const customer = await getCustomerById(order.idCustomer);
+        result[order.idCustomer] = {
+          totalOrder: 0,
+          customer: `${customer.firstname} ${customer.lastname}`,
+        };
+      }
+      result[order.idCustomer].totalOrder +=
+        order.associations.orderRows.reduce(
+          (sum, orderRow) =>
+            sum +
+            Number(orderRow.productQuantity) * Number(orderRow.productPrice),
+          0
+        );
+    })
+  );
+  let topCustomers = Object.values(result).sort(
+    (a, b) => b.totalOrder - a.totalOrder
+  );
+  if (limit) {
+    const entries = Object.entries(topCustomers).slice(0, limit);
+    topCustomers = Object.fromEntries(entries);
+  }
+  return topCustomers;
 };
