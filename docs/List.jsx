@@ -3,7 +3,7 @@ import { getOrderById } from "../../services/order.service";
 import { useEffect, useState } from "react";
 import { Loader2, AlertCircle, ArrowLeft } from "lucide-react";
 
-const CommandeDetail = () => {
+const List = () => {
   const { id } = useParams();
   const [order, setOrder] = useState();
   const [error, setError] = useState();
@@ -132,4 +132,4 @@ const CommandeDetail = () => {
     </div>
   );
 };
-export default CommandeDetail;
+export default List;
