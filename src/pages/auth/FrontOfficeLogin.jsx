@@ -11,8 +11,8 @@ import { useAuth } from "./AuthContext";
 
 const FrontOfficeLogin = () => {
   const navigate = useNavigate();
-  const [email, setEmail] = useState("rakoto@yopmail.com");
-  const [password, setPassword] = useState("XvzsX5O0!GBD0uXQ");
+  const [email, setEmail] = useState("client1@mail.com");
+  const [password, setPassword] = useState("Kx9aEZQX");
   const [loading, setLoading] = useState(false);
   const [guestLoading, setGuestLoading] = useState(false);
   const [error, setError] = useState(null);
