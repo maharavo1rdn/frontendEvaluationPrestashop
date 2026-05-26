@@ -3,6 +3,7 @@ import { Link, useNavigate } from "react-router-dom";
 import { AlertCircle, Loader2 } from "lucide-react";
 import { LoginBackOffice } from "../../services/auth/backoffice.service";
 import { useAuth } from "../auth/AuthContext";
+import { remove } from "jszip";
 const BackOfficeLogin = () => {
   const navigate = useNavigate();
   const [email, setEmail] = useState("maharavordn@gmail.com");
@@ -17,9 +18,17 @@ const BackOfficeLogin = () => {
     setLoading(true);
 
     try {
+      const removeStockCustomer = JSON.stringify(
+        sessionStorage.getItem("removeStockCustomer")
+      );
       const employee = await LoginBackOffice(email, password);
       loginAdmin(employee);
-      navigate("/backOffice/dashboard");
+      console.log(Boolean(removeStockCustomer));
+      if (Boolean(removeStockCustomer) == true) {
+        navigate("/frontOffice/removeStock");
+      } else {
+        navigate("/backOffice/dashboard");
+      }
     } catch (err) {
       setError(err.message);
     } finally {

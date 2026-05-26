@@ -22,6 +22,12 @@ const FRONTOFFICE_ITEMS = [
     icon: Receipt,
     path: "/frontOffice/commandes/customers",
   },
+  {
+    id: "Stock",
+    label: "Stock",
+    icon: Receipt,
+    path: "/frontOffice/removeStock",
+  },
 ];
 
 const FrontOfficeSidebar = ({ collapsed, onToggle }) => {

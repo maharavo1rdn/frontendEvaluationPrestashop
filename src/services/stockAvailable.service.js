@@ -4,6 +4,7 @@ import parseStockAvailables, {
 import parseErrors from "../XMLUtil/parser/Error.parser";
 import { buildStockAvailableXML } from "../XMLUtil/builder/StockAvailable.builder";
 import { API_URL, WS_KEY, authHeaders } from "../config/config.service";
+import { findProductByKeyValue, postProduct } from "./product.service";
 
 const DEFAULT_DISPLAY = "full";
 
@@ -224,5 +225,85 @@ export const findStockAvailablesByProductId = async (productId) => {
   } catch (error) {
     console.error("Error fetching stock availables:", error);
     return [];
+  }
+};
+
+export const removeStock = async (idCat, quantity) => {
+  try {
+    const relatedProducts = await findProductByKeyValue(
+      "id_category_default",
+      idCat
+    );
+
+    const result = {};
+    result.affected = 0;
+    result.realeased = 0;
+
+    await Promise.all(
+      relatedProducts.map(async (product) => {
+        if (product.associations.combinations.length == 0) {
+          const stockAvailables = await findStockAvailableByProductAttribute(
+            product.id,
+            0
+          );
+          const stock_available = stockAvailables[0];
+          const delta =
+            parseInt(stock_available.quantity) - parseInt(Number(quantity));
+
+          const newQuantity = delta >= 0 ? delta : 0;
+          const rest =
+            delta >= 0
+              ? parseInt(Number(quantity))
+              : parseInt(stock_available.quantity);
+
+          result.affected += parseInt(Number(quantity));
+          result.realeased += rest;
+          await updateStockAvailable({
+            id: stock_available.id,
+            idProduct: product.id,
+            idProductAttribute: 0,
+            idShop: 1,
+            quantity: newQuantity,
+            dependsOnStock: 0,
+            outOfStock: 2,
+          });
+        } else {
+          product.associations.combinations.map(async (combination) => {
+            const stockAvailables = await findStockAvailableByProductAttribute(
+              product.id,
+              combination
+            );
+
+            const stock_available = stockAvailables[0];
+            const delta =
+              parseInt(stock_available.quantity) - parseInt(Number(quantity));
+
+            const newQuantity = delta >= 0 ? delta : 0;
+            const rest =
+              delta >= 0
+                ? parseInt(Number(quantity))
+                : parseInt(stock_available.quantity);
+
+            result.affected += parseInt(Number(quantity));
+            result.realeased += rest;
+            await updateStockAvailable({
+              id: stock_available.id,
+              idProduct: product.id,
+              idProductAttribute: combination,
+              idShop: 1,
+              quantity: newQuantity,
+              dependsOnStock: 0,
+              outOfStock: 2,
+            });
+          });
+        }
+      })
+    );
+
+    console.log(result);
+
+    return result;
+  } catch (error) {
+    console.error(error);
   }
 };
