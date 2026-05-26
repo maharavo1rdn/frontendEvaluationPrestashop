@@ -236,38 +236,72 @@ export const removeStock = async (idCat, quantity) => {
     );
 
     const result = {};
-    const affected = parseInt(quantity) * relatedProducts.length;
-    result.affected = affected;
+    result.affected = 0;
     result.realeased = 0;
 
     await Promise.all(
       relatedProducts.map(async (product) => {
-        product.associations.combinations.map(async (combination)=>{
+        if (product.associations.combinations.length == 0) {
+          const stockAvailables = await findStockAvailableByProductAttribute(
+            product.id,
+            0
+          );
+          const stock_available = stockAvailables[0];
+          const delta =
+            parseInt(stock_available.quantity) - parseInt(Number(quantity));
 
-        });
-        const stockAvailables = await findStockAvailableByProductAttribute(
-          product.id,
-          0
-        );
-        const stock_available = stockAvailables[0];
-        const delta =
-          parseInt(stock_available.quantity) - parseInt(Number(quantity));
+          const newQuantity = delta >= 0 ? delta : 0;
+          const rest =
+            delta >= 0
+              ? parseInt(Number(quantity))
+              : parseInt(stock_available.quantity);
 
-        const newQuantity = delta >= 0 ? delta : 0;
-        const rest = delta >= 0 ? parseInt(Number(quantity)) : parseInt(stock_available.quantity);
-        result.realeased += rest;
+          result.affected += parseInt(Number(quantity));
+          result.realeased += rest;
+          await updateStockAvailable({
+            id: stock_available.id,
+            idProduct: product.id,
+            idProductAttribute: 0,
+            idShop: 1,
+            quantity: newQuantity,
+            dependsOnStock: 0,
+            outOfStock: 2,
+          });
+        } else {
+          product.associations.combinations.map(async (combination) => {
+            const stockAvailables = await findStockAvailableByProductAttribute(
+              product.id,
+              combination
+            );
 
-        await updateStockAvailable({
-          id: stock_available.id,
-          idProduct: product.id,
-          idProductAttribute: 0,
-          idShop: 1,
-          quantity: newQuantity,
-          dependsOnStock: 0,
-          outOfStock: 2,
-        });
+            const stock_available = stockAvailables[0];
+            const delta =
+              parseInt(stock_available.quantity) - parseInt(Number(quantity));
+
+            const newQuantity = delta >= 0 ? delta : 0;
+            const rest =
+              delta >= 0
+                ? parseInt(Number(quantity))
+                : parseInt(stock_available.quantity);
+
+            result.affected += parseInt(Number(quantity));
+            result.realeased += rest;
+            await updateStockAvailable({
+              id: stock_available.id,
+              idProduct: product.id,
+              idProductAttribute: combination,
+              idShop: 1,
+              quantity: newQuantity,
+              dependsOnStock: 0,
+              outOfStock: 2,
+            });
+          });
+        }
       })
     );
+
+    console.log(result);
+
     return result;
   } catch (error) {
     console.error(error);
