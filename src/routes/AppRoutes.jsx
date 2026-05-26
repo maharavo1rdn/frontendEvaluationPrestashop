@@ -14,6 +14,7 @@ import { EmployeeProtectedRoute } from "../pages/auth/EmployeeProtectedRoute";
 import { CustomerProtectedRoute } from "../pages/auth/CustomerProtectedRoute";
 import StockRoutes from "./stock/StockRoutes";
 import StatsRoutes from "./stats/StatsRoutes";
+import RemoveStock from "../pages/stock/RemoveStock";
 
 export default function AppRoutes() {
   return (

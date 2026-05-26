@@ -128,8 +128,7 @@ export const findProductByKeyValue = async (key, value) => {
       [`filter[${key}]`]: `[${value}]`,
       output_format: "XML",
       display: "full",
-    });
-
+    });    
     const queryString = params
       .toString()
       .replace(/%5B/g, "[")
