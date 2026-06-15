@@ -22,9 +22,8 @@ const BackOfficeLogin = () => {
         sessionStorage.getItem("removeStockCustomer")
       );
       const employee = await LoginBackOffice(email, password);
-      loginAdmin(employee);
-      console.log(Boolean(removeStockCustomer));
-      if (Boolean(removeStockCustomer) == true) {
+      loginAdmin(employee);      
+      if (removeStockCustomer == null) {
         navigate("/frontOffice/removeStock");
       } else {
         navigate("/backOffice/dashboard");
